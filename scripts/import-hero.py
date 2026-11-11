@@ -4,6 +4,10 @@ sprite and art.json (draw scale, cell, feet anchor, face box and which frames pl
 
 Usage: python3 -I scripts/import-hero.py <unzipped character dir> <heroId> <world height>
 
+Optional assets/heroes/<heroId>/art-overrides.json: "skip" lists animations to leave out, "recolor"
+maps an animation to a hue in degrees (warm fire baked into a template becomes that colour), and any
+other key replaces the measured value in art.json ("attacks" entries are replaced one by one).
+
 <unzipped character dir> holds <State>/animations/<name>/east/*.png and <State>/rotations/east.png.
 <world height> is how tall the standing fighter is drawn in world pixels (match the hero's hurtbox).
 
@@ -13,6 +17,7 @@ Attack timing is picked by measuring each frame: the frame that reaches furthest
 uppercuts) is the hit; frames before it are startup and frames after it recovery. Then run
 scripts/pack-hero-atlas.py <heroId>. Re-running overwrites frames/ and art.json.
 """
+import colorsys
 import json
 import shutil
 import sys
@@ -29,6 +34,21 @@ def opaque_points(im):
     return [(x, y) for y in range(im.height) for x in range(im.width) if px[x, y][3] > 0]
 
 
+def recolor(im, hue):
+    """Shift saturated warm pixels (template fire: red, orange, yellow) to another hue."""
+    px = im.load()
+    for y in range(im.height):
+        for x in range(im.width):
+            r, g, b, a = px[x, y]
+            if a == 0:
+                continue
+            h, s, v = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
+            if s > 0.62 and v > 0.74 and (h < 0.17 or h > 0.96):
+                nr, ng, nb = colorsys.hsv_to_rgb(hue / 360, s, min(1, v * 1.05))
+                px[x, y] = (round(nr * 255), round(ng * 255), round(nb * 255), a)
+    return im
+
+
 def anchor(im):
     pts = opaque_points(im)
     bottom = max(y for _, y in pts)
@@ -39,9 +59,14 @@ def anchor(im):
 def main() -> None:
     src, hero, world_h = Path(sys.argv[1]), sys.argv[2], int(sys.argv[3])
     repo = Path(__file__).resolve().parent.parent
+    dest = repo / 'assets' / 'heroes' / hero
+    over_path = dest / 'art-overrides.json'
+    overrides = json.loads(over_path.read_text()) if over_path.exists() else {}
+    skip = set(overrides.pop('skip', ['jab6']))
+    recolors = overrides.pop('recolor', {})
     state = next(p for p in src.iterdir() if p.is_dir() and (p / 'animations').exists())
     anim_dir = state / 'animations'
-    anims = {d.name: sorted((d / 'east').glob('*.png')) for d in anim_dir.iterdir() if (d / 'east').exists()}
+    anims = {d.name: sorted((d / 'east').glob('*.png')) for d in anim_dir.iterdir() if (d / 'east').exists() and d.name not in skip}
 
     # Feet anchor for each canvas size, from a standing frame of that size.
     anchors = {}
@@ -60,6 +85,8 @@ def main() -> None:
         out = []
         for f in files:
             im = Image.open(f).convert('RGBA')
+            if name in recolors:
+                im = recolor(im, recolors[name])
             ax, ay = anchors[im.size]
             canvas = Image.new('RGBA', (big, big), (0, 0, 0, 0))
             canvas.paste(im, (fx - ax, fy - ay), im)
@@ -76,7 +103,6 @@ def main() -> None:
     cell_w, cell_h = right - left, bottom - top
     feet_x, feet_y = fx - left, fy - top
 
-    dest = repo / 'assets' / 'heroes' / hero
     frames_dir = dest / 'frames'
     if frames_dir.exists():
         shutil.rmtree(frames_dir)
@@ -106,7 +132,8 @@ def main() -> None:
         peak = max(range(start, n), key=lambda i: m[i])
         active = [peak] + [i for i in (peak + 1,) if i < n and m[i] >= 0.92 * m[peak]]
         startup = list(range(start, peak)) or [peak]
-        recovery = list(range(active[-1] + 1, n)) or [active[-1]]
+        # A clip that ends on the hit rewinds through its wind-up to recover.
+        recovery = list(range(active[-1] + 1, n)) or (list(reversed(startup))[:3] if startup != [peak] else [active[-1]])
         if loop:
             lo = max(start, peak - 1)
             active = list(range(lo, min(n, peak + 2)))
@@ -117,7 +144,7 @@ def main() -> None:
 
     jump = [i for i, f in enumerate(metrics['jump']) if f['air'] > 6] or list(range(2, max(3, count('jump') - 1)))
     block_n = count('block')
-    light = 'jab6' if 'jab6' in anims else 'light_punch'
+    light = 'light_punch'
     heavy = split('heavy_punch', 'reach')
     art = {
         'scale': scale,
@@ -135,7 +162,7 @@ def main() -> None:
         'lying': list(range(5, count('knockout'))),
         'getup': list(range(count('getup'))),
         'win': list(range(1, count('win'))),
-        'powerUp': list(range(1, count('power_up'))) if 'power_up' in anims else [],
+        'powerUp': list(range(1, count('power_up') - 1)) if 'power_up' in anims else [],
         'attacks': {
             'light': split(light, 'reach'),
             'heavy': heavy,
@@ -165,6 +192,11 @@ def main() -> None:
     cx = round(sum(head) / len(head))
     art['face'] = {'x': cx - side // 2, 'y': max(0, btop - 2), 'w': side, 'h': side}
 
+    for key, value in overrides.items():
+        if key == 'attacks':
+            art['attacks'].update(value)
+        else:
+            art[key] = value
     (dest / 'art.json').write_text(json.dumps(art, indent=1) + '\n')
     print(hero, f'cell {cell_w}x{cell_h} feet ({feet_x},{feet_y}) scale {scale} idle height {idle_h:.0f}')
     for k, v in art['attacks'].items():

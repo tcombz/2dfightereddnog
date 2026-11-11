@@ -1,12 +1,15 @@
 // Render-only: maps sim fighter state to a sprite frame. The sim knows nothing about this.
+import chrisArt from '../../assets/heroes/chris/art.json';
 import chrisAtlas from '../../assets/heroes/chris/atlas.json';
 import chrisPng from '../../assets/heroes/chris/atlas.png';
 import chrisBase from '../../assets/heroes/chris/base/east.png';
 import chrisSheet from '../../assets/heroes/chris/sheet_portrait.jpg';
 import chrisSuper from '../../assets/heroes/chris/super_art.jpg';
+import jetsetterArt from '../../assets/heroes/jetsetter/art.json';
 import jetsetterAtlas from '../../assets/heroes/jetsetter/atlas.json';
 import jetsetterSheet from '../../assets/heroes/jetsetter/sheet_portrait.jpg';
 import jetsetterSuper from '../../assets/heroes/jetsetter/super_art.jpg';
+import leaderArt from '../../assets/heroes/leader/art.json';
 import leaderAtlas from '../../assets/heroes/leader/atlas.json';
 import leaderPng from '../../assets/heroes/leader/atlas.png';
 import leaderBase from '../../assets/heroes/leader/base/east.png';
@@ -16,6 +19,7 @@ import jetsetterPng from '../../assets/heroes/jetsetter/atlas.png';
 import jetsetterBase from '../../assets/heroes/jetsetter/base/east.png';
 import rogueAtlas from '../../assets/heroes/rogue/atlas.json';
 import roguePng from '../../assets/heroes/rogue/atlas.png';
+import rogueArt from '../../assets/heroes/rogue/art.json';
 import rogueBase from '../../assets/heroes/rogue/base/east.png';
 import { FS, HEROES, KNOCKDOWN_TICKS, MOVE_KEYS, getMove } from '../sim';
 import type { FighterState, MoveKey } from '../sim';
@@ -68,6 +72,38 @@ export interface HeroArt {
   attacks: Record<MoveKey, AttackArt>;
 }
 
+/** The generated art.json written by scripts/import-hero.py: scale, cell, feet, face and frame picks. */
+interface ArtJson {
+  scale: number;
+  cellW: number;
+  cellH: number;
+  feetX: number;
+  feetY: number;
+  face: { x: number; y: number; w: number; h: number };
+  idle: number[];
+  walk: number[];
+  jump: number[];
+  crouch: number[];
+  block: number[];
+  hit: number[];
+  fall: number[];
+  lying: number[];
+  getup: number[];
+  win: number[];
+  powerUp: number[];
+  attacks: Record<string, AttackArt>;
+}
+
+type ArtFields = Omit<HeroArt, 'key' | 'png' | 'atlas' | 'base' | 'sheet' | 'superArt' | 'projectiles'>;
+
+function fromJson(j: ArtJson): ArtFields {
+  const { scale, cellW, cellH, feetX, feetY, face, idle, walk, jump, crouch, block, hit, fall, lying, getup, win, powerUp } = j;
+  return {
+    scale, cellW, cellH, feetX, feetY, face, idle, walk, jump, crouch, block, hit, fall, lying, getup, win, powerUp,
+    attacks: j.attacks as Record<MoveKey, AttackArt>,
+  };
+}
+
 const ART: Record<string, HeroArt> = {
   rogue: {
     key: 'rogue',
@@ -75,36 +111,7 @@ const ART: Record<string, HeroArt> = {
     atlas: rogueAtlas,
     base: rogueBase,
     projectiles: { projectile: 'bolt' },
-    scale: 2,
-    feetX: 100,
-    feetY: 170,
-    cellW: 200,
-    cellH: 200,
-    powerUp: [],
-    face: { x: 50, y: 4, w: 40, h: 40 },
-    idle: [0, 1, 2, 3],
-    walk: [0, 1, 2, 3, 4, 5],
-    jump: [2, 3, 4, 5, 6, 7, 8],
-    crouch: [1, 2, 3, 4],
-    block: [3, 4],
-    hit: [2, 3, 4, 5],
-    fall: [2, 3, 4],
-    lying: [5, 6],
-    getup: [0, 1, 2, 3, 4],
-    win: [2, 3, 4, 5, 6, 7, 8],
-    attacks: {
-      light: { anim: 'light_punch', startup: [0], active: [1], recovery: [2] },
-      heavy: { anim: 'heavy_punch', startup: [0, 1, 2], active: [3], recovery: [3, 2, 0] },
-      kick: { anim: 'kick', startup: [1, 2, 3], active: [4, 5], recovery: [6, 7, 8] },
-      crouchLight: { anim: 'crouch_light', startup: [1, 2], active: [3], recovery: [2, 1] },
-      sweep: { anim: 'sweep', startup: [1, 2, 3], active: [4], recovery: [3, 5] },
-      jumpAttack: { anim: 'jump_attack', startup: [0, 1], active: [2, 3], recovery: [4] },
-      throw: { anim: 'heavy_punch', startup: [1], active: [3], recovery: [3, 2, 1, 0] },
-      special: { anim: 'special', startup: [0, 1, 2, 3], active: [4, 5], recovery: [6, 3] },
-      projectile: { anim: 'projectile', startup: [0, 1, 2, 3], active: [4], recovery: [5, 4, 0] },
-      rising: { anim: 'uppercut', startup: [0, 1], active: [2, 3], recovery: [4, 5, 6] },
-      super: { anim: 'special', startup: [1, 2], active: [3, 4, 5], recovery: [6, 3], loopActive: true },
-    },
+    ...fromJson(rogueArt),
   },
   jetsetter: {
     key: 'jetsetter',
@@ -114,36 +121,7 @@ const ART: Record<string, HeroArt> = {
     sheet: jetsetterSheet,
     superArt: jetsetterSuper,
     projectiles: { projectile: 'disc' },
-    scale: 2,
-    feetX: 100,
-    feetY: 170,
-    cellW: 200,
-    cellH: 200,
-    powerUp: [],
-    face: { x: 52, y: 2, w: 40, h: 40 },
-    idle: [0, 1, 2, 3],
-    walk: [0, 1, 2, 3, 4, 5],
-    jump: [2, 3, 4, 5, 6, 7, 8],
-    crouch: [1, 2, 3, 4],
-    block: [1, 2],
-    hit: [2, 3, 4, 5],
-    fall: [2, 3, 4],
-    lying: [5, 6],
-    getup: [0, 1, 2, 3, 4],
-    win: [3, 4, 5, 6, 7, 8],
-    attacks: {
-      light: { anim: 'light_punch', startup: [0], active: [1], recovery: [2] },
-      heavy: { anim: 'heavy_punch', startup: [1, 2, 3], active: [4], recovery: [6, 3] },
-      kick: { anim: 'kick', startup: [1, 2], active: [3, 4], recovery: [5, 6] },
-      crouchLight: { anim: 'crouch_light', startup: [1, 2], active: [3], recovery: [2, 1] },
-      sweep: { anim: 'sweep', startup: [1, 2, 3], active: [4], recovery: [3, 5] },
-      jumpAttack: { anim: 'jump_attack', startup: [0, 1], active: [2, 3], recovery: [4] },
-      throw: { anim: 'heavy_punch', startup: [1], active: [3], recovery: [3, 1, 0] },
-      special: { anim: 'special', startup: [4, 5, 6], active: [7, 8], recovery: [8, 6] },
-      projectile: { anim: 'projectile', startup: [0, 1, 2, 3], active: [4], recovery: [5, 6] },
-      rising: { anim: 'uppercut', startup: [0, 1], active: [2, 3], recovery: [4, 5] },
-      super: { anim: 'heavy_punch', startup: [1, 2, 3], active: [4, 5], recovery: [6], loopActive: true },
-    },
+    ...fromJson(jetsetterArt),
   },
   chris: {
     key: 'chris',
@@ -153,37 +131,7 @@ const ART: Record<string, HeroArt> = {
     sheet: chrisSheet,
     superArt: chrisSuper,
     projectiles: { projectile: 'cards' },
-    scale: 2,
-    feetX: 100,
-    feetY: 170,
-    cellW: 200,
-    cellH: 200,
-    powerUp: [],
-    face: { x: 52, y: 4, w: 36, h: 36 },
-    idle: [0, 1, 2, 3, 4, 5, 6, 7],
-    walk: [0, 1, 2, 3, 4, 5],
-    jump: [3, 4, 5, 6],
-    crouch: [1, 2, 3, 4],
-    block: [3, 4],
-    hit: [2, 3, 4, 5],
-    fall: [2, 3, 4],
-    lying: [5, 6],
-    getup: [0, 1, 2, 3, 4],
-    win: [1, 2, 3, 4, 5, 6, 7, 8],
-    attacks: {
-      light: { anim: 'light_punch', startup: [0], active: [1], recovery: [2] },
-      heavy: { anim: 'heavy_punch', startup: [1, 2, 3], active: [4], recovery: [3, 0] },
-      kick: { anim: 'kick', startup: [1, 2], active: [3, 4], recovery: [5] },
-      crouchLight: { anim: 'crouch_light', startup: [0, 1], active: [3], recovery: [2, 1] },
-      sweep: { anim: 'sweep', startup: [1, 2, 3], active: [4], recovery: [3, 5] },
-      jumpAttack: { anim: 'jump_attack', startup: [0, 1], active: [2, 3], recovery: [4] },
-      throw: { anim: 'heavy_punch', startup: [1], active: [4], recovery: [3, 1, 0] },
-      // The Diplomacy: cards swirl while he waits; the answer sends them flying.
-      special: { anim: 'special', startup: [1, 2], active: [3, 4, 5, 6], recovery: [7, 8, 0], loopActive: true },
-      projectile: { anim: 'projectile', startup: [0, 1, 2], active: [3], recovery: [4, 5, 6] },
-      rising: { anim: 'uppercut', startup: [0, 1], active: [2, 3], recovery: [4, 5, 6] },
-      super: { anim: 'special', startup: [4, 5], active: [5, 6, 7], recovery: [8], loopActive: true },
-    },
+    ...fromJson(chrisArt),
   },
   leader: {
     key: 'leader',
@@ -193,36 +141,7 @@ const ART: Record<string, HeroArt> = {
     sheet: leaderSheet,
     superArt: leaderSuper,
     projectiles: { special: 'crew', projectile: 'wave' },
-    scale: 2,
-    feetX: 100,
-    feetY: 170,
-    cellW: 200,
-    cellH: 200,
-    powerUp: [],
-    face: { x: 60, y: 2, w: 40, h: 40 },
-    idle: [0, 1, 2, 3, 4, 5, 6, 7],
-    walk: [0, 1, 2, 3, 4, 5],
-    jump: [3, 4, 5, 6],
-    crouch: [1, 2, 3, 4],
-    block: [3, 4],
-    hit: [2, 3, 4, 5],
-    fall: [2, 3, 4],
-    lying: [5, 6],
-    getup: [0, 1, 2, 3, 4],
-    win: [2, 3, 4, 5, 6, 7, 8],
-    attacks: {
-      light: { anim: 'light_punch', startup: [0, 1], active: [2], recovery: [1] },
-      heavy: { anim: 'heavy_punch', startup: [1, 2, 3], active: [5], recovery: [4, 0] },
-      kick: { anim: 'kick', startup: [1, 2], active: [3, 4], recovery: [5] },
-      crouchLight: { anim: 'crouch_light', startup: [0, 1], active: [2], recovery: [1] },
-      sweep: { anim: 'sweep', startup: [1, 2, 3], active: [4], recovery: [3, 5] },
-      jumpAttack: { anim: 'jump_attack', startup: [0, 1], active: [2, 3], recovery: [4] },
-      throw: { anim: 'heavy_punch', startup: [1], active: [5], recovery: [4, 1, 0] },
-      special: { anim: 'special', startup: [1, 2, 3, 4, 5], active: [8], recovery: [8, 7, 6] },
-      projectile: { anim: 'projectile', startup: [0, 1, 2, 3], active: [4], recovery: [5] },
-      rising: { anim: 'uppercut', startup: [0, 1], active: [2, 3], recovery: [4, 5] },
-      super: { anim: 'special', startup: [2, 3], active: [3, 4, 5], recovery: [8], loopActive: true },
-    },
+    ...fromJson(leaderArt),
   },
 };
 

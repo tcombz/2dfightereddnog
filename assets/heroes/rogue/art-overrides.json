@@ -1,0 +1,5 @@
+{
+ "skip": ["jab6"],
+ "recolor": { "projectile": 205 },
+ "block": [3, 4, 6]
+}
