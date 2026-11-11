@@ -29,8 +29,8 @@ async function start(): Promise<void> {
     input: { gamepad: false },
     scene: [BootScene, TitleScene, SelectScene, VersusScene, FightScene, ResultScene, HowToScene],
   });
-  // Handy for automated play-testing in development builds.
-  if (import.meta.env.DEV) (window as unknown as { __game: Phaser.Game }).__game = game;
+  // Exposed for automated play-testing.
+  (window as unknown as { __game: Phaser.Game }).__game = game;
 }
 
 void start();
