@@ -4,6 +4,7 @@ import {
   FS,
   FX,
   GAME_KEYS,
+  Guard,
   HEROES,
   Input,
   MAX_SEPARATION,
@@ -117,7 +118,7 @@ describe('determinism', () => {
     expect(h2).toBe(h1);
     expect(h3).toBe(h1);
     // Golden value: pins the result across runs, machines and refactors.
-    expect(h1).toMatchInlineSnapshot(`"449edcc5"`);
+    expect(h1).toMatchInlineSnapshot(`"d3e4fa60"`);
   });
 
   it('resuming from a serialized mid-run state gives the same hash', () => {
@@ -597,6 +598,38 @@ describe('punish counters and chip KOs', () => {
     s.fighters[1].health = 5;
     s = play(s, [[Heavy | Special, L]], 120, [0, L]).s;
     expect(s.fighters[1].health).toBe(0);
+  });
+});
+
+describe('every fighter kicks and sweeps their own way', () => {
+  it('Chris: the axe kick is an overhead and the low kick keeps them standing', () => {
+    expect(getMove(CHRIS, Move.Kick).guard).toBe(Guard.High);
+    expect(getMove(CHRIS, Move.Kick).startup).toBeGreaterThanOrEqual(16);
+    expect(getMove(CHRIS, Move.Sweep).knockdown).toBe(false);
+  });
+
+  it('the Jetsetter sweep hits twice, the Leader slide and Jetsetter kick travel, Eddnog shoulders through a hit', () => {
+    expect(getMove(JET, Move.Sweep).hits).toBe(2);
+    expect(getMove(LEADER, Move.Sweep).advance).toBeGreaterThan(0);
+    expect(getMove(JET, Move.Kick).advance).toBeGreaterThan(0);
+    expect(getMove(EDD, Move.Kick).armor).toBe(1);
+  });
+
+  it('the Rogue has the quickest kick and the Leader pushes furthest', () => {
+    const kicks = ALL_HEROES.map((h) => getMove(h, Move.Kick));
+    expect(Math.min(...kicks.map((k) => k.startup))).toBe(getMove(ROGUE, Move.Kick).startup);
+    expect(Math.max(...kicks.map((k) => k.knockback.x))).toBe(getMove(LEADER, Move.Kick).knockback.x);
+  });
+
+  it("Chris's axe kick hits a crouching guard", () => {
+    let s = fight(CHRIS, JET, 110);
+    const k = getMove(CHRIS, Move.Kick);
+    const fx: number[] = [];
+    for (let t = 0; t < k.startup + k.active + 2; t += 1) {
+      s = step(s, t === 0 ? R | Heavy : 0, D | R);
+      fx.push(s.fighters[1].fx);
+    }
+    expect(fx).toContain(FX.Hit);
   });
 });
 

@@ -5,8 +5,11 @@ import { CPU_LEVELS, CSS, GAME_SUBTITLE, GAME_TITLE, VIEW_H, VIEW_W } from '../c
 import type { MatchSetup, Mode } from '../config';
 import { ALL_ART, feetOrigin, frameName, menuScale } from '../heroArt';
 import { Menu, backdrop, body, display, goTo, goldFill } from '../ui';
+import { familyName, menuHint, onPad } from '../prompts';
 
 export class TitleScene extends Phaser.Scene {
+  private footer!: Phaser.GameObjects.Text;
+  private promptStamp = -1;
   private menu!: Menu;
   private pressStart!: Phaser.GameObjects.Text;
   private started = false;
@@ -39,7 +42,8 @@ export class TitleScene extends Phaser.Scene {
     this.add.text(VIEW_W / 2, 214, GAME_SUBTITLE, display(18, CSS.ink, 5)).setOrigin(0.5);
     this.pressStart = this.add.text(VIEW_W / 2, 400, 'PRESS ENTER OR START', display(24, CSS.ink, 6)).setOrigin(0.5);
     this.tweens.add({ targets: this.pressStart, alpha: 0.25, duration: 600, yoyo: true, repeat: -1 });
-    this.add.text(VIEW_W / 2, VIEW_H - 18, 'Keyboard or gamepad  ·  Best in a desktop browser', body(13, CSS.muted)).setOrigin(0.5);
+    this.footer = this.add.text(VIEW_W / 2, VIEW_H - 18, '', body(13, CSS.muted)).setOrigin(0.5);
+    this.promptStamp = -1;
 
     const cpuLevel = (): number => (this.registry.get('cpuLevel') as number | undefined) ?? 1;
     const pct = (v: number): string => `◀ ${Math.round(v * 100)}% ▶`;
@@ -119,6 +123,12 @@ export class TitleScene extends Phaser.Scene {
     const tick = Math.floor(this.clock / (1000 / 60));
     this.fighters.forEach((s, i) => s.setFrame(frameName('idle', Math.floor((tick + i * 13) / 9) % 4)));
     controls.poll();
+    if (controls.deviceStamp !== this.promptStamp) {
+      this.promptStamp = controls.deviceStamp;
+      this.footer.setText(
+        onPad(-1) ? `${familyName(-1)} controller  ·  ${menuHint()}` : `Keyboard or any controller  ·  ${menuHint()}`,
+      );
+    }
     for (const e of controls.take()) {
       if (!this.started) {
         if (e.action === 'confirm' || e.action === 'pause') {

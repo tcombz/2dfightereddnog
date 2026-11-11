@@ -7,16 +7,17 @@ import { Input } from '../../sim';
 import { sfx } from '../audio';
 import { C, CSS, VIEW_H, VIEW_W } from '../config';
 import { Menu, backdrop, body, display, goTo, goldFill } from '../ui';
+import { backHint, padButton } from '../prompts';
 
-const LIVE: Array<[number, string]> = [
-  [Input.Left, '←'],
-  [Input.Up, '↑'],
-  [Input.Down, '↓'],
-  [Input.Right, '→'],
-  [Input.Light, 'LIGHT'],
-  [Input.Heavy, 'HEAVY'],
-  [Input.Special, 'SPECIAL'],
-  [Input.Block, 'BLOCK'],
+const LIVE: Array<[number, string, PadAction | null]> = [
+  [Input.Left, '←', null],
+  [Input.Up, '↑', null],
+  [Input.Down, '↓', null],
+  [Input.Right, '→', null],
+  [Input.Light, 'LIGHT', 'light'],
+  [Input.Heavy, 'HEAVY', 'heavy'],
+  [Input.Special, 'SPECIAL', 'special'],
+  [Input.Block, 'BLOCK', 'block'],
 ];
 
 /** Directions wait this long for a press before keeping the current setting. */
@@ -41,6 +42,7 @@ export class ControllerScene extends Phaser.Scene {
   private prompt!: Phaser.GameObjects.Text;
   private capture: Capture | null = null;
   private clock = 0;
+  private footer!: Phaser.GameObjects.Text;
 
   constructor() {
     super('pads');
@@ -69,7 +71,7 @@ export class ControllerScene extends Phaser.Scene {
       this.live.push(this.add.text(x + 18, 186, '', display(14, CSS.gold, 3)));
     }
     this.prompt = this.add.text(VIEW_W / 2, 500, '', display(18, '#ffffff', 5)).setOrigin(0.5);
-    this.add.text(VIEW_W / 2, VIEW_H - 14, 'Keyboard players: no setup needed  ·  Esc or B to go back', body(13, CSS.muted)).setOrigin(0.5, 1);
+    this.footer = this.add.text(VIEW_W / 2, VIEW_H - 14, '', body(13, CSS.muted)).setOrigin(0.5, 1);
 
     this.menu = new Menu(
       this,
@@ -201,12 +203,16 @@ export class ControllerScene extends Phaser.Scene {
   update(_t: number, delta: number): void {
     this.clock += delta;
     controls.poll();
+    this.footer.setText(`Keyboard players: no setup needed  ·  ${backHint()}`);
     for (let i = 0; i < 2; i += 1) {
       const p = controls.pad(i);
       const kind = !p ? '' : controls.hasRemap(p) ? 'your setup' : p.mapping === 'standard' ? 'standard layout' : 'best-guess layout: set it up below';
       this.info[i].setText(p ? `${padName(p)}\n${kind}` : 'No controller. Keyboard works too.');
       const bits = controls.bits(i);
-      this.live[i].setText(LIVE.filter(([b]) => bits & b).map(([, s]) => s).join('  ') || 'press anything to test');
+      const pressed = LIVE.filter(([b]) => bits & b).map(([, s, a]) => (a && p ? `${s} (${padButton(a, i)})` : s));
+      // At rest, show where each attack is on this pad.
+      const legend = p ? LIVE.filter(([, , a]) => a).map(([, s, a]) => `${padButton(a as PadAction, i)} ${s}`).join('   ') : 'press anything to test';
+      this.live[i].setText(pressed.join('  ') || legend);
     }
 
     const c = this.capture;

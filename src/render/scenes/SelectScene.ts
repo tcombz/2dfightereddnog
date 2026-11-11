@@ -9,6 +9,7 @@ import { arcadeSetup, newArcadeRun } from '../arcade';
 import { artFor, feetOrigin, frameName, menuScale } from '../heroArt';
 import { heroInfo } from '../heroInfo';
 import { STAGES } from '../stages';
+import { menuHint } from '../prompts';
 import { body, display, goTo, goldFill, stripes } from '../ui';
 
 const TILE = 92;
@@ -50,6 +51,7 @@ export class SelectScene extends Phaser.Scene {
   private hint!: Phaser.GameObjects.Text;
   private ratingLabels: Phaser.GameObjects.Text[] = [];
   private clock = 0;
+  private promptStamp = -1;
 
   constructor() {
     super('select');
@@ -230,8 +232,8 @@ export class SelectScene extends Phaser.Scene {
       this.setup.mode === 'versus' ? 'Each player: move and confirm' : this.sides[0].locked && !this.arcade ? 'Now pick the opponent' : 'Pick your fighter';
     this.hint.setText(
       this.phase === 'stage'
-        ? 'Choose a stage  ·  Left / Right  ·  Confirm: Enter, F or A  ·  Back: Esc, G or B'
-        : `${who}  ·  Up / Down: controls  ·  Confirm: Enter, F or A  ·  Back: Esc, G or B`,
+        ? `Choose a stage  ·  Left / Right  ·  ${menuHint()}`
+        : `${who}  ·  Up / Down: controls  ·  ${menuHint()}`,
     );
   }
 
@@ -304,6 +306,10 @@ export class SelectScene extends Phaser.Scene {
     this.clock += delta;
     const tick = Math.floor(this.clock / (1000 / 60));
     controls.poll();
+    if (controls.deviceStamp !== this.promptStamp) {
+      this.promptStamp = controls.deviceStamp;
+      this.refresh();
+    }
     for (const e of controls.take()) {
       if (this.phase === 'stage') {
         if (e.action === 'left' || e.action === 'right') {

@@ -101,9 +101,10 @@ const heroes = [
     moves: {
       light: { name: 'Jab', startup: 4, active: 3, recovery: 7, damage: 30, hitstun: 15, blockstun: 11, kb: [3, 0], hitstop: 7, cancel: ALL, hitbox: { x: 15, y: 158, w: 86, h: 30 } },
       heavy: { name: 'Devastating Strike', startup: 8, active: 4, recovery: 18, damage: 80, hitstun: 24, blockstun: 17, kb: [10, 0], hitstop: 11, advance: 3, cancel: SP, hitbox: { x: 15, y: 132, w: 108, h: 40 } },
-      kick: { name: 'High Kick', startup: 10, active: 4, recovery: 17, damage: 72, hitstun: 22, blockstun: 15, kb: [12, 0], hitstop: 10, cancel: SP, hitbox: { x: 20, y: 146, w: 120, h: 56 } },
+      // Spinning hook kick: the fastest kick in the cast, high and long.
+      kick: { name: 'High Kick', startup: 9, active: 4, recovery: 17, damage: 70, hitstun: 22, blockstun: 15, kb: [12, 0], hitstop: 10, cancel: SP, hitbox: { x: 20, y: 140, w: 132, h: 62 } },
       crouchLight: { name: 'Low Jab', guard: Guard.Low, body: 'crouch', startup: 4, active: 3, recovery: 8, damage: 24, hitstun: 14, blockstun: 10, kb: [3, 0], hitstop: 7, cancel: ALL, hitbox: { x: 20, y: 112, w: 108, h: 52 } },
-      sweep: { name: 'Sweep', guard: Guard.Low, body: 'crouch', startup: 9, active: 4, recovery: 24, damage: 70, knockdown: true, blockstun: 14, kb: [7, 6], hitstop: 10, cancel: Cancel.Super, hitbox: { x: 10, y: 0, w: 110, h: 80 } },
+      sweep: { name: 'Sweep', guard: Guard.Low, body: 'crouch', startup: 8, active: 5, recovery: 24, damage: 70, knockdown: true, blockstun: 14, kb: [7, 6], hitstop: 10, cancel: Cancel.Super, hitbox: { x: 10, y: 0, w: 110, h: 80 } },
       jumpAttack: { name: 'Strike From Above', guard: Guard.High, body: 'air', air: true, startup: 5, active: 14, recovery: 4, damage: 68, hitstun: 20, blockstun: 14, kb: [6, 0], hitstop: 10, hitbox: { x: 10, y: 50, w: 125, h: 120 } },
       throw: { name: 'Throw', kind: Kind.Throw, guard: Guard.Throw, limb: false, startup: 4, active: 2, recovery: 24, damage: 110, knockdown: true, kb: [14, 14], hitstop: 14, hitbox: { x: 10, y: 60, w: 70, h: 120 } },
       // Rogue's Rift: blinks in (invulnerable while he vanishes), strikes, and blinks back out on a hit.
@@ -132,9 +133,11 @@ const heroes = [
     moves: {
       light: { name: 'Smooth Jab', startup: 4, active: 3, recovery: 8, damage: 34, hitstun: 15, blockstun: 11, kb: [3, 0], hitstop: 7, cancel: ALL, hitbox: { x: 15, y: 158, w: 83, h: 30 } },
       heavy: { name: 'Power Strike', startup: 9, active: 4, recovery: 20, damage: 88, hitstun: 24, blockstun: 17, kb: [11, 0], hitstop: 12, cancel: SP, hitbox: { x: 15, y: 130, w: 125, h: 60 } },
-      kick: { name: 'Step Kick', startup: 10, active: 4, recovery: 18, damage: 78, hitstun: 22, blockstun: 15, kb: [12, 0], hitstop: 11, cancel: SP, hitbox: { x: 20, y: 110, w: 110, h: 80 } },
+      // Skipping roundhouse: steps in as it swings.
+      kick: { name: 'Step Kick', startup: 11, active: 4, recovery: 17, advance: 9, damage: 78, hitstun: 22, blockstun: 15, kb: [12, 0], hitstop: 11, cancel: SP, hitbox: { x: 20, y: 110, w: 110, h: 80 } },
       crouchLight: { name: 'Low Jab', guard: Guard.Low, body: 'crouch', startup: 4, active: 3, recovery: 9, damage: 26, hitstun: 14, blockstun: 10, kb: [3, 0], hitstop: 7, cancel: ALL, hitbox: { x: 20, y: 108, w: 90, h: 52 } },
-      sweep: { name: 'Floor Sweep', guard: Guard.Low, body: 'crouch', startup: 10, active: 4, recovery: 25, damage: 80, knockdown: true, blockstun: 15, kb: [7, 6], hitstop: 11, cancel: Cancel.Super, hitbox: { x: 10, y: 0, w: 115, h: 96 } },
+      // Breakdance spin: two sweeping hits, the second knocks down.
+      sweep: { name: 'Floor Sweep', guard: Guard.Low, body: 'crouch', startup: 10, active: 9, recovery: 22, damage: 44, hits: 2, rehit: 5, knockdown: true, blockstun: 15, kb: [7, 6], hitstop: 11, cancel: Cancel.Super, hitbox: { x: 10, y: 0, w: 115, h: 96 } },
       jumpAttack: { name: 'Aerial Style', guard: Guard.High, body: 'air', air: true, startup: 6, active: 14, recovery: 4, damage: 76, hitstun: 20, blockstun: 14, kb: [6, 0], hitstop: 11, hitbox: { x: 10, y: 50, w: 110, h: 120 } },
       throw: { name: 'Throw', kind: Kind.Throw, guard: Guard.Throw, limb: false, startup: 4, active: 2, recovery: 24, damage: 120, knockdown: true, kb: [14, 14], hitstop: 14, hitbox: { x: 10, y: 60, w: 70, h: 120 } },
       special: { name: 'Smash Step', kind: Kind.Special, startup: 13, active: 6, recovery: 25, advance: 14, damage: 120, chip: 18, hitstun: 24, blockstun: 18, kb: [11, 16], knockdown: true, hitstop: 14, cancel: Cancel.Super, hitbox: { x: 10, y: 40, w: 140, h: 120 } },
@@ -163,9 +166,11 @@ const heroes = [
     moves: {
       light: { name: 'Make Your Point', startup: 4, active: 3, recovery: 7, damage: 30, hitstun: 15, blockstun: 11, kb: [3, 0], hitstop: 7, cancel: ALL, hitbox: { x: 15, y: 138, w: 82, h: 30 } },
       heavy: { name: 'The Final Vote', startup: 9, active: 4, recovery: 19, damage: 90, hitstun: 24, blockstun: 17, kb: [11, 0], hitstop: 12, cancel: SP, hitbox: { x: 15, y: 118, w: 112, h: 46 } },
-      kick: { name: 'Gavel Kick', startup: 10, active: 4, recovery: 17, damage: 78, hitstun: 22, blockstun: 15, kb: [12, 0], hitstop: 10, cancel: SP, hitbox: { x: 20, y: 110, w: 116, h: 60 } },
+      // Axe kick: the heel comes down from above, so it must be blocked standing (an overhead).
+      kick: { name: 'Gavel Kick', guard: Guard.High, startup: 17, active: 4, recovery: 16, damage: 80, hitstun: 24, blockstun: 14, kb: [10, 0], hitstop: 12, cancel: SP, hitbox: { x: 20, y: 60, w: 112, h: 150 } },
       crouchLight: { name: 'Fine Print', guard: Guard.Low, body: 'crouch', startup: 4, active: 3, recovery: 8, damage: 24, hitstun: 14, blockstun: 10, kb: [3, 0], hitstop: 7, cancel: ALL, hitbox: { x: 20, y: 96, w: 100, h: 50 } },
-      sweep: { name: 'Low Blow', guard: Guard.Low, body: 'crouch', startup: 9, active: 4, recovery: 24, damage: 72, knockdown: true, blockstun: 14, kb: [7, 6], hitstop: 10, cancel: Cancel.Super, hitbox: { x: 10, y: 0, w: 112, h: 80 } },
+      // A kneeling low kick that keeps them standing: cancels into specials instead of knocking down.
+      sweep: { name: 'Low Blow', guard: Guard.Low, body: 'crouch', startup: 8, active: 4, recovery: 20, damage: 62, hitstun: 21, blockstun: 12, kb: [8, 0], hitstop: 10, cancel: SP, hitbox: { x: 10, y: 0, w: 112, h: 80 } },
       jumpAttack: { name: 'Take to the Skies', guard: Guard.High, body: 'air', air: true, startup: 5, active: 14, recovery: 4, damage: 70, hitstun: 20, blockstun: 14, kb: [6, 0], hitstop: 10, hitbox: { x: 10, y: 40, w: 116, h: 110 } },
       throw: { name: 'Backroom Deal', kind: Kind.Throw, guard: Guard.Throw, limb: false, startup: 4, active: 2, recovery: 24, damage: 110, knockdown: true, kb: [14, 14], hitstop: 14, hitbox: { x: 10, y: 60, w: 70, h: 110 } },
       // Counter stance: an opponent's strike during the active frames is deflected and answered.
@@ -194,9 +199,11 @@ const heroes = [
     moves: {
       light: { name: 'Lead the Charge', startup: 5, active: 3, recovery: 8, damage: 35, hitstun: 15, blockstun: 11, kb: [3, 0], hitstop: 8, cancel: ALL, hitbox: { x: 15, y: 156, w: 88, h: 32 } },
       heavy: { name: 'Set the Tone', startup: 10, active: 4, recovery: 21, damage: 92, hitstun: 25, blockstun: 18, kb: [12, 0], hitstop: 13, advance: 4, cancel: SP, hitbox: { x: 15, y: 130, w: 122, h: 50 } },
-      kick: { name: 'Front Line', startup: 11, active: 4, recovery: 18, damage: 80, hitstun: 22, blockstun: 15, kb: [13, 0], hitstop: 11, cancel: SP, hitbox: { x: 20, y: 140, w: 124, h: 58 } },
+      // Push kick: shoves them back to his range, hit or blocked.
+      kick: { name: 'Front Line', startup: 11, active: 4, recovery: 18, damage: 76, hitstun: 22, blockstun: 17, kb: [22, 0], hitstop: 11, cancel: SP, hitbox: { x: 20, y: 96, w: 128, h: 70 } },
       crouchLight: { name: 'Check In', guard: Guard.Low, body: 'crouch', startup: 5, active: 3, recovery: 9, damage: 30, hitstun: 14, blockstun: 10, kb: [3, 0], hitstop: 8, cancel: ALL, hitbox: { x: 20, y: 108, w: 98, h: 52 } },
-      sweep: { name: 'Keep Your Ground', guard: Guard.Low, body: 'crouch', startup: 10, active: 4, recovery: 26, damage: 84, knockdown: true, blockstun: 15, kb: [8, 6], hitstop: 11, cancel: Cancel.Super, hitbox: { x: 10, y: 0, w: 118, h: 90 } },
+      // Sliding kick: covers ground along the floor.
+      sweep: { name: 'Keep Your Ground', guard: Guard.Low, body: 'crouch', startup: 10, active: 6, recovery: 24, advance: 11, damage: 84, knockdown: true, blockstun: 15, kb: [8, 6], hitstop: 11, cancel: Cancel.Super, hitbox: { x: 10, y: 0, w: 118, h: 90 } },
       jumpAttack: { name: 'Take the High Ground', guard: Guard.High, body: 'air', air: true, startup: 6, active: 14, recovery: 4, damage: 82, hitstun: 20, blockstun: 14, kb: [6, 0], hitstop: 11, hitbox: { x: 10, y: 50, w: 118, h: 120 } },
       throw: { name: 'Family Business', kind: Kind.Throw, guard: Guard.Throw, limb: false, startup: 4, active: 2, recovery: 24, damage: 130, knockdown: true, kb: [15, 14], hitstop: 15, hitbox: { x: 10, y: 60, w: 74, h: 130 } },
       // The crew charges across the screen: a wide projectile that knocks down.
@@ -229,7 +236,8 @@ const heroes = [
     moves: {
       light: { name: 'Keep the Pressure', startup: 5, active: 3, recovery: 9, damage: 40, hitstun: 15, blockstun: 11, kb: [3, 0], hitstop: 8, cancel: ALL, hitbox: { x: 15, y: 160, w: 92, h: 34 } },
       heavy: { name: 'Bring the Hammer Down', startup: 12, active: 4, recovery: 22, armor: 1, damage: 104, hitstun: 26, blockstun: 19, kb: [13, 0], hitstop: 14, advance: 3, cancel: SP, hitbox: { x: 15, y: 120, w: 124, h: 70 } },
-      kick: { name: 'Shoulder Check', startup: 12, active: 4, recovery: 19, damage: 86, hitstun: 22, blockstun: 15, kb: [14, 0], hitstop: 12, cancel: SP, hitbox: { x: 20, y: 130, w: 126, h: 70 } },
+      // Shoulder tackle: steps in behind the pauldron and soaks one hit.
+      kick: { name: 'Shoulder Check', startup: 13, active: 4, recovery: 19, advance: 8, armor: 1, damage: 86, hitstun: 22, blockstun: 15, kb: [15, 0], hitstop: 12, cancel: SP, hitbox: { x: 20, y: 110, w: 110, h: 100 } },
       crouchLight: { name: 'Low Jab', guard: Guard.Low, body: 'crouch', startup: 5, active: 3, recovery: 10, damage: 32, hitstun: 14, blockstun: 10, kb: [3, 0], hitstop: 8, cancel: ALL, hitbox: { x: 20, y: 110, w: 100, h: 54 } },
       sweep: { name: 'Sweep the Leg', guard: Guard.Low, body: 'crouch', startup: 11, active: 4, recovery: 27, damage: 92, knockdown: true, blockstun: 15, kb: [8, 6], hitstop: 12, cancel: Cancel.Super, hitbox: { x: 10, y: 0, w: 122, h: 90 } },
       jumpAttack: { name: 'Crush From Above', guard: Guard.High, body: 'air', air: true, startup: 6, active: 14, recovery: 4, damage: 90, hitstun: 21, blockstun: 15, kb: [7, 0], hitstop: 13, hitbox: { x: 0, y: 20, w: 130, h: 130 } },

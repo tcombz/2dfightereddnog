@@ -38,6 +38,16 @@ export function moveList(hero: number): MoveLine[] {
       else if (m.advance) text = 'Dashes forward. Knocks down.';
       else text = 'Close-range blast. Knocks down.';
     }
+    if (key === 'kick') {
+      // Read from the data, so each fighter's kick says what makes it theirs.
+      const bits = [m.guard === 2 ? 'Overhead: block it standing' : m.armor ? `Armored (${m.armor} hit), steps in` : m.advance ? 'Steps in as it swings' : m.knockback.x >= 20 ? 'Shoves them back, hit or blocked' : m.startup <= 9 ? 'Fastest kick in the game' : 'Long reach poke'];
+      text = `${bits[0]}.`;
+    }
+    if (key === 'sweep') {
+      const parts = [m.hits > 1 ? `Hits low ${m.hits} times` : 'Hits low', m.advance ? 'slides in' : '', m.knockdown ? 'knocks down' : 'cancels into specials'];
+      text = `${parts.filter(Boolean).join(', ')}.`;
+      text = text[0].toUpperCase() + text.slice(1);
+    }
     if (key === 'super') text = `${m.hits}-hit super. Needs a full meter.`;
     if (key === 'heavy' && m.armor) text = `Armored (${m.armor} hit). Cancels on hit.`;
     return { key, name: m.name, input, note: text, damage };

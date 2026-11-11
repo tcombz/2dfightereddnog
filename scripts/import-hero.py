@@ -28,6 +28,7 @@ from pathlib import Path
 from PIL import Image
 
 AIRBORNE = {'jump', 'jump_attack'}
+PREFER = {'hit_high': 'hit', 'kick_v4': 'kick', 'sweep_v4': 'sweep', 'jump_air': 'jump'}
 STANDING = ['idle', 'block', 'special', 'win', 'walk', 'crouch_light', 'jab6', 'power_up', 'light_punch', 'heavy_punch']
 
 
@@ -103,6 +104,10 @@ def main() -> None:
     for old, new in renames.items():
         if old in anims:
             anims[new] = anims.pop(old)
+    # Newer, hero-specific re-rolls replace the shared template clips when the download has them.
+    for old, new in PREFER.items():
+        if old in anims:
+            anims[new] = anims.pop(old)
 
     # Feet anchor for each canvas size, from a standing frame of that size.
     anchors = {}
@@ -153,7 +158,10 @@ def main() -> None:
             cell.save(frames_dir / name / f'{n:02d}.png')
             pts = opaque_points(cell)
             low = [x for x, y in pts if y > feet_y - 80]
+            head = [x for x, y in pts if y < min(yy for _, yy in pts) + 40]
             metrics[name].append({
+                # How far the head is thrown back behind the feet (hit reactions).
+                'lean': feet_x - sum(head) / max(1, len(head)),
                 'reach': max(x for x, _ in pts) - feet_x,
                 'low': (max(low) - feet_x) if low else 0,
                 'top': feet_y - min(y for _, y in pts),
@@ -179,6 +187,15 @@ def main() -> None:
 
     idle_h = sum(f['top'] for f in metrics['idle']) / len(metrics['idle'])
 
+    def reaction(name):
+        # Start on the biggest recoil, then play out the recovery.
+        if name not in metrics:
+            return []
+        m = [f['lean'] for f in metrics[name]]
+        n = len(m)
+        peak = max(range(1, max(2, n - 1)), key=lambda i: m[i])
+        return list(range(peak, n))
+
     def crouched(a):
         # A low attack never pops back up to standing: drop startup frames taller than a crouch.
         low = [i for i in a['startup'] if metrics[a['anim']][i]['top'] <= 0.84 * idle_h]
@@ -200,7 +217,9 @@ def main() -> None:
         'jump': jump,
         'crouch': list(range(1, count('crouch'))),
         'block': list(range(max(1, block_n // 2), block_n)),
-        'hit': list(range(2, count('hit'))),
+        'hit': reaction('hit') if 'hit' in metrics else [],
+        'hitLow': reaction('hit_low'),
+        'crouchBlock': list(range(1, count('crouch_block'))),
         'fall': [2, 3, 4],
         'lying': list(range(5, count('knockout'))),
         'getup': list(range(count('getup'))),

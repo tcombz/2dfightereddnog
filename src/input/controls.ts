@@ -181,6 +181,18 @@ function loadMaps(): Record<string, PadMap> {
   }
 }
 
+/** Which button labels a pad has, from the browser's id string (names and USB vendor ids). */
+export type PadFamily = 'xbox' | 'ps' | 'switch' | 'generic';
+
+export function padFamily(p: Gamepad): PadFamily {
+  const id = p.id.toLowerCase();
+  if (/playstation|dualshock|dualsense|sony|054c|wireless controller/.test(id)) return 'ps';
+  if (/nintendo|pro controller|joy-con|057e|switch/.test(id)) return 'switch';
+  if (/xbox|xinput|microsoft|045e/.test(id)) return 'xbox';
+  // Most other standard-mapped pads (8BitDo, Logitech, PowerA) print Xbox letters.
+  return p.mapping === 'standard' ? 'xbox' : 'generic';
+}
+
 /** A short readable name for a pad, from the browser's id string. */
 export function padName(p: Gamepad | null): string {
   if (!p) return 'none';
@@ -202,6 +214,13 @@ export class Controls {
   /** While the Controllers screen listens for a button, pads do not drive menus. */
   capturing = false;
   rumbleOn = true;
+  /** What each player last pressed something on, so on-screen prompts can show the right buttons. */
+  readonly device: ['keys' | 'pad', 'keys' | 'pad'] = ['keys', 'keys'];
+  /** The device and player behind the most recent press (shared screens follow whoever touched last). */
+  lastDevice: 'keys' | 'pad' = 'keys';
+  lastPlayer = 0;
+  /** Goes up whenever the above change, so scenes know to redraw their prompts. */
+  deviceStamp = 0;
 
   constructor() {
     try {
@@ -219,6 +238,9 @@ export class Controls {
       }
       if (e.repeat) return;
       this.held.add(e.code);
+      if (p1 !== undefined) this.use(0, 'keys');
+      else if (p2 !== undefined) this.use(1, 'keys');
+      else if (e.code === 'Enter' || e.code === 'Escape' || e.code === 'Backspace') this.use(this.lastPlayer, 'keys');
       if (p1 !== undefined) this.pushFromBits(0, p1);
       if (p2 !== undefined) this.pushFromBits(1, p2);
       if (e.code === 'Enter' || e.code === 'NumpadEnter') this.events.push({ player: -1, action: 'confirm' });
@@ -229,6 +251,14 @@ export class Controls {
     window.addEventListener('blur', () => this.held.clear());
     window.addEventListener('gamepadconnected', (e) => this.attach((e as GamepadEvent).gamepad));
     window.addEventListener('gamepaddisconnected', (e) => this.detach((e as GamepadEvent).gamepad));
+  }
+
+  private use(player: number, dev: 'keys' | 'pad'): void {
+    if (this.device[player] === dev && this.lastDevice === dev && this.lastPlayer === player) return;
+    this.device[player] = dev;
+    this.lastDevice = dev;
+    this.lastPlayer = player;
+    this.deviceStamp += 1;
   }
 
   private pushFromBits(player: number, bits: number): void {
@@ -357,6 +387,7 @@ export class Controls {
           if (down && !this.menuPrev[i][k]) this.events.push({ player: i, action: actions[k] });
         });
         this.menuPrev[i] = now;
+        if (bits !== 0 || now.some((d) => d)) this.use(i, 'pad');
       }
       this.padPrev[i] = bits;
       this.padBitsNow[i] = this.capturing ? 0 : bits;

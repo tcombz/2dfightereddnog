@@ -80,6 +80,9 @@ export interface HeroArt {
   /** Forward dash run cycle and back-dash hop (empty: fall back to walk and jump frames). */
   dash: number[];
   backdash: number[];
+  /** Hit while crouching, and guarding low (empty: fall back to crouch frames). */
+  hitLow: number[];
+  crouchBlock: number[];
   attacks: Record<MoveKey, AttackArt>;
 }
 
@@ -104,6 +107,8 @@ interface ArtJson {
   powerUp: number[];
   dash?: number[];
   backdash?: number[];
+  hitLow?: number[];
+  crouchBlock?: number[];
   attacks: Record<string, AttackArt>;
 }
 
@@ -115,6 +120,8 @@ function fromJson(j: ArtJson): ArtFields {
     scale, cellW, cellH, feetX, feetY, face, idle, walk, jump, crouch, block, hit, fall, lying, getup, win, powerUp,
     dash: j.dash ?? [],
     backdash: j.backdash ?? [],
+    hitLow: j.hitLow ?? [],
+    crouchBlock: j.crouchBlock ?? [],
     attacks: j.attacks as Record<MoveKey, AttackArt>,
   };
 }
@@ -196,6 +203,16 @@ function spread(frames: number[], t: number, total: number): number {
   return frames[Math.min(frames.length - 1, Math.max(0, i))];
 }
 
+/**
+ * A hit reaction: snap straight to the biggest recoil (the first listed frame) and hold it while
+ * the blow lands, then ease back through the rest. Hits read as hits instead of a slow flinch.
+ */
+function impact(frames: number[], t: number, total: number): number {
+  const hold = Math.max(3, total >> 2);
+  if (t < hold || frames.length === 1) return frames[0];
+  return frames[Math.min(frames.length - 1, 1 + Math.floor(((t - hold) * (frames.length - 1)) / Math.max(1, total - hold)))];
+}
+
 const loop = (frames: number[], t: number, ticksPerFrame: number): number =>
   frames[Math.floor(t / ticksPerFrame) % frames.length];
 
@@ -235,10 +252,21 @@ export function poseFor(art: HeroArt, f: FighterState, clock: number, celebratin
     case FS.Crouch:
       return pose('crouch', hold(art.crouch, f.stateTick, 2));
     case FS.Block:
-      return f.low ? pose('crouch', art.crouch[art.crouch.length - 1]) : pose('block', hold(art.block, f.stateTick, 2));
-    case FS.Hitstun:
-      if (f.low) return pose('crouch', art.crouch[art.crouch.length - 2]);
-      return pose('hit', spread(art.hit, f.stateTick, f.stateTick + f.stunTimer));
+      if (f.low) {
+        return art.crouchBlock.length
+          ? pose('crouch_block', hold(art.crouchBlock, f.stateTick, 2))
+          : pose('crouch', art.crouch[art.crouch.length - 1]);
+      }
+      return pose('block', hold(art.block, f.stateTick, 2));
+    case FS.Hitstun: {
+      const total = f.stateTick + f.stunTimer;
+      // Hit in the air (a juggle): tumble with the knockdown fall frames, not a standing flinch.
+      if (f.y > 0) return pose('knockout', art.fall[f.vy > 4 ? 0 : f.vy > -4 ? 1 : 2]);
+      if (f.low) {
+        return art.hitLow.length ? pose('hit_low', impact(art.hitLow, f.stateTick, total)) : pose('crouch', art.crouch[art.crouch.length - 2]);
+      }
+      return pose('hit', impact(art.hit, f.stateTick, total));
+    }
     case FS.Knockdown:
     case FS.KO: {
       if (f.y > 0 || f.vy > 0) {

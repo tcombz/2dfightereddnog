@@ -33,6 +33,7 @@ import { heroInfo } from '../heroInfo';
 import { Hud } from '../hud';
 import { SuperFx } from '../superFx';
 import { moveList } from '../moves';
+import { backHint, inputText } from '../prompts';
 import { STAGES } from '../stages';
 import { ComboTracker, TRIALS, stepLabel } from '../trials';
 import type { StageDef } from '../stages';
@@ -64,6 +65,8 @@ export class FightScene extends Phaser.Scene {
   private sprites: Phaser.GameObjects.Image[] = [];
   /** Rally: a hot glow behind a fighter who is low on health and building meter fast. */
   private rallyGlow: Phaser.GameObjects.Image[] = [];
+  private promptStamp = -1;
+  private lastSmear = [-1, -1];
   private shadows: Phaser.GameObjects.Image[] = [];
   private projViews: ProjectileView[] = [];
   private darken!: Phaser.GameObjects.Rectangle;
@@ -239,6 +242,11 @@ export class FightScene extends Phaser.Scene {
 
   update(_t: number, delta: number): void {
     controls.poll();
+    // A trial's buttons follow whatever player 1 is holding: pad buttons or keyboard words.
+    if (controls.deviceStamp !== this.promptStamp) {
+      this.promptStamp = controls.deviceStamp;
+      if (this.trialOn) this.buildTrial();
+    }
     for (const e of controls.take()) {
       if (this.paused) this.pauseInput(e.action);
       else if (e.action === 'pause' && this.state.phase !== Phase.MatchEnd) this.openPause();
@@ -539,6 +547,10 @@ export class FightScene extends Phaser.Scene {
         .setFlipX(f.facing !== 1)
         .setPosition(f.x + jitter, GROUND_Y - f.y)
         .setDepth(f.state === FS.Attack ? 32 : 30 + i);
+      // Weight: squash for a moment on landing, stretch a touch on take-off.
+      const sinceLanding = s.tick - this.landedAt[i];
+      const squash = sinceLanding >= 0 && sinceLanding < 5 ? (5 - sinceLanding) * 0.012 : f.state === FS.Jump && f.stateTick < 5 ? -(5 - f.stateTick) * 0.008 : 0;
+      sprite.setScale(art.scale * (1 + squash), art.scale * (1 - squash));
 
       // Flashes: white on hit, red on counter, blue on block, glow during a super flash.
       if (f.state === FS.Hitstun && f.stateTick < 3) sprite.setTintFill(0xffffff);
@@ -550,10 +562,18 @@ export class FightScene extends Phaser.Scene {
       const lift = Math.min(1, f.y / 240);
       shadow.setPosition(f.x, GROUND_Y + 2).setScale(1.1 - lift * 0.5, 1).setAlpha(0.75 - lift * 0.45);
 
-      // Afterimages on dashes and supers.
+      // Afterimages on dashes and supers, and a short smear as a big strike swings through.
       const superActive = f.state === FS.Attack && f.moveId === Move.Super;
+      let swing = false;
+      if (f.state === FS.Attack && f.moveId !== Move.Light && f.moveId !== Move.CrouchLight && f.moveId !== Move.Throw && !superActive) {
+        const m = getMove(f.hero, f.moveId);
+        swing = f.stateTick >= m.startup - 3 && f.stateTick < m.startup + Math.min(m.active, 4);
+      }
       if ((f.state === FS.Dash && this.clock % 3 === 0) || (superActive && this.clock % 2 === 0 && s.hitstop === 0)) {
         this.fx.afterimage(sprite, heroInfo(HEROES[f.hero].id).color);
+      } else if (swing && s.hitstop === 0 && (s.tick & 1) === 0 && this.lastSmear[i] !== s.tick) {
+        this.lastSmear[i] = s.tick;
+        this.fx.afterimage(sprite, heroInfo(HEROES[f.hero].id).accent, 0.3, 160);
       }
 
       // Projectile.
@@ -809,7 +829,7 @@ export class FightScene extends Phaser.Scene {
     goldFill(title);
     const chips = t.steps.map(([key, link]) =>
       this.add
-        .text(0, y + 30, (link === '' ? '' : link === ',' ? ',  ' : '  >  ') + stepLabel(key, simple), body(18, CSS.ink))
+        .text(0, y + 30, (link === '' ? '' : link === ',' ? ',  ' : '  >  ') + inputText(stepLabel(key, simple), 0), body(18, CSS.ink))
         .setShadow(0, 2, '#000000', 3),
     );
     const total = chips.reduce((w, c) => w + c.width, 0);
@@ -818,7 +838,7 @@ export class FightScene extends Phaser.Scene {
       c.setX(x);
       x += c.width;
     }
-    const tip = this.add.text(VIEW_W / 2, y + 60, `${t.tip}   ·   F5 next   ·   F4 off`, body(12, CSS.muted)).setOrigin(0.5, 0);
+    const tip = this.add.text(VIEW_W / 2, y + 60, `${inputText(t.tip, 0)}   ·   F5 next   ·   F4 off`, body(12, CSS.muted)).setOrigin(0.5, 0);
     const w = Math.max(total, tip.width, title.width) + 44;
     const bg = this.add.rectangle(VIEW_W / 2, y - 8, w, 88, 0x0b0e1c, 0.82).setOrigin(0.5, 0).setStrokeStyle(2, C.gold, 0.55);
     this.trialObjs = [bg, title, ...chips, tip];
@@ -899,10 +919,10 @@ export class FightScene extends Phaser.Scene {
     moveList(f.hero).forEach((m, i) => {
       const y = 92 + i * 36;
       objs.push(this.add.text(60, y, m.name, display(16, CSS.ink, 4)));
-      objs.push(this.add.text(300, y, m.input, body(16, CSS.gold)));
+      objs.push(this.add.text(300, y, inputText(m.input, -1), body(16, CSS.gold)));
       objs.push(this.add.text(600, y + 1, m.note, body(13, CSS.muted)));
     });
-    objs.push(this.add.text(VIEW_W / 2, VIEW_H - 44, 'Back: Esc, G or B', body(13, CSS.muted)).setOrigin(0.5));
+    objs.push(this.add.text(VIEW_W / 2, VIEW_H - 44, backHint(), body(13, CSS.muted)).setOrigin(0.5));
     this.moveListObjects = objs;
     this.ui.add(objs);
   }

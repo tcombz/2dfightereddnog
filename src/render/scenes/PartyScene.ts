@@ -4,6 +4,7 @@ import { controls } from '../../input/controls';
 import { sfx } from '../audio';
 import { C, CSS, VIEW_H, VIEW_W } from '../config';
 import { newParty } from '../party';
+import { menuHint, onPad } from '../prompts';
 import { Menu, backdrop, body, display, goTo, goldFill } from '../ui';
 
 const MAX_PLAYERS = 12;
@@ -14,6 +15,7 @@ export class PartyScene extends Phaser.Scene {
   private hint!: Phaser.GameObjects.Text;
   private nameBox?: HTMLInputElement;
   private menu!: Menu;
+  private promptStamp = -1;
 
   constructor() {
     super('party');
@@ -154,11 +156,19 @@ export class PartyScene extends Phaser.Scene {
         ? 'Nobody yet.\nType names in the box,\nor ADD PLAYER from a controller.'
         : this.names.map((n, i) => `${i + 1}.  ${n}${i === 0 ? '   (player 1 side)' : i === 1 ? '   (player 2 side)' : ''}`).join('\n'),
     );
-    this.hint.setText('Keyboard: type a name and press Enter (Enter on an empty box starts)  ·  Pads: use the menu');
+    this.hint.setText(
+      onPad(-1)
+        ? `Controller: ADD PLAYER adds "Player N" (type real names on a keyboard)  ·  ${menuHint()}`
+        : 'Keyboard: type a name and press Enter (Enter on an empty box starts)  ·  Pads: use the menu',
+    );
   }
 
   update(): void {
     controls.poll();
+    if (controls.deviceStamp !== this.promptStamp) {
+      this.promptStamp = controls.deviceStamp;
+      this.refresh();
+    }
     for (const e of controls.take()) {
       if (e.action === 'back' || e.action === 'pause') {
         this.leave('title');

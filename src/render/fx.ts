@@ -546,11 +546,11 @@ export class Effects {
   }
 
   /** A fading silhouette copy of a sprite (dashes and supers). */
-  afterimage(src: Phaser.GameObjects.Image, color: number): void {
+  afterimage(src: Phaser.GameObjects.Image, color: number, alpha = 0.45, ms = 260): void {
     const g = this.add(this.scene.add.image(src.x, src.y, src.texture.key, src.frame.name), 25);
     g.setOrigin(src.originX, src.originY).setScale(src.scaleX, src.scaleY).setFlipX(src.flipX).setRotation(src.rotation);
-    g.setTintFill(color).setAlpha(0.45).setBlendMode(Phaser.BlendModes.ADD);
-    this.scene.tweens.add({ targets: g, alpha: 0, duration: 260, onComplete: () => g.destroy() });
+    g.setTintFill(color).setAlpha(alpha).setBlendMode(Phaser.BlendModes.ADD);
+    this.scene.tweens.add({ targets: g, alpha: 0, duration: ms, onComplete: () => g.destroy() });
   }
 
   /** Small sparks trailing a projectile. */
