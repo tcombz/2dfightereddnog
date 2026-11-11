@@ -38,9 +38,15 @@
     `superFx.ts` super cinematics; `config.ts` sizes, colours, game title
 - `src/input/controls.ts` keyboard (two players on one keyboard) and gamepads, plus menu events
 - `src/ai/cpu.ts` computer opponent (easy, normal, hard) and the training dummy's auto-guard
-- `assets/heroes/<id>/` sprite frames, `atlas.png` and `atlas.json` (repack with
-  `python3 scripts/pack-hero-atlas.py <id>`). Frames are feet-aligned on a 200 px cell, anchor
-  (100, 170), and drawn at 2x, so heroes are about 240 px tall.
+- `assets/heroes/<id>/` sprite frames, `atlas.png`, `atlas.json`, `art.json` and
+  `art-overrides.json`. Heroes are PixelLab characters (about 150-165 px tall standing). Import a
+  character download with `python3 -I scripts/import-hero.py <unzipped dir> <id> <world height>`
+  (feet-aligned frames, the east base, and `art.json`: draw scale, cell, feet anchor, face box and
+  which frames play for each state and attack, measured from the frames), then repack with
+  `python3 scripts/pack-hero-atlas.py <id>`. Hand fixes go in `art-overrides.json` (skip, rename,
+  clean, recolor, or any `art.json` key), never in `art.json`, which the import overwrites. The
+  draw scale keeps each hero's world height matched to his hurtbox; the fight camera zooms to
+  1.28x when the fighters are close.
 - `assets/stages/` stage art (768x320, drawn at 2x); `assets/audio/` sound effects and music loops
 - `tests/sim.test.ts` determinism, match flow, guarding, specials, combos (every trial route for every
   pair of fighters), movement, training and data tests

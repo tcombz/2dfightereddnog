@@ -5,6 +5,7 @@ import {
   FS,
   FX,
   HEROES,
+  INTRO_TICKS,
   Input,
   Kind,
   MOVE_KEYS,
@@ -443,6 +444,12 @@ export class FightScene extends Phaser.Scene {
         const n = art.powerUp.length;
         const k = Math.min(n - 1, Math.floor(((SUPER_FREEZE - s.hitstop) * n) / SUPER_FREEZE));
         pose.frame = frameName('power_up', art.powerUp[k]);
+      }
+      // Round intro: each fighter powers up once as the round is called, player 2 a beat later.
+      if (s.phase === Phase.Intro && f.state === FS.Idle && art.powerUp.length > 0) {
+        const n = art.powerUp.length;
+        const t = INTRO_TICKS - s.phaseTimer - 10 - i * 22;
+        if (t >= 0 && t < 64) pose.frame = frameName('power_up', art.powerUp[Math.min(n - 1, Math.floor((t * n) / 64))]);
       }
       // Settle into stance: knees bend on landing, and the fighter rises out of a crouch.
       if ((f.state === FS.Idle || f.state === FS.Walk) && !won) {
