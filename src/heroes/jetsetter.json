@@ -7,15 +7,15 @@
   "walkSpeed": 5,
   "backWalkSpeed": 4,
   "jumpVelocity": 21,
-  "jumpSpeedX": 6,
+  "jumpSpeedX": 7,
   "gravity": 1,
   "width": 72,
   "height": 232,
   "crouchHeight": 150,
-  "dashSpeed": 12,
-  "dashTicks": 16,
-  "backdashSpeed": 10,
-  "backdashTicks": 18
+  "dashSpeed": 15,
+  "dashTicks": 13,
+  "backdashSpeed": 12,
+  "backdashTicks": 15
  },
  "hurtboxes": {
   "stand": [

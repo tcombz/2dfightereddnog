@@ -160,7 +160,7 @@ export class SelectScene extends Phaser.Scene {
         const art = artFor(hero);
         side.preview.setTexture(art.key, frameName('idle', 0)).setVisible(true).setOrigin(...feetOrigin(art, i === 1)).setScale(menuScale(art, 2.3));
         side.name.setText(info.title);
-        side.style.setText(info.style);
+        side.style.setText(`${info.archetype}  ·  ${info.style}`);
         side.tagline.setText(`"${info.tagline}"`);
       } else {
         side.preview.setVisible(false);

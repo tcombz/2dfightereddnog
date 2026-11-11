@@ -166,7 +166,7 @@ export class Cpu {
       if (this.counterHero(me) && opp.state === FS.Attack && s.tick >= this.reactAt && this.lastCounter !== key) {
         this.lastCounter = key;
         const om = getMove(opp.hero, opp.moveId);
-        if (om.kind !== Kind.Throw && !om.projectile && opp.stateTick < om.startup - 2 && this.chance(L.antiAir * 0.5)) {
+        if (om.kind !== Kind.Throw && !om.projectile && opp.stateTick < om.startup - 1 && this.chance(L.antiAir * 0.8)) {
           return SPECIAL;
         }
       }

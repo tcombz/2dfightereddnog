@@ -72,7 +72,33 @@ again if the group prefers something else.
   and KOs.
 - **On-ramps**: simple specials (one direction + special), combo trials in training, arcade mode.
 
-## 5. What to watch at the party
+## 5. Refinement pass (applying the analysis)
+
+- **Punish counters** (Street Fighter 6): hitting an attack while it recovers is called out as
+  PUNISH, with 1.25x damage and extra stun, so reading a whiff pays off. Counter hits on startup
+  keep their bonus too.
+- **Chip KO from supers**: a blocked super finishes an opponent on their last sliver, and a round
+  ended by a super is called out as SUPER FINISH.
+- **Hit shake**: whoever is hit jitters for the length of the impact freeze, the classic way to
+  sell a hit.
+- **Layered impact sounds**: a deep crunch under every big hit, a counter crack, a steel clang on
+  armor, a teleport crackle for the Rift, a ground slam for Eddnog, a card flurry for Chris, and a
+  cinematic boom on every KO.
+- **One clear plan per fighter**: the select screen names each fighter's archetype (RUSHDOWN,
+  ALL-ROUNDER, TRICKSTER, ZONER, GRAPPLER) and the How to Play page gives their plan in one line.
+- **Identity tuning**: the Jetsetter jumps further and dashes faster (mobility), Chris walks
+  faster, his counter stance hits harder and his cards fly faster (trickster payoff), Eddnog's Bear
+  Hug reaches further (grappler), the Leader's Crew Call comes out a little slower and his health
+  and Golden Rule damage drop slightly (he was the strongest).
+- **Pacing check**: rounds between computer players average 32.5 s with no time-outs, and the
+  median combo takes about 18% of a health bar, close to the "short combos that hurt" target, so
+  damage was left alone.
+
+Hard-vs-hard computer win rates after the pass (64 matches each): Rogue 56%, Jetsetter 61%,
+Chris 34%, Leader 59%, Eddnog 50%. Chris relies on reading attacks, which the computer does
+poorly; judge him in human play.
+
+## 6. What to watch at the party
 
 - Whether Eddnog's armor feels fair to fight against: if he walks through too much, drop Bulwark
   Rush to one hit of armor.

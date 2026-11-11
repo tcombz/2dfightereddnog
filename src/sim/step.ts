@@ -729,7 +729,9 @@ function applyHit(s: GameState, att: FighterState, def: FighterState, c: Contact
     }
   }
 
-  if (guarding(def, c.guard, dir)) {
+  // A blocked super can still finish someone on their last sliver of health (chip KO).
+  const chipKo = c.kind === Kind.Super && def.health <= d.chipDamage;
+  if (!chipKo && guarding(def, c.guard, dir)) {
     def.health = Math.max(1, def.health - d.chipDamage);
     if (def.state !== FS.Block) setState(def, FS.Block);
     def.low = def.prevInput & Input.Down ? 1 : 0;
@@ -744,18 +746,20 @@ function applyHit(s: GameState, att: FighterState, def: FighterState, c: Contact
     return;
   }
 
-  // Counter hit: caught during the start of an attack.
+  // Counter hit: caught starting an attack. Punish: caught recovering from one (a whiff read).
   let counter = false;
+  let punish = false;
   if (def.state === FS.Attack) {
     const dm = getMove(def.hero, def.moveId);
     counter = def.stateTick < dm.startup + dm.active;
+    punish = !counter;
   }
   const juggled = def.state === FS.Knockdown;
   const inCombo = def.state === FS.Hitstun || juggled;
   def.combo = inCombo ? def.combo + 1 : 1;
   if (def.combo === 1) def.comboDamage = 0;
   let dmg = (d.damage * COMBO_SCALE[Math.min(def.combo - 1, COMBO_SCALE.length - 1)]) >> 4;
-  if (counter) dmg = (dmg * 5) >> 2;
+  if (counter || punish) dmg = (dmg * 5) >> 2;
   dmg = Math.max(1, dmg);
   def.health -= dmg;
   def.comboDamage += dmg;
@@ -775,7 +779,7 @@ function applyHit(s: GameState, att: FighterState, def: FighterState, c: Contact
     def.vy = Math.max(d.knockback.y, LAUNCH_MIN_VY);
   } else {
     setState(def, FS.Hitstun);
-    def.stunTimer = d.hitstun + (counter ? 4 : 0);
+    def.stunTimer = d.hitstun + (counter ? 4 : punish ? 6 : 0);
     def.vx = 0;
     def.vy = 0;
     def.push = dir * d.knockback.x;
@@ -785,7 +789,7 @@ function applyHit(s: GameState, att: FighterState, def: FighterState, c: Contact
   if (c.kind !== Kind.Super) att.meter = Math.min(METER_MAX, att.meter + d.damage);
   def.meter = Math.min(METER_MAX, def.meter + (dmg >> 1));
   s.hitstop = Math.max(s.hitstop, ko ? KO_FREEZE : d.hitstop);
-  setFx(def, counter ? FX.Counter : c.kind === Kind.Throw ? FX.Throw : FX.Hit, c.x, c.y, d.hitstop);
+  setFx(def, c.kind === Kind.Throw ? FX.Throw : counter ? FX.Counter : punish ? FX.Punish : FX.Hit, c.x, c.y, d.hitstop);
 }
 
 /** The defender is in the active frames of a counter stance and this is a strike it can answer. */

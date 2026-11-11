@@ -286,7 +286,7 @@ export class FightScene extends Phaser.Scene {
       const y = GROUND_Y - f.fxY;
       const dir = f.x >= att.x ? 1 : -1;
 
-      if (f.fx === FX.Hit || f.fx === FX.Counter || f.fx === FX.Throw) {
+      if (f.fx === FX.Hit || f.fx === FX.Counter || f.fx === FX.Punish || f.fx === FX.Throw) {
         const projectileHit = att.state !== FS.Attack || att.moveHits === 0;
         const moveId = att.state === FS.Attack ? att.moveId : -1;
         const kind = moveId >= 0 ? getMove(att.hero, moveId).kind : Kind.Special;
@@ -294,7 +294,7 @@ export class FightScene extends Phaser.Scene {
         const attInfo = heroInfo(HEROES[att.hero].id);
         // Every hit carries the attacker's identity: his colours, his particles, his sound on the big ones.
         const color = special ? attInfo.accent : f.fxPower >= 10 ? attInfo.color : 0xfff3c4;
-        this.fx.hit(x, y, dir, f.fxPower, color, f.fx === FX.Counter);
+        this.fx.hit(x, y, dir, f.fxPower, color, f.fx === FX.Counter || f.fx === FX.Punish);
         this.fx.themed(attInfo.hitStyle, x, y, dir, f.fxPower);
         if (f.fx === FX.Throw) sfx(this, 'throw');
         else if (moveId === Move.Light || moveId === Move.CrouchLight) sfx(this, 'hit_light', 1, (Math.random() - 0.5) * 200);
@@ -302,11 +302,15 @@ export class FightScene extends Phaser.Scene {
         else sfx(this, 'hit_heavy', 1, (Math.random() - 0.5) * 150);
         if (special) sfx(this, this.signature(1 - i), 0.55);
         else if (f.fxPower >= 10) sfx(this, attInfo.hitSfx, 0.35, (Math.random() - 0.5) * 200);
+        // A deep crunch under every big hit.
+        if (f.fxPower >= 10) sfx(this, 'hit_crunch', 0.55, (Math.random() - 0.5) * 150);
         if (f.fxPower >= 10) this.cameras.main.shake(90 + f.fxPower * 6, 0.002 + f.fxPower * 0.00035);
         // Rumble: the one who got hit feels it most.
         controls.rumble(i, Math.min(1, 0.25 + f.fxPower * 0.045), 70 + f.fxPower * 9);
         controls.rumble(1 - i, Math.min(0.6, 0.1 + f.fxPower * 0.02), 50);
         if (f.fx === FX.Counter) this.fx.popText(f.x, GROUND_Y - f.y - 250, 'COUNTER', '#ff6a4a');
+        if (f.fx === FX.Punish) this.fx.popText(f.x, GROUND_Y - f.y - 250, 'PUNISH', '#ffb030');
+        if (f.fx === FX.Counter || f.fx === FX.Punish) sfx(this, 'counter', 0.7);
       } else if (f.fx === FX.Block) {
         this.fx.block(x, y, dir, heroInfo(HEROES[f.hero].id).accent);
         sfx(this, 'block', 0.9, (Math.random() - 0.5) * 200);
@@ -316,8 +320,8 @@ export class FightScene extends Phaser.Scene {
         this.fx.block(x, y, dir, 0xfff2c0);
         this.fx.ring(x, y, heroInfo(HEROES[f.hero].id).accent, 1.1);
         this.fx.popText(f.x, GROUND_Y - f.y - 260, 'ARMOR', '#ffe08a');
-        sfx(this, 'block', 1, -700);
-        sfx(this, 'hit_heavy', 0.5, -500);
+        sfx(this, 'armor', 0.9);
+        sfx(this, 'block', 0.6, -700);
         this.cameras.main.shake(120, 0.004);
         controls.rumble(i, 0.5, 110);
       } else if (f.fx === FX.Tech) {
@@ -359,7 +363,8 @@ export class FightScene extends Phaser.Scene {
         this.fx.ring(p.x, GROUND_Y - p.y - 120, accent, 1.2);
         this.fx.ring(f.x, GROUND_Y - f.y - 120, accent, 1.6);
         this.fx.themed(heroInfo(HEROES[f.hero].id).hitStyle, f.x, GROUND_Y - f.y - 120, f.facing, 12);
-        sfx(this, 'zap', 0.9);
+        sfx(this, 'blink', 0.9);
+        sfx(this, 'zap', 0.5);
         this.cameras.main.flash(70, 160, 220, 255);
       }
       if (f.state === FS.Dash && p.state !== FS.Dash) {
@@ -408,8 +413,15 @@ export class FightScene extends Phaser.Scene {
       const w = s.fighters[winner];
       if (w.health >= HEROES[w.hero].stats.maxHealth) sub = 'PERFECT';
     }
+    // A super that ends the round gets its own call.
+    const finisher = winner === Result.P1 || winner === Result.P2 ? s.fighters[winner] : null;
+    if (ko && finisher && finisher.state === FS.Attack && finisher.moveId === Move.Super) {
+      sub = sub ? `SUPER FINISH · ${sub}` : 'SUPER FINISH';
+      this.cameras.main.flash(420, 255, 220, 120);
+    }
     if (ko) {
       sfx(this, 'ko');
+      sfx(this, 'ko_boom', 0.8);
       this.slowmo.rate = 0.3;
       controls.rumble(0, 1, 500);
       controls.rumble(1, 1, 500);
@@ -496,11 +508,14 @@ export class FightScene extends Phaser.Scene {
         if (sinceLand >= 0 && sinceLand < 6) pose.frame = frameName('crouch', c[Math.max(0, Math.min(c.length - 1, 2) - (sinceLand >> 1))]);
         else if (sinceStand >= 0 && sinceStand < 4) pose.frame = frameName('crouch', c[Math.max(0, c.length - 3 - (sinceStand >> 1))]);
       }
+      // Hit shake: whoever was just hit (or blocked) jitters for the length of the impact freeze.
+      const shaken = s.hitstop > 0 && s.freezeSlot < 0 && (f.state === FS.Hitstun || f.state === FS.Knockdown || f.state === FS.KO || (f.state === FS.Block && f.stunTimer > 0));
+      const jitter = shaken ? ((this.clock & 1) === 0 ? 1 : -1) * Math.min(7, 2 + (s.hitstop >> 1)) : 0;
       sprite
         .setFrame(pose.frame)
         .setOrigin(...feetOrigin(art, f.facing !== 1))
         .setFlipX(f.facing !== 1)
-        .setPosition(f.x, GROUND_Y - f.y)
+        .setPosition(f.x + jitter, GROUND_Y - f.y)
         .setDepth(f.state === FS.Attack ? 32 : 30 + i);
 
       // Flashes: white on hit, red on counter, blue on block, glow during a super flash.

@@ -121,8 +121,8 @@ const heroes = [
     name: 'The Jetsetter',
     color: '#e0b030',
     stats: {
-      maxHealth: 1050, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 21, jumpSpeedX: 6, gravity: 1,
-      width: 72, height: 232, crouchHeight: 150, dashSpeed: 12, dashTicks: 16, backdashSpeed: 10, backdashTicks: 18,
+      maxHealth: 1050, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 21, jumpSpeedX: 7, gravity: 1,
+      width: 72, height: 232, crouchHeight: 150, dashSpeed: 15, dashTicks: 13, backdashSpeed: 12, backdashTicks: 15,
     },
     bodies: {
       stand: { x: -36, y: 0, w: 72, h: 232 },
@@ -152,7 +152,7 @@ const heroes = [
     color: '#b8323f',
     // Short in stature: a smaller body, so some high attacks sail over him.
     stats: {
-      maxHealth: 980, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 21, jumpSpeedX: 6, gravity: 1,
+      maxHealth: 1000, walkSpeed: 6, backWalkSpeed: 5, jumpVelocity: 21, jumpSpeedX: 6, gravity: 1,
       width: 64, height: 208, crouchHeight: 138, dashSpeed: 13, dashTicks: 15, backdashSpeed: 11, backdashTicks: 16,
     },
     bodies: {
@@ -162,17 +162,17 @@ const heroes = [
     },
     moves: {
       light: { name: 'Make Your Point', startup: 4, active: 3, recovery: 7, damage: 30, hitstun: 15, blockstun: 11, kb: [3, 0], hitstop: 7, cancel: ALL, hitbox: { x: 15, y: 138, w: 82, h: 30 } },
-      heavy: { name: 'The Final Vote', startup: 9, active: 4, recovery: 19, damage: 84, hitstun: 24, blockstun: 17, kb: [11, 0], hitstop: 12, cancel: SP, hitbox: { x: 15, y: 118, w: 112, h: 46 } },
-      kick: { name: 'Gavel Kick', startup: 10, active: 4, recovery: 17, damage: 72, hitstun: 22, blockstun: 15, kb: [12, 0], hitstop: 10, cancel: SP, hitbox: { x: 20, y: 110, w: 116, h: 60 } },
+      heavy: { name: 'The Final Vote', startup: 9, active: 4, recovery: 19, damage: 90, hitstun: 24, blockstun: 17, kb: [11, 0], hitstop: 12, cancel: SP, hitbox: { x: 15, y: 118, w: 112, h: 46 } },
+      kick: { name: 'Gavel Kick', startup: 10, active: 4, recovery: 17, damage: 78, hitstun: 22, blockstun: 15, kb: [12, 0], hitstop: 10, cancel: SP, hitbox: { x: 20, y: 110, w: 116, h: 60 } },
       crouchLight: { name: 'Fine Print', guard: Guard.Low, body: 'crouch', startup: 4, active: 3, recovery: 8, damage: 24, hitstun: 14, blockstun: 10, kb: [3, 0], hitstop: 7, cancel: ALL, hitbox: { x: 20, y: 96, w: 100, h: 50 } },
       sweep: { name: 'Low Blow', guard: Guard.Low, body: 'crouch', startup: 9, active: 4, recovery: 24, damage: 72, knockdown: true, blockstun: 14, kb: [7, 6], hitstop: 10, cancel: Cancel.Super, hitbox: { x: 10, y: 0, w: 112, h: 80 } },
       jumpAttack: { name: 'Take to the Skies', guard: Guard.High, body: 'air', air: true, startup: 5, active: 14, recovery: 4, damage: 70, hitstun: 20, blockstun: 14, kb: [6, 0], hitstop: 10, hitbox: { x: 10, y: 40, w: 116, h: 110 } },
       throw: { name: 'Backroom Deal', kind: Kind.Throw, guard: Guard.Throw, limb: false, startup: 4, active: 2, recovery: 24, damage: 110, knockdown: true, kb: [14, 14], hitstop: 14, hitbox: { x: 10, y: 60, w: 70, h: 110 } },
       // Counter stance: an opponent's strike during the active frames is deflected and answered.
-      special: { name: 'The Diplomacy', kind: Kind.Special, counter: 1, startup: 3, active: 22, recovery: 20, damage: 120, chip: 0, hitstun: 26, blockstun: 18, kb: [10, 18], knockdown: true, hitstop: 16, cancel: Cancel.Super },
+      special: { name: 'The Diplomacy', kind: Kind.Special, counter: 1, startup: 3, active: 22, recovery: 20, damage: 145, chip: 0, hitstun: 26, blockstun: 18, kb: [10, 18], knockdown: true, hitstop: 16, cancel: Cancel.Super },
       projectile: {
         name: 'Wild Card', kind: Kind.Special, startup: 12, active: 1, recovery: 26,
-        projectile: { x: 60, y: 120, w: 52, h: 36, speed: 12, life: 95, damage: 62, chip: 10, hitstun: 19, blockstun: 15, kb: [9, 0], hitstop: 8 },
+        projectile: { x: 60, y: 120, w: 52, h: 36, speed: 14, life: 82, damage: 66, chip: 10, hitstun: 19, blockstun: 15, kb: [9, 0], hitstop: 8 },
       },
       rising: { name: 'Checkmate', kind: Kind.Special, juggle: 1, cancel: Cancel.Super, startup: 4, active: 9, recovery: 30, invuln: 7, damage: 118, chip: 16, hitstun: 30, blockstun: 20, kb: [6, 22], knockdown: true, hitstop: 12, hitbox: { x: 0, y: 90, w: 88, h: 170 } },
       super: { name: 'World Stage', kind: Kind.Super, juggle: 1, meterCost: 1000, startup: 8, active: 26, recovery: 28, hits: 5, rehit: 5, invuln: 18, damage: 62, chip: 22, hitstun: 32, blockstun: 20, kb: [4, 22], knockdown: true, hitstop: 8, hitbox: { x: -60, y: 0, w: 320, h: 270 } },
@@ -183,7 +183,7 @@ const heroes = [
     name: 'The Leader',
     color: '#d4a017',
     stats: {
-      maxHealth: 1000, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 21, jumpSpeedX: 6, gravity: 1,
+      maxHealth: 980, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 21, jumpSpeedX: 6, gravity: 1,
       width: 76, height: 236, crouchHeight: 152, dashSpeed: 12, dashTicks: 15, backdashSpeed: 10, backdashTicks: 18,
     },
     bodies: {
@@ -201,12 +201,12 @@ const heroes = [
       throw: { name: 'Family Business', kind: Kind.Throw, guard: Guard.Throw, limb: false, startup: 4, active: 2, recovery: 24, damage: 130, knockdown: true, kb: [15, 14], hitstop: 15, hitbox: { x: 10, y: 60, w: 74, h: 130 } },
       // The crew charges across the screen: a wide projectile that knocks down.
       special: {
-        name: 'The Crew Call', kind: Kind.Special, startup: 16, active: 1, recovery: 30,
+        name: 'The Crew Call', kind: Kind.Special, startup: 18, active: 1, recovery: 32,
         projectile: { x: 20, y: 0, w: 130, h: 180, speed: 10, life: 70, damage: 88, chip: 16, hitstun: 24, blockstun: 18, kb: [12, 14], knockdown: true, hitstop: 12 },
       },
       projectile: {
         name: 'Golden Rule', kind: Kind.Special, startup: 13, active: 1, recovery: 28,
-        projectile: { x: 70, y: 130, w: 74, h: 60, speed: 9, life: 120, damage: 78, chip: 13, hitstun: 21, blockstun: 16, kb: [10, 0], hitstop: 9 },
+        projectile: { x: 70, y: 130, w: 74, h: 60, speed: 9, life: 120, damage: 72, chip: 13, hitstun: 21, blockstun: 16, kb: [10, 0], hitstop: 9 },
       },
       rising: { name: 'Rise Up', kind: Kind.Special, juggle: 1, cancel: Cancel.Super, startup: 5, active: 9, recovery: 32, invuln: 7, damage: 135, chip: 16, hitstun: 30, blockstun: 20, kb: [6, 22], knockdown: true, hitstop: 13, hitbox: { x: 0, y: 100, w: 96, h: 185 } },
       super: { name: 'Main Character Energy', kind: Kind.Super, juggle: 1, meterCost: 1000, startup: 7, active: 26, recovery: 28, hits: 5, rehit: 5, advance: 9, invuln: 16, damage: 68, chip: 22, hitstun: 32, blockstun: 20, kb: [4, 22], knockdown: true, hitstop: 8, hitbox: { x: 0, y: 0, w: 170, h: 250 } },
@@ -233,7 +233,7 @@ const heroes = [
       crouchLight: { name: 'Low Jab', guard: Guard.Low, body: 'crouch', startup: 5, active: 3, recovery: 10, damage: 32, hitstun: 14, blockstun: 10, kb: [3, 0], hitstop: 8, cancel: ALL, hitbox: { x: 20, y: 110, w: 100, h: 54 } },
       sweep: { name: 'Sweep the Leg', guard: Guard.Low, body: 'crouch', startup: 11, active: 4, recovery: 27, damage: 92, knockdown: true, blockstun: 15, kb: [8, 6], hitstop: 12, cancel: Cancel.Super, hitbox: { x: 10, y: 0, w: 122, h: 90 } },
       jumpAttack: { name: 'Crush From Above', guard: Guard.High, body: 'air', air: true, startup: 6, active: 14, recovery: 4, damage: 90, hitstun: 21, blockstun: 15, kb: [7, 0], hitstop: 13, hitbox: { x: 0, y: 20, w: 130, h: 130 } },
-      throw: { name: 'Bear Hug', kind: Kind.Throw, guard: Guard.Throw, limb: false, startup: 5, active: 3, recovery: 26, damage: 150, knockdown: true, kb: [16, 14], hitstop: 16, hitbox: { x: 10, y: 60, w: 86, h: 140 } },
+      throw: { name: 'Bear Hug', kind: Kind.Throw, guard: Guard.Throw, limb: false, startup: 5, active: 3, recovery: 26, damage: 150, knockdown: true, kb: [16, 14], hitstop: 16, hitbox: { x: 10, y: 60, w: 104, h: 140 } },
       // Bulwark Rush: a shoulder-first charge behind a gold shield that soaks two hits.
       special: { name: 'Bulwark Rush', kind: Kind.Special, startup: 12, active: 16, recovery: 26, armor: 2, advance: 10, damage: 118, chip: 18, hitstun: 26, blockstun: 20, kb: [14, 16], knockdown: true, hitstop: 15, cancel: Cancel.Super, hitbox: { x: 10, y: 40, w: 110, h: 190 } },
       projectile: {

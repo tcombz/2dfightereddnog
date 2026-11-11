@@ -84,7 +84,7 @@ export class HowToScene extends Phaser.Scene {
     } else {
       const hero = this.page - 3;
       const info = heroInfo(HEROES[hero].id);
-      add(this.add.text(70, 108, `${info.style}  ·  "${info.tagline}"`, body(14, CSS.muted)));
+      add(this.add.text(70, 108, `${info.archetype}  ·  ${info.plan}`, body(14, CSS.muted)));
       moveList(hero).forEach((m, r) => {
         const y = 136 + r * 33;
         add(this.add.text(70, y, m.name, display(15, CSS.ink, 4)));

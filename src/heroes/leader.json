@@ -3,7 +3,7 @@
  "name": "The Leader",
  "color": "#d4a017",
  "stats": {
-  "maxHealth": 1000,
+  "maxHealth": 980,
   "walkSpeed": 5,
   "backWalkSpeed": 4,
   "jumpVelocity": 21,
@@ -3099,9 +3099,9 @@
    "name": "The Crew Call",
    "kind": 1,
    "guard": 0,
-   "startup": 16,
+   "startup": 18,
    "active": 1,
-   "recovery": 30,
+   "recovery": 32,
    "damage": 0,
    "chipDamage": 0,
    "hitstun": 0,
@@ -3124,7 +3124,7 @@
    "teleport": 0,
    "meterCost": 0,
    "projectile": {
-    "spawnTick": 16,
+    "spawnTick": 18,
     "x": 20,
     "y": 0,
     "w": 130,
@@ -3143,6 +3143,50 @@
     "hitstop": 12
    },
    "frames": [
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -38,
+       "y": 0,
+       "w": 76,
+       "h": 236
+      }
+     ]
+    },
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -38,
+       "y": 0,
+       "w": 76,
+       "h": 236
+      }
+     ]
+    },
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -38,
+       "y": 0,
+       "w": 76,
+       "h": 236
+      }
+     ]
+    },
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -38,
+       "y": 0,
+       "w": 76,
+       "h": 236
+      }
+     ]
+    },
     {
      "hitboxes": [],
      "hurtboxes": [
@@ -3698,7 +3742,7 @@
     "h": 60,
     "speed": 9,
     "life": 120,
-    "damage": 78,
+    "damage": 72,
     "chipDamage": 13,
     "hitstun": 21,
     "blockstun": 16,

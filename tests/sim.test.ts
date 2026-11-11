@@ -116,7 +116,7 @@ describe('determinism', () => {
     expect(h2).toBe(h1);
     expect(h3).toBe(h1);
     // Golden value: pins the result across runs, machines and refactors.
-    expect(h1).toMatchInlineSnapshot(`"0c4692a0"`);
+    expect(h1).toMatchInlineSnapshot(`"7b5a89ca"`);
   });
 
   it('resuming from a serialized mid-run state gives the same hash', () => {
@@ -568,6 +568,34 @@ describe('armor and teleports', () => {
     expect(closest).toBeGreaterThan(0);
     expect(s.fighters[0].x).toBeGreaterThan(startX + 60);
     expect(s.fighters[1].x - s.fighters[0].x).toBeGreaterThan(closest);
+  });
+});
+
+describe('punish counters and chip KOs', () => {
+  it('hitting an attack while it recovers is a punish: bonus damage and stun', () => {
+    // The Jetsetter whiffs a heavy from range; the Rogue walks in and jabs its recovery.
+    let s = fight(ROGUE, JET, 190);
+    s = step(s, 0, Heavy);
+    const heavy = getMove(JET, Move.Heavy);
+    for (let t = 1; t < heavy.startup + heavy.active; t += 1) s = step(s, 0, 0);
+    for (let t = 0; t < 10; t += 1) s = step(s, R, 0);
+    expect(s.fighters[1].state).toBe(FS.Attack);
+    const fx: number[] = [];
+    for (let t = 0; t < 12; t += 1) {
+      s = step(s, t === 0 ? Light : 0, 0);
+      fx.push(s.fighters[1].fx);
+    }
+    expect(fx).toContain(FX.Punish);
+    const jab = getMove(ROGUE, Move.Light).damage;
+    expect(s.fighters[1].comboDamage).toBe((jab * 5) >> 2);
+  });
+
+  it('a blocked super can still finish someone on their last sliver', () => {
+    let s = fight(ROGUE, JET, 110);
+    s.fighters[0].meter = METER_MAX;
+    s.fighters[1].health = 5;
+    s = play(s, [[Heavy | Special, L]], 120, [0, L]).s;
+    expect(s.fighters[1].health).toBe(0);
   });
 });
 

@@ -18,6 +18,9 @@ export interface HeroInfo {
   hitStyle: HitStyle;
   hitSfx: string;
   style: string;
+  /** The fighter's archetype and their plan in one line, so a newcomer knows what they want to do. */
+  archetype: string;
+  plan: string;
   tagline: string;
   /** Lines shown on the results screen when this hero wins. */
   quotes: string[];
@@ -37,6 +40,8 @@ export const HERO_INFO: Record<string, HeroInfo> = {
     hitStyle: 'volt',
     hitSfx: 'zap',
     style: 'Agile · Strategic · Unpredictable',
+    archetype: 'RUSHDOWN',
+    plan: 'Blink in with the Rift, hit, blink out. Never let them breathe.',
     tagline: 'Play smart. Strike fast.',
     quotes: [
       "Let's not waste each other's time.",
@@ -59,6 +64,8 @@ export const HERO_INFO: Record<string, HeroInfo> = {
     hitStyle: 'vinyl',
     hitSfx: 'scratch',
     style: 'Luxury · Music · Free spirit',
+    archetype: 'ALL-ROUNDER',
+    plan: 'Fast dash, long jumps, a travelling spinning kick and records to keep space.',
     tagline: "Life's a playlist.",
     quotes: ['Another banger.', 'Keep up.', 'Good taste.', "That's a bet.", 'One more song?', 'Time to show out.'],
     color: 0xe0b030,
@@ -69,10 +76,12 @@ export const HERO_INFO: Record<string, HeroInfo> = {
     title: 'CHRIS "THE DIPLOMAT"',
     short: 'THE DIPLOMAT',
     superStyle: 'world',
-    sfx: { special: 'whoosh_light', projectile: 'whoosh_light' },
+    sfx: { special: 'cards', projectile: 'cards' },
     hitStyle: 'cards',
-    hitSfx: 'whoosh_light',
+    hitSfx: 'cards',
     style: 'Tactical · Witty · Unpredictable',
+    archetype: 'TRICKSTER',
+    plan: 'Bait an attack into the Diplomacy, then make them pay. Cards keep them guessing.',
     tagline: "Politics, poker... what's the difference?",
     quotes: [
       'Another election? How quaint.',
@@ -94,6 +103,8 @@ export const HERO_INFO: Record<string, HeroInfo> = {
     hitStyle: 'crown',
     hitSfx: 'crowd',
     style: 'Brawler · Leader · Strategist',
+    archetype: 'ZONER',
+    plan: 'Own the screen with the crew and the Golden Rule, then crown the rush.',
     tagline: "Let's do this.",
     quotes: ["Let's get it.", 'Stay together.', 'You got this.', "That's the play.", 'Family first.', 'We run this.'],
     color: 0xd4a017,
@@ -104,10 +115,12 @@ export const HERO_INFO: Record<string, HeroInfo> = {
     title: 'EDDNOG "THE TANK"',
     short: 'THE TANK',
     superStyle: 'quake',
-    sfx: { special: 'whoosh_heavy', projectile: 'fall' },
+    sfx: { special: 'slam', projectile: 'slam' },
     hitStyle: 'quake',
-    hitSfx: 'fall',
+    hitSfx: 'slam',
     style: 'Brawler · Tank · Support',
+    archetype: 'GRAPPLER',
+    plan: 'Armor through their pokes, get close, and Bear Hug them off the screen.',
     tagline: 'Bigger than the fight.',
     quotes: ['Team first!', 'Smash time!', 'We got this!', 'Good times!', "Let's go!", 'Together... we win.'],
     color: 0xe0a526,
