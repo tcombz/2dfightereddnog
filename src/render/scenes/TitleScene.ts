@@ -3,7 +3,7 @@ import { controls } from '../../input/controls';
 import { playMusic, setMusicVolume, setSfxVolume, settings, sfx } from '../audio';
 import { CPU_LEVELS, CSS, GAME_SUBTITLE, GAME_TITLE, VIEW_H, VIEW_W } from '../config';
 import type { MatchSetup, Mode } from '../config';
-import { ALL_ART, frameName } from '../heroArt';
+import { ALL_ART, feetOrigin, frameName, menuScale } from '../heroArt';
 import { Menu, backdrop, body, display, goTo, goldFill } from '../ui';
 
 export class TitleScene extends Phaser.Scene {
@@ -27,8 +27,8 @@ export class TitleScene extends Phaser.Scene {
     this.fighters = ALL_ART.slice(0, 2).map((art, i) =>
       this.add
         .image(i === 0 ? 170 : VIEW_W - 170, VIEW_H + 30, art.key, frameName('idle', 0))
-        .setOrigin(art.feetX / art.cell, art.feetY / art.cell)
-        .setScale(2.7)
+        .setOrigin(...feetOrigin(art, i === 1))
+        .setScale(menuScale(art, 2.7))
         .setFlipX(i === 1)
         .setTint(i === 0 ? 0xc8d8ff : 0xffe2c8),
     );

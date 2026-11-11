@@ -18,7 +18,7 @@ from pathlib import Path
 from PIL import Image
 
 PAD = 2
-MAX_WIDTH = 1024
+MAX_WIDTH = 2048
 
 
 def main() -> None:

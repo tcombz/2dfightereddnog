@@ -49,7 +49,8 @@ export interface HeroArt {
   /** Where the fighter's feet centre sits inside the atlas cell, in cell pixels. */
   feetX: number;
   feetY: number;
-  cell: number;
+  cellW: number;
+  cellH: number;
   /** Head box in the base sprite (128 px canvas), for portraits. */
   face: { x: number; y: number; w: number; h: number };
   idle: number[];
@@ -62,6 +63,8 @@ export interface HeroArt {
   lying: number[];
   getup: number[];
   win: number[];
+  /** Frames played during the super freeze, before the super's own startup (empty: none). */
+  powerUp: number[];
   attacks: Record<MoveKey, AttackArt>;
 }
 
@@ -75,7 +78,9 @@ const ART: Record<string, HeroArt> = {
     scale: 2,
     feetX: 100,
     feetY: 170,
-    cell: 200,
+    cellW: 200,
+    cellH: 200,
+    powerUp: [],
     face: { x: 50, y: 4, w: 40, h: 40 },
     idle: [0, 1, 2, 3],
     walk: [0, 1, 2, 3, 4, 5],
@@ -112,7 +117,9 @@ const ART: Record<string, HeroArt> = {
     scale: 2,
     feetX: 100,
     feetY: 170,
-    cell: 200,
+    cellW: 200,
+    cellH: 200,
+    powerUp: [],
     face: { x: 52, y: 2, w: 40, h: 40 },
     idle: [0, 1, 2, 3],
     walk: [0, 1, 2, 3, 4, 5],
@@ -149,7 +156,9 @@ const ART: Record<string, HeroArt> = {
     scale: 2,
     feetX: 100,
     feetY: 170,
-    cell: 200,
+    cellW: 200,
+    cellH: 200,
+    powerUp: [],
     face: { x: 52, y: 4, w: 36, h: 36 },
     idle: [0, 1, 2, 3, 4, 5, 6, 7],
     walk: [0, 1, 2, 3, 4, 5],
@@ -187,7 +196,9 @@ const ART: Record<string, HeroArt> = {
     scale: 2,
     feetX: 100,
     feetY: 170,
-    cell: 200,
+    cellW: 200,
+    cellH: 200,
+    powerUp: [],
     face: { x: 60, y: 2, w: 40, h: 40 },
     idle: [0, 1, 2, 3, 4, 5, 6, 7],
     walk: [0, 1, 2, 3, 4, 5],
@@ -222,6 +233,16 @@ export function artFor(hero: number): HeroArt {
 }
 
 export const frameName = (anim: string, i: number): string => `${anim}/${String(i).padStart(2, '0')}`;
+
+/** Sprite origin that puts the feet on the sprite's position, mirrored for a flipped sprite. */
+export function feetOrigin(art: HeroArt, flipped = false): [number, number] {
+  return [(flipped ? art.cellW - art.feetX : art.feetX) / art.cellW, art.feetY / art.cellH];
+}
+
+/** Menu sprite scale: `k` was tuned for the original 2x art, so higher-resolution art draws smaller. */
+export function menuScale(art: HeroArt, k: number): number {
+  return (k * art.scale) / 2;
+}
 
 /** Frame `t` of `total` spread evenly over `frames`. */
 function spread(frames: number[], t: number, total: number): number {

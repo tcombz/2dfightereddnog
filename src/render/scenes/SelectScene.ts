@@ -6,7 +6,7 @@ import { C, CSS, VIEW_H, VIEW_W } from '../config';
 import { CPU_LEVELS } from '../config';
 import type { MatchSetup } from '../config';
 import { arcadeSetup, newArcadeRun } from '../arcade';
-import { artFor, frameName } from '../heroArt';
+import { artFor, feetOrigin, frameName, menuScale } from '../heroArt';
 import { heroInfo } from '../heroInfo';
 import { STAGES } from '../stages';
 import { body, display, goTo, goldFill, stripes } from '../ui';
@@ -101,8 +101,8 @@ export class SelectScene extends Phaser.Scene {
       const art = artFor(i);
       const preview = this.add
         .image(x, 392, art.key, frameName('idle', 0))
-        .setOrigin(art.feetX / art.cell, art.feetY / art.cell)
-        .setScale(2.3)
+        .setOrigin(...feetOrigin(art, i === 1))
+        .setScale(menuScale(art, 2.3))
         .setFlipX(i === 1);
       const align = i === 0 ? 0 : 1;
       const tx = i === 0 ? 32 : VIEW_W - 32;
@@ -158,7 +158,7 @@ export class SelectScene extends Phaser.Scene {
       } else if (hero >= 0) {
         const info = heroInfo(HEROES[hero].id);
         const art = artFor(hero);
-        side.preview.setTexture(art.key, frameName('idle', 0)).setVisible(true).setOrigin(art.feetX / art.cell, art.feetY / art.cell);
+        side.preview.setTexture(art.key, frameName('idle', 0)).setVisible(true).setOrigin(...feetOrigin(art, i === 1)).setScale(menuScale(art, 2.3));
         side.name.setText(info.title);
         side.style.setText(info.style);
         side.tagline.setText(`"${info.tagline}"`);

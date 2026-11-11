@@ -12,6 +12,7 @@ import {
   Phase,
   Result,
   STAGE_WIDTH,
+  SUPER_FREEZE,
   TICK_RATE,
   createInitialState,
   getHitboxes,
@@ -25,7 +26,7 @@ import { playMusic, sfx } from '../audio';
 import { C, CSS, GROUND_Y, VIEW_H, VIEW_W } from '../config';
 import type { MatchSetup } from '../config';
 import { Effects } from '../fx';
-import { artFor, frameName, poseFor } from '../heroArt';
+import { artFor, feetOrigin, frameName, poseFor } from '../heroArt';
 import { heroInfo } from '../heroInfo';
 import { Hud } from '../hud';
 import { SuperFx } from '../superFx';
@@ -38,6 +39,10 @@ import { Menu, body, display, goTo, goldFill } from '../ui';
 const TICK_MS = 1000 / TICK_RATE;
 const MAX_STEPS_PER_FRAME = 5;
 const DUMMY_MODES = ['STAND', 'CROUCH', 'JUMP', 'BLOCK ALL', 'CPU'];
+/** Fighting-game camera: fully zoomed in at CAM_NEAR apart or closer, back to 1x at CAM_FAR. */
+const CAM_ZOOM = 1.28;
+const CAM_NEAR = 300;
+const CAM_FAR = 640;
 
 interface ProjectileView {
   img: Phaser.GameObjects.Image;
@@ -73,6 +78,11 @@ export class FightScene extends Phaser.Scene {
   private landedAt = [-99, -99];
   private stoodAt = [-99, -99];
   private matchOverTicks = 0;
+  /** Camera: eased zoom and centre, and the extra punch-in a super flash adds. */
+  private camZoom = 1;
+  private camX = VIEW_W / 2;
+  private camY = VIEW_H / 2;
+  private punch = { z: 1 };
   private dummy = 3;
   private trainingText: Phaser.GameObjects.Text | null = null;
   /** Combo trials (training): the current trial, which are cleared, and what the current combo holds. */
@@ -107,6 +117,7 @@ export class FightScene extends Phaser.Scene {
     this.celebrate = [0, 0];
     this.landedAt = [-99, -99];
     this.stoodAt = [-99, -99];
+    this.punch = { z: 1 };
     this.matchOverTicks = 0;
     this.pauseObjects = [];
     this.moveListObjects = [];
@@ -382,7 +393,7 @@ export class FightScene extends Phaser.Scene {
     sfx(this, 'super');
     sfx(this, this.signature(slot), 0.7);
     const cam = this.cameras.main;
-    this.tweens.add({ targets: cam, zoom: 1.14, duration: 160, ease: 'Quad.easeOut', yoyo: true, hold: 440 });
+    this.tweens.add({ targets: this.punch, z: 1.14, duration: 160, ease: 'Quad.easeOut', yoyo: true, hold: 440 });
     cam.shake(200, 0.004);
     this.fx.ring(f.x, GROUND_Y - f.y - 120, heroInfo(id).accent, 2.6);
     this.superFx.flash(heroInfo(id), id, slot, move.name, f.x, GROUND_Y - f.y, f.facing);
@@ -393,10 +404,27 @@ export class FightScene extends Phaser.Scene {
   private centerCamera(snap: boolean): void {
     const [a, b] = this.state.fighters;
     const cam = this.cameras.main;
-    const targetX = Phaser.Math.Clamp((a.x + b.x) / 2 - VIEW_W / 2, 0, STAGE_WIDTH - VIEW_W);
-    const targetY = -Math.min(80, Math.max(a.y, b.y) * 0.35);
-    if (snap) cam.setScroll(targetX, targetY);
-    else cam.setScroll(cam.scrollX + (targetX - cam.scrollX) * 0.18, cam.scrollY + (targetY - cam.scrollY) * 0.12);
+    const gap = Math.abs(a.x - b.x);
+    const air = Math.max(a.y, b.y);
+    // In close when the fighters are near each other, out wide as they separate or jump high.
+    const near = Phaser.Math.Clamp((CAM_FAR - gap) / (CAM_FAR - CAM_NEAR), 0, 1);
+    const want = Math.max(1, 1 + (CAM_ZOOM - 1) * near - air / 900);
+    // Pull out quickly (a jump or a dash apart), push in gently.
+    this.camZoom = snap ? want : this.camZoom + (want - this.camZoom) * (want < this.camZoom ? 0.14 : 0.05);
+    const z = this.camZoom;
+    const halfW = VIEW_W / (2 * z);
+    const tx = Phaser.Math.Clamp((a.x + b.x) / 2, halfW, STAGE_WIDTH - halfW);
+    // The floor stays at the same height on screen at any zoom; the view rises a little to follow jumps.
+    const ty = GROUND_Y - (GROUND_Y - VIEW_H / 2) / z - Math.min(40, air * 0.25) / z;
+    if (snap) {
+      this.camX = tx;
+      this.camY = ty;
+    } else {
+      this.camX += (tx - this.camX) * 0.18;
+      this.camY += (ty - this.camY) * 0.12;
+    }
+    cam.setZoom(z * this.punch.z);
+    cam.centerOn(this.camX, this.camY);
   }
 
   private draw(delta: number): void {
@@ -410,6 +438,12 @@ export class FightScene extends Phaser.Scene {
       const won = (s.phase === Phase.RoundEnd || s.phase === Phase.MatchEnd) && s.roundResult === i && f.state === FS.Idle && f.y === 0;
       if (won && s.hitstop === 0) this.celebrate[i] += 1;
       const pose = poseFor(art, f, this.clock + i * 13, won && this.celebrate[i] > 0, this.celebrate[i]);
+      // The super freeze plays the fighter's power-up, before the super's own startup frames.
+      if (s.hitstop > 0 && s.freezeSlot === i && f.state === FS.Attack && f.moveId === Move.Super && art.powerUp.length > 0) {
+        const n = art.powerUp.length;
+        const k = Math.min(n - 1, Math.floor(((SUPER_FREEZE - s.hitstop) * n) / SUPER_FREEZE));
+        pose.frame = frameName('power_up', art.powerUp[k]);
+      }
       // Settle into stance: knees bend on landing, and the fighter rises out of a crouch.
       if ((f.state === FS.Idle || f.state === FS.Walk) && !won) {
         const c = art.crouch;
@@ -418,10 +452,9 @@ export class FightScene extends Phaser.Scene {
         if (sinceLand >= 0 && sinceLand < 6) pose.frame = frameName('crouch', c[Math.max(0, Math.min(c.length - 1, 2) - (sinceLand >> 1))]);
         else if (sinceStand >= 0 && sinceStand < 4) pose.frame = frameName('crouch', c[Math.max(0, c.length - 3 - (sinceStand >> 1))]);
       }
-      const ox = f.facing === 1 ? art.feetX : art.cell - art.feetX;
       sprite
         .setFrame(pose.frame)
-        .setOrigin(ox / art.cell, art.feetY / art.cell)
+        .setOrigin(...feetOrigin(art, f.facing !== 1))
         .setFlipX(f.facing !== 1)
         .setPosition(f.x, GROUND_Y - f.y)
         .setDepth(f.state === FS.Attack ? 32 : 30 + i);

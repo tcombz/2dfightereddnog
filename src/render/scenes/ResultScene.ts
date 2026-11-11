@@ -4,7 +4,7 @@ import { HEROES, Result } from '../../sim';
 import { playMusic, sfx } from '../audio';
 import { C, CSS, VIEW_H, VIEW_W } from '../config';
 import type { MatchSetup } from '../config';
-import { artFor, frameName } from '../heroArt';
+import { artFor, feetOrigin, frameName, menuScale } from '../heroArt';
 import { heroInfo } from '../heroInfo';
 import { arcadeSetup } from '../arcade';
 import { STAGES } from '../stages';
@@ -57,8 +57,8 @@ export class ResultScene extends Phaser.Scene {
       const art = artFor(this.hero);
       this.sprite = this.add
         .image(250, VIEW_H - 10, art.key, frameName('win', art.win[0]))
-        .setOrigin(art.feetX / art.cell, art.feetY / art.cell)
-        .setScale(3);
+        .setOrigin(...feetOrigin(art))
+        .setScale(menuScale(art, 3));
       let who = setup.mode === 'cpu' && winner === 1 ? 'CPU' : `PLAYER ${winner + 1}`;
       if (run && won) who = champion ? 'ARCADE CLEAR' : `FIGHT ${run.fight + 1} OF ${run.order.length} WON`;
       this.add.text(470, 70, who, display(18, winner === 0 ? CSS.p1 : CSS.p2, 4));

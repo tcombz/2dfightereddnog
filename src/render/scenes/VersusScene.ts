@@ -3,7 +3,7 @@ import { HEROES } from '../../sim';
 import { ensureMusic, sfx, stopMusic } from '../audio';
 import { CSS, VIEW_H, VIEW_W } from '../config';
 import type { MatchSetup } from '../config';
-import { artFor, frameName } from '../heroArt';
+import { artFor, feetOrigin, frameName, menuScale } from '../heroArt';
 import { heroInfo } from '../heroInfo';
 import { STAGES } from '../stages';
 import { body, display, goTo, goldFill, stripes } from '../ui';
@@ -42,8 +42,8 @@ export class VersusScene extends Phaser.Scene {
       } else {
         const sprite = this.add
           .image(fromX, VIEW_H + 40, art.key, frameName('win', art.win[Math.min(2, art.win.length - 1)]))
-          .setOrigin(art.feetX / art.cell, art.feetY / art.cell)
-          .setScale(3.2)
+          .setOrigin(...feetOrigin(art, i === 1))
+          .setScale(menuScale(art, 3.2))
           .setFlipX(i === 1);
         this.tweens.add({ targets: sprite, x: toX, duration: 380, ease: 'Cubic.easeOut', delay: i * 120 });
       }
