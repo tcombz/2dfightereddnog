@@ -1,9 +1,11 @@
 {
  "skip": [
   "block2",
+  "hit_high",
   "jab6",
   "jab_st",
-  "jab_st2"
+  "jab_st2",
+  "kick_v4"
  ],
  "attacks": {
   "kick": {
@@ -14,21 +16,6 @@
    ],
    "active": [
     3,
-    4
-   ],
-   "recovery": [
-    5,
-    6
-   ]
-  },
-  "sweep": {
-   "anim": "sweep",
-   "startup": [
-    1,
-    2,
-    3
-   ],
-   "active": [
     4
    ],
    "recovery": [
@@ -85,5 +72,10 @@
   3,
   4,
   5
+ ],
+ "hitLow": [
+  3,
+  5,
+  6
  ]
 }

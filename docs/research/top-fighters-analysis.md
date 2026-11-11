@@ -105,6 +105,51 @@ poorly; judge him in human play.
 - Whether the Rogue's Rift is too strong against projectiles: if so, add recovery after a whiff.
 - Whether Chris needs help in human hands; the CPU numbers are only a rough guide.
 
+## 7. Combat feel audit: why it felt clunky and stale
+
+Measured from the frame data and the sprite sheets, not guessed.
+
+**Clunky**
+
+- **Hits did not sell.** The standing hit reaction barely moved off the idle pose and played evenly
+  over the whole hitstun, so the biggest recoil arrived late. A crouching fighter who got hit just
+  showed a crouch frame, and a juggled fighter flinched upright in mid-air.
+- **Too few drawings for the time on screen.** Attacks are 6-9 drawings stretched over 30-40
+  ticks; a sweep's recovery held 2 drawings for 24 ticks, and the jump showed 3 drawings for a
+  44-tick arc (6 of its 9 frames were thrown away because they touched the floor).
+- **No sense of weight.** Nothing marked take-off, landing or the speed of a swing.
+
+The sim itself was not the problem: inputs come out on the first free frame, there is a 6-tick
+buffer, no landing lag and an instant turn-around.
+
+**Stale**
+
+- **Everyone moved the same way.** The kick, sweep, jump, hit, knockdown and get-up for all five
+  fighters came from the same PixelLab template clips, so the silhouettes in motion matched.
+- **Everyone played the same way outside their specials.** Kicks and sweeps differed only by a few
+  frames and points of damage.
+
+**What changed (version 16)**
+
+- Hit reactions snap to the biggest recoil and hold it while the blow lands, then ease out;
+  crouching hits and crouching guard have their own animations; juggled fighters tumble.
+- New PixelLab clips per fighter (6 each, generated from that fighter's own stance so identity
+  holds): standing hit, crouching hit, crouching guard, a fully airborne jump, and a kick and sweep
+  written for that character.
+- Each kick and sweep now plays differently: the Rogue's spinning hook kick is the fastest kick in
+  the game; the Jetsetter's roundhouse travels and his breakdance sweep hits twice; Chris's axe kick
+  is an overhead and his low kick cancels instead of knocking down; the Leader's push kick shoves
+  them to his range and his sweep slides; Eddnog's shoulder check soaks a hit.
+- Big strikes leave a short smear in the fighter's colour, and landings squash.
+- Controller prompts: every move list, combo, trial and menu shows the buttons of the pad the
+  player is holding (Xbox, PlayStation, Switch or numbered), read through any remap.
+
+**Next, with more PixelLab generations**
+
+- Unique supers for the four fighters who still reuse their special animation for it.
+- A launch/juggle tumble and a wall-splat per fighter.
+- Hero-specific heavy punch, uppercut and throw clips, so no two fighters share any animation.
+
 ## Sources
 
 - Street Fighter 6 Drive system and Modern controls: [GamesRadar interview with director Takayuki Nakayama](https://gamesradar.com/street-fighter-6s-biggest-changes-explained-by-game-director-takayuki-nakayama), [GamingBolt](https://gamingbolt.com/street-fighter-6-drive-system-and-modern-and-classic-controls-detailed), [Game Informer cover story](https://www.gameinformer.com/feature/2022/12/16/the-dawn-of-a-new-era), [Dashfight on Modern controls](https://dashfight.com/news/classic-vs-modern-controls-in-street-fighter-6-and-beyond-3123)
