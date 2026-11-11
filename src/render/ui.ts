@@ -43,7 +43,7 @@ export class Menu {
     private readonly items: MenuItem[],
     private readonly width = 340,
     private readonly rowH = 46,
-    private readonly fontSize = 24,
+    fontSize = 24,
   ) {
     this.bar = scene.add.graphics();
     items.forEach((it, i) => {

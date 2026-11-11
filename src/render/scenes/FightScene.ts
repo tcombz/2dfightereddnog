@@ -218,10 +218,6 @@ export class FightScene extends Phaser.Scene {
 
   // ---------- sim events to sound and effects ----------
 
-  private heroColor(slot: number): number {
-    return heroInfo(HEROES[this.state.fighters[slot].hero].id).color;
-  }
-
   private signature(slot: number): string {
     return HEROES[this.state.fighters[slot].hero].id === 'rogue' ? 'zap' : 'scratch';
   }

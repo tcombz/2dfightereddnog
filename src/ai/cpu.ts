@@ -192,7 +192,7 @@ export class Cpu {
     }
   }
 
-  private neutral(s: GameState, me: FighterState, opp: FighterState, dist: number, L: Level): void {
+  private neutral(_s: GameState, me: FighterState, opp: FighterState, dist: number, L: Level): void {
     const r = this.rng();
     const superReady = me.meter >= HEROES[me.hero].moves.super.meterCost;
     const oppDown = opp.state === FS.Knockdown || opp.state === FS.KO;

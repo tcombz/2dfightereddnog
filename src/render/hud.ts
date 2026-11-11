@@ -14,7 +14,6 @@ const PORTRAIT = 56;
 export class Hud {
   private readonly g: Phaser.GameObjects.Graphics;
   private readonly timer: Phaser.GameObjects.Text;
-  private readonly names: Phaser.GameObjects.Text[];
   private readonly meterLabels: Phaser.GameObjects.Text[];
   private readonly comboText: Phaser.GameObjects.Text[];
   private readonly comboSub: Phaser.GameObjects.Text[];
@@ -30,7 +29,7 @@ export class Hud {
   constructor(
     private readonly scene: Phaser.Scene,
     state: GameState,
-    private readonly cpuSide: number,
+    cpuSide: number,
     private readonly training: boolean,
   ) {
     const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
@@ -45,7 +44,7 @@ export class Hud {
       add(scene.add.image(x, 14, `portrait_${id}`).setOrigin(0, 0).setDisplaySize(PORTRAIT, PORTRAIT).setFlipX(i === 1));
     });
     this.timer = add(scene.add.text(VIEW_W / 2, BAR_Y + 12, '99', display(38, CSS.ink, 6)).setOrigin(0.5));
-    this.names = state.fighters.map((f, i) =>
+    state.fighters.forEach((f, i) =>
       add(
         scene.add
           .text(i === 0 ? 82 : VIEW_W - 82, BAR_Y + BAR_H + 6, heroInfo(HEROES[f.hero].id).title, display(15, CSS.ink, 4))
