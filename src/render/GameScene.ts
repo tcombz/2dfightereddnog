@@ -101,13 +101,6 @@ export class GameScene extends Phaser.Scene {
     kb.on('keydown-D', () => cycle(0, 1));
     kb.on('keydown-LEFT', () => cycle(1, -1));
     kb.on('keydown-RIGHT', () => cycle(1, 1));
-    // Touch: tap the left or right third to change that side's fighter, the middle to confirm.
-    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      if (!this.selecting) confirm();
-      else if (p.x < VIEW_WIDTH / 3) cycle(0, 1);
-      else if (p.x > (VIEW_WIDTH * 2) / 3) cycle(1, 1);
-      else confirm();
-    });
     kb.on('keydown-C', () => {
       this.cpuP2 = !this.cpuP2;
     });
@@ -266,7 +259,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private message(s: GameState): string {
-    if (this.selecting) return 'CHOOSE YOUR FIGHTER\nP1: A / D or tap left     P2: ◀ / ▶ or tap right\nEnter or tap centre to FIGHT';
+    if (this.selecting) return `CHOOSE YOUR FIGHTER\nP1: A / D          P2: ◀ / ▶\nC: P2 is ${this.cpuP2 ? 'the computer' : 'a second player'}\nEnter to FIGHT`;
     const who = (r: number): string => (r === Result.Draw ? 'DRAW' : `P${r + 1} WINS`);
     switch (s.phase) {
       case Phase.Intro:
@@ -278,7 +271,7 @@ export class GameScene extends Phaser.Scene {
         return `${ko ? 'K.O.' : 'TIME UP'}\n${who(s.roundResult)} THE ROUND`.replace('DRAW THE ROUND', 'DRAW');
       }
       default:
-        return `${who(s.matchResult)}${s.matchResult === Result.Draw ? '' : ' THE MATCH'}\nEnter or tap: fighter select`;
+        return `${who(s.matchResult)}${s.matchResult === Result.Draw ? '' : ' THE MATCH'}\nEnter: fighter select`;
     }
   }
 }

@@ -2,19 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Fighter 2D</title>
     <style>
       html, body { margin: 0; height: 100%; background: #111; color: #aaa; font-family: monospace; }
       #app { width: 100%; height: calc(100% - 56px); }
-      body.touch #app { height: 100%; }
-      body.touch #help { display: none; }
-      body { touch-action: none; user-select: none; -webkit-user-select: none; }
-      .pad { position: fixed; bottom: 12px; display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(2, 56px); gap: 6px; z-index: 10; }
-      .pad-left { left: 12px; }
-      .pad-right { right: 12px; }
-      .pad button { border: 2px solid rgba(255,255,255,0.55); border-radius: 12px; background: rgba(20,24,36,0.55); color: #fff; font: bold 16px monospace; touch-action: none; }
-      .pad button.held { background: rgba(120,170,255,0.75); }
       #help { height: 56px; box-sizing: border-box; padding: 6px 12px; font-size: 12px; line-height: 1.5; text-align: center; }
     </style>
   </head>
@@ -23,7 +15,7 @@
     <div id="help">
       P1: WASD move · F light · G heavy · T kick · H special · R block &nbsp;|&nbsp;
       P2: Arrows move · U light · I heavy · Y kick · O special · P block<br />
-      Kick is also Down + heavy · F2 or ` : hitbox debug · C: computer plays P2 · Enter: start / back to fighter select
+      Kick is also Down + heavy · F2 or ` : hitbox debug · C: computer / second player for P2 · Enter: start / back to fighter select
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
