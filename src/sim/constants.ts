@@ -1,0 +1,10 @@
+export const TICK_RATE = 60;
+export const STAGE_WIDTH = 960;
+export const ROUND_SECONDS = 99;
+export const ROUND_TICKS = ROUND_SECONDS * TICK_RATE;
+export const ROUNDS_TO_WIN = 2;
+export const INTRO_TICKS = 90;
+export const ROUND_END_TICKS = 150;
+export const KNOCKDOWN_TICKS = 45;
+export const LAUNCH_MIN_VY = 8;
+export const START_X: readonly [number, number] = [300, 660];
