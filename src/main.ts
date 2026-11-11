@@ -1,15 +1,36 @@
+import '@fontsource/bungee/400.css';
+import '@fontsource/chakra-petch/500.css';
+import '@fontsource/chakra-petch/600.css';
 import Phaser from 'phaser';
-import { LocalKeyboard } from './dev/localKeyboard';
-import { GameScene, VIEW_HEIGHT, VIEW_WIDTH } from './render/GameScene';
+import { VIEW_H, VIEW_W } from './render/config';
+import { BootScene } from './render/scenes/BootScene';
+import { FightScene } from './render/scenes/FightScene';
+import { HowToScene } from './render/scenes/HowToScene';
+import { ResultScene } from './render/scenes/ResultScene';
+import { SelectScene } from './render/scenes/SelectScene';
+import { TitleScene } from './render/scenes/TitleScene';
+import { VersusScene } from './render/scenes/VersusScene';
 
-new Phaser.Game({
-  type: Phaser.AUTO,
-  parent: 'app',
-  width: VIEW_WIDTH,
-  height: VIEW_HEIGHT,
-  backgroundColor: '#1b1f2a',
-  pixelArt: true,
-  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  // The computer plays P2 by default so one person can play; C switches to two players.
-  scene: new GameScene(new LocalKeyboard(), true),
-});
+async function start(): Promise<void> {
+  // Text is drawn to canvases, so the web fonts must be ready before the first scene draws any.
+  try {
+    await Promise.all([document.fonts.load('40px "Bungee"'), document.fonts.load('600 16px "Chakra Petch"')]);
+  } catch {
+    // Fallback fonts are fine.
+  }
+  const game = new Phaser.Game({
+    type: Phaser.AUTO,
+    parent: 'app',
+    width: VIEW_W,
+    height: VIEW_H,
+    backgroundColor: '#070912',
+    pixelArt: true,
+    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+    input: { gamepad: false },
+    scene: [BootScene, TitleScene, SelectScene, VersusScene, FightScene, ResultScene, HowToScene],
+  });
+  // Handy for automated play-testing in development builds.
+  if (import.meta.env.DEV) (window as unknown as { __game: Phaser.Game }).__game = game;
+}
+
+void start();

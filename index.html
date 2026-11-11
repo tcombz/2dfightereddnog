@@ -3,20 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fighter 2D</title>
+    <title>After Hours</title>
+    <meta name="description" content="A 1v1 pixel-art street fighting game for the browser." />
     <style>
-      html, body { margin: 0; height: 100%; background: #111; color: #aaa; font-family: monospace; }
-      #app { width: 100%; height: calc(100% - 56px); }
-      #help { height: 56px; box-sizing: border-box; padding: 6px 12px; font-size: 12px; line-height: 1.5; text-align: center; }
+      html, body { margin: 0; height: 100%; background: #070912; overflow: hidden; }
+      #app { width: 100%; height: 100%; }
+      canvas { display: block; image-rendering: pixelated; }
     </style>
   </head>
   <body>
     <div id="app"></div>
-    <div id="help">
-      P1: WASD move · F light · G heavy · T kick · H special · R block &nbsp;|&nbsp;
-      P2: Arrows move · U light · I heavy · Y kick · O special · P block<br />
-      Kick is also Down + heavy · F2 or ` : hitbox debug · C: computer / second player for P2 · Enter: start / back to fighter select
-    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

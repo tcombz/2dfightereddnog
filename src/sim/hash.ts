@@ -1,4 +1,50 @@
-import type { GameState } from './types';
+import type { FighterState, GameState } from './types';
+
+/** Every FighterState field the hash covers, in order (hist is hashed separately). */
+export const FIGHTER_KEYS = [
+  'hero',
+  'x',
+  'y',
+  'vx',
+  'vy',
+  'push',
+  'facing',
+  'health',
+  'meter',
+  'state',
+  'stateTick',
+  'moveId',
+  'moveHits',
+  'hitTick',
+  'stunTimer',
+  'low',
+  'combo',
+  'comboDamage',
+  'prevInput',
+  'projX',
+  'projY',
+  'projVx',
+  'projLife',
+  'projMove',
+  'fx',
+  'fxX',
+  'fxY',
+  'fxPower',
+] as const satisfies ReadonlyArray<keyof FighterState>;
+
+/** Every GameState field the hash covers, in order (wins and fighters are hashed separately). */
+export const GAME_KEYS = [
+  'tick',
+  'phase',
+  'phaseTimer',
+  'round',
+  'timer',
+  'roundResult',
+  'matchResult',
+  'hitstop',
+  'freezeSlot',
+  'training',
+] as const satisfies ReadonlyArray<keyof GameState>;
 
 /** FNV-1a (32 bit) over every state field in a fixed order. Returns 8 hex chars. */
 export function hashState(s: GameState): string {
@@ -9,29 +55,13 @@ export function hashState(s: GameState): string {
       h = Math.imul(h, 0x01000193);
     }
   };
-  add(s.tick);
-  add(s.phase);
-  add(s.phaseTimer);
-  add(s.round);
-  add(s.timer);
+  for (const k of GAME_KEYS) add(s[k]);
   add(s.wins[0]);
   add(s.wins[1]);
-  add(s.roundResult);
-  add(s.matchResult);
   for (const f of s.fighters) {
-    add(f.hero);
-    add(f.x);
-    add(f.y);
-    add(f.vx);
-    add(f.vy);
-    add(f.facing);
-    add(f.health);
-    add(f.state);
-    add(f.stateTick);
-    add(f.moveId);
-    add(f.moveHit);
-    add(f.stunTimer);
-    add(f.prevInput);
+    for (const k of FIGHTER_KEYS) add(f[k]);
+    add(f.hist.length);
+    for (const d of f.hist) add(d);
   }
   return (h >>> 0).toString(16).padStart(8, '0');
 }

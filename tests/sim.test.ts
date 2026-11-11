@@ -1,18 +1,31 @@
 import { describe, expect, it } from 'vitest';
 import {
+  FIGHTER_KEYS,
   FS,
+  FX,
+  GAME_KEYS,
   HEROES,
   Input,
+  MAX_SEPARATION,
+  METER_MAX,
   MOVE_KEYS,
+  Move,
   Phase,
   Result,
+  SUPER_FREEZE,
   createInitialState,
+  getMove,
   hashState,
+  heroIndex,
   step,
 } from '../src/sim';
 import type { GameState } from '../src/sim';
 
 type InputLog = Array<[number, number]>;
+
+const ROGUE = heroIndex('rogue');
+const JET = heroIndex('jetsetter');
+const { Left: L, Right: R, Up: U, Down: D, Light, Heavy, Special, Block } = Input;
 
 /** Test-side integer LCG. The sim itself has no randomness. */
 function makeLog(seed: number, ticks: number): InputLog {
@@ -42,7 +55,7 @@ function makeLog(seed: number, ticks: number): InputLog {
   return log;
 }
 
-function run(log: InputLog, from: GameState = createInitialState(0, 1), start = 0): GameState {
+function run(log: InputLog, from: GameState = createInitialState(ROGUE, JET), start = 0): GameState {
   let s = from;
   for (let i = start; i < log.length; i += 1) s = step(s, log[i][0], log[i][1]);
   return s;
@@ -62,6 +75,30 @@ function allIntegers(o: unknown): boolean {
   return true;
 }
 
+/** A round already in progress with P1 at x 700 and P2 `gap` pixels to its right. */
+function fight(p1 = ROGUE, p2 = JET, gap = 120): GameState {
+  const s = createInitialState(p1, p2);
+  s.phase = Phase.Fight;
+  s.phaseTimer = 0;
+  s.fighters[0].x = 700;
+  s.fighters[1].x = 700 + gap;
+  return s;
+}
+
+/** Plays a script of [p1, p2] inputs, then `idle` ticks of the last entry's held inputs. */
+function play(s: GameState, script: InputLog, idle = 0, hold: [number, number] = [0, 0]): { s: GameState; fx: number[] } {
+  const fx: number[] = [];
+  for (const [a, b] of script) {
+    s = step(s, a, b);
+    fx.push(s.fighters[1].fx);
+  }
+  for (let t = 0; t < idle; t += 1) {
+    s = step(s, hold[0], hold[1]);
+    fx.push(s.fighters[1].fx);
+  }
+  return { s, fx };
+}
+
 const LOG = makeLog(12345, 20000);
 
 describe('determinism', () => {
@@ -72,7 +109,7 @@ describe('determinism', () => {
     expect(h2).toBe(h1);
     expect(h3).toBe(h1);
     // Golden value: pins the result across runs, machines and refactors.
-    expect(h1).toMatchInlineSnapshot(`"28f2cb1e"`);
+    expect(h1).toMatchInlineSnapshot(`"e74de636"`);
   });
 
   it('resuming from a serialized mid-run state gives the same hash', () => {
@@ -87,25 +124,33 @@ describe('determinism', () => {
   });
 
   it('step never mutates its input and keeps every field an integer', () => {
-    let s = createInitialState(0, 1);
+    let s = createInitialState(ROGUE, JET);
     const seen = new Set<number>();
     for (const [a, b] of LOG) {
       deepFreeze(s);
       s = step(s, a, b); // throws if step writes to the frozen state
       if (!allIntegers(s)) throw new Error(`non-integer state at tick ${s.tick}`);
       seen.add(s.fighters[0].state).add(s.fighters[1].state);
+      const gap = Math.abs(s.fighters[0].x - s.fighters[1].x);
+      if (gap > MAX_SEPARATION) throw new Error(`fighters ${gap} apart at tick ${s.tick}`);
     }
     // The random log should exercise the state machine (KO is covered by the scripted match below).
     for (const st of Object.values(FS)) if (st !== FS.KO) expect(seen.has(st), String(st)).toBe(true);
+  });
+
+  it('the hash covers every state field', () => {
+    const s = createInitialState(ROGUE, JET);
+    expect(Object.keys(s.fighters[0]).sort()).toEqual([...FIGHTER_KEYS, 'hist'].sort());
+    expect(Object.keys(s).sort()).toEqual([...GAME_KEYS, 'wins', 'fighters'].sort());
   });
 });
 
 describe('match flow', () => {
   it('a scripted match runs to completion: best of 3, P1 wins 2-0', () => {
-    let s = createInitialState(0, 1);
+    let s = createInitialState(ROGUE, JET);
     let ticks = 0;
     while (s.phase !== Phase.MatchEnd && ticks < 60 * 99 * 4) {
-      s = step(s, ticks % 32 === 0 ? Input.Light : Input.Right, 0);
+      s = step(s, ticks % 32 === 0 ? Light : R, 0);
       ticks += 1;
     }
     expect(s.phase).toBe(Phase.MatchEnd);
@@ -116,12 +161,12 @@ describe('match flow', () => {
   });
 
   it('time out awards the round to the fighter with more health', () => {
-    let s = createInitialState(0, 1);
+    let s = createInitialState(ROGUE, JET);
     // P2 lands one hit, then nobody acts until the 99 second timer expires.
     let ticks = 0;
     while (s.phase !== Phase.RoundEnd && ticks < 60 * 110) {
-      const p2 = ticks % 32 === 0 ? Input.Light : Input.Left;
-      s = step(s, 0, s.fighters[0].health < HEROES[0].stats.maxHealth ? 0 : p2);
+      const p2 = ticks % 32 === 0 ? Light : L;
+      s = step(s, 0, s.fighters[0].health < HEROES[ROGUE].stats.maxHealth ? 0 : p2);
       ticks += 1;
     }
     expect(s.timer).toBe(0);
@@ -129,58 +174,170 @@ describe('match flow', () => {
     expect(s.wins).toEqual([0, 1]);
   });
 
-  it('blocking reduces damage to chip', () => {
-    const play = (p2: number): number => {
-      let s = createInitialState(0, 1);
-      for (let t = 0; t < 700; t += 1) s = step(s, t % 32 === 0 ? Input.Light : Input.Right, p2);
+  it('blocking a special only costs chip damage', () => {
+    const health = (p2: number): number => {
+      let s = createInitialState(ROGUE, JET);
+      for (let t = 0; t < 900; t += 1) s = step(s, t % 64 === 0 ? Special : R, p2);
       return s.fighters[1].health;
     };
-    const max = HEROES[1].stats.maxHealth;
-    expect(play(0)).toBeLessThan(play(Input.Block));
-    expect(play(Input.Block)).toBeLessThan(max);
+    const max = HEROES[JET].stats.maxHealth;
+    expect(health(0)).toBeLessThan(health(Block));
+    expect(health(Block)).toBeLessThan(max);
+  });
+
+  it('super meter carries over to the next round', () => {
+    let s = createInitialState(ROGUE, JET);
+    let ticks = 0;
+    while (s.round === 1 && ticks < 60 * 99 * 2) {
+      s = step(s, ticks % 32 === 0 ? Light : R, 0);
+      ticks += 1;
+    }
+    expect(s.round).toBe(2);
+    expect(s.fighters[0].meter).toBeGreaterThan(0);
   });
 });
 
-describe('sprite heroes', () => {
-  const rogue = HEROES.findIndex((h) => h.id === 'rogue');
-  const jet = HEROES.findIndex((h) => h.id === 'jetsetter');
-
-  it('Rogue vs Jetsetter plays a full deterministic match', () => {
-    expect(rogue).toBeGreaterThanOrEqual(0);
-    expect(jet).toBeGreaterThanOrEqual(0);
-    const a = run(LOG, createInitialState(rogue, jet));
-    const b = run(LOG, createInitialState(rogue, jet));
-    expect(hashState(a)).toBe(hashState(b));
-    expect(a.phase).toBe(Phase.MatchEnd);
+describe('guarding', () => {
+  it('holding back blocks a jab', () => {
+    const { s, fx } = play(fight(ROGUE, JET, 110), [[Light, R]], 10, [0, R]);
+    expect(fx).toContain(FX.Block);
+    expect(s.fighters[1].health).toBe(HEROES[JET].stats.maxHealth);
   });
 
-  it('every move of both heroes connects at walk-up range', () => {
-    for (const [att, def] of [[rogue, jet], [jet, rogue]]) {
-      for (const button of [Input.Light, Input.Heavy, Input.Special, Input.Down | Input.Heavy]) {
-        let s = createInitialState(att, def);
-        // Walk in after the intro, pause one tick, then press the button once.
-        for (let t = 0; t < 260; t += 1) s = step(s, t === 200 ? button : t < 198 ? Input.Right : 0, 0);
-        expect(s.fighters[1].health, `${HEROES[att].id} ${button}`).toBeLessThan(HEROES[def].stats.maxHealth);
+  it('a sweep is low: it beats a standing guard but not a crouching one', () => {
+    const vs = (p2: number): GameState => play(fight(ROGUE, JET, 150), [[D | Heavy, p2]], 24, [D, p2]).s;
+    expect(vs(R).fighters[1].state).toBe(FS.Knockdown);
+    expect(vs(R | D).fighters[1].health).toBe(HEROES[JET].stats.maxHealth);
+  });
+
+  it('a jump attack is an overhead: it beats a crouching guard but not a standing one', () => {
+    const vs = (p2: number): { s: GameState; fx: number[] } => {
+      const script: InputLog = [[U | R, p2]];
+      for (let t = 0; t < 22; t += 1) script.push([0, p2]);
+      script.push([Light, p2]);
+      return play(fight(ROGUE, JET, 230), script, 30, [0, p2]);
+    };
+    expect(vs(R | D).s.fighters[1].health).toBeLessThan(HEROES[JET].stats.maxHealth);
+    const standing = vs(R);
+    expect(standing.fx).toContain(FX.Block);
+    expect(standing.s.fighters[1].health).toBe(HEROES[JET].stats.maxHealth);
+  });
+
+  it('a throw beats blocking', () => {
+    const { s, fx } = play(fight(ROGUE, JET, 90), [[Light | Heavy, R]], 20, [0, R]);
+    expect(fx).toContain(FX.Throw);
+    expect(s.fighters[1].state).toBe(FS.Knockdown);
+  });
+});
+
+describe('special moves', () => {
+  it('down, down-forward, forward + special throws a projectile that crosses the screen', () => {
+    const { s } = play(
+      fight(ROGUE, JET, 500),
+      [[D, 0], [D, 0], [D | R, 0], [D | R, 0], [R | Special, 0]],
+      90,
+    );
+    expect(s.fighters[1].health).toBeLessThan(HEROES[JET].stats.maxHealth);
+  });
+
+  it('only one projectile per player is on screen at a time', () => {
+    // Wait out the throw animation; the projectile is still flying.
+    let { s } = play(fight(ROGUE, JET, 800), [[D, 0], [D | R, 0], [R | Special, 0]], 45);
+    expect(s.fighters[0].projLife).toBeGreaterThan(0);
+    s = play(s, [[0, 0], [D, 0], [D | R, 0], [R | Special, 0]]).s;
+    expect(s.fighters[0].moveId).toBe(Move.Special);
+  });
+
+  it('forward, down, down-forward + special is the rising attack, invulnerable as it starts', () => {
+    const { s } = play(fight(ROGUE, JET, 300), [[R, 0], [0, 0], [D, 0], [D | R, 0], [D | R | Special, 0]]);
+    expect(s.fighters[0].moveId).toBe(Move.Rising);
+    const m = getMove(ROGUE, Move.Rising);
+    expect(m.invuln).toBeGreaterThan(m.startup);
+  });
+
+  it('a super needs a full meter, spends it and freezes the game for its flash', () => {
+    const without = play(fight(), [[Heavy | Special, 0]]).s;
+    expect(without.fighters[0].moveId).not.toBe(Move.Super);
+
+    const s = fight();
+    s.fighters[0].meter = METER_MAX;
+    const withMeter = play(s, [[Heavy | Special, 0]]).s;
+    expect(withMeter.fighters[0].moveId).toBe(Move.Super);
+    expect(withMeter.fighters[0].meter).toBe(0);
+    expect(withMeter.hitstop).toBe(SUPER_FREEZE);
+    expect(withMeter.freezeSlot).toBe(0);
+  });
+
+  it('every move of both heroes connects from a sensible range', () => {
+    const cases: Array<[string, InputLog, number]> = [
+      ['light', [[Light, 0]], 110],
+      ['heavy', [[Heavy, 0]], 130],
+      ['kick', [[R | Heavy, 0]], 150],
+      ['crouchLight', [[D | Light, 0]], 110],
+      ['sweep', [[D | Heavy, 0]], 150],
+      ['throw', [[Light | Heavy, 0]], 90],
+      ['special', [[Special, 0]], 150],
+      ['projectile', [[D, 0], [D | R, 0], [R | Special, 0]], 400],
+      ['rising', [[R, 0], [0, 0], [D, 0], [D | R | Special, 0]], 100],
+      ['super', [[Heavy | Special, 0]], 150],
+    ];
+    for (const hero of [ROGUE, JET]) {
+      for (const [name, script, gap] of cases) {
+        const s = fight(hero, hero === ROGUE ? JET : ROGUE, gap);
+        s.fighters[0].meter = METER_MAX;
+        const out = play(s, script, 100).s;
+        const def = out.fighters[1];
+        expect(def.health, `${HEROES[hero].id} ${name}`).toBeLessThan(HEROES[def.hero].stats.maxHealth);
       }
     }
   });
 });
 
-describe('command moves', () => {
-  it('down + heavy is the kick, and an advancing move carries the attacker forward', () => {
-    const jet = HEROES.findIndex((h) => h.id === 'jetsetter');
-    let s = createInitialState(jet, 0);
-    for (let t = 0; t < 100; t += 1) s = step(s, 0, 0);
-    const kick = step(s, Input.Down | Input.Heavy, 0);
-    expect(kick.fighters[0].state).toBe(FS.Attack);
-    expect(MOVE_KEYS[kick.fighters[0].moveId]).toBe('kick');
+describe('combos', () => {
+  it('a jab that hits can be cancelled into a special, and the second hit is scaled', () => {
+    const script: InputLog = [[Light, 0], [0, 0], [0, 0], [0, 0], [0, 0], [Special, 0]];
+    const { s } = play(fight(ROGUE, JET, 110), script, 30, [Special, 0]);
+    const def = s.fighters[1];
+    const jab = getMove(ROGUE, Move.Light).damage;
+    const palm = getMove(ROGUE, Move.Special).damage;
+    expect(def.comboDamage).toBe(jab + ((palm * 15) >> 4));
+    expect(def.health).toBe(HEROES[JET].stats.maxHealth - def.comboDamage);
+  });
 
-    const x0 = s.fighters[0].x;
-    let d = step(s, Input.Special, 0);
-    for (let t = 0; t < 30; t += 1) d = step(d, 0, 0);
-    const m = HEROES[jet].moves.special;
-    expect(m.advance).toBeGreaterThan(0);
-    expect(d.fighters[0].x).toBe(x0 + m.advance * m.active);
+  it('a whiffed jab cannot be cancelled', () => {
+    const { s } = play(fight(ROGUE, JET, 400), [[Light, 0], [0, 0], [0, 0], [0, 0], [0, 0], [Special, 0]]);
+    expect(s.fighters[0].moveId).toBe(Move.Light);
+  });
+});
+
+describe('movement', () => {
+  it('tapping forward twice dashes farther than walking', () => {
+    const dashed = play(fight(ROGUE, JET, 700), [[R, 0], [0, 0], [R, 0]], 12, [0, 0]).s.fighters[0].x;
+    const walked = play(fight(ROGUE, JET, 700), [[R, 0], [R, 0], [R, 0]], 12, [R, 0]).s.fighters[0].x;
+    expect(dashed).toBeGreaterThan(walked);
+  });
+
+  it('fighters can never walk farther apart than the camera frames', () => {
+    const { s } = play(fight(ROGUE, JET, 600), [], 200, [L, R]);
+    expect(Math.abs(s.fighters[1].x - s.fighters[0].x)).toBe(MAX_SEPARATION);
+  });
+});
+
+describe('training mode', () => {
+  it('has no timer, never KOs, and refills health once a combo ends', () => {
+    let s = createInitialState(ROGUE, JET, { training: true });
+    expect(s.phase).toBe(Phase.Fight);
+    s.fighters[0].x = 700;
+    s.fighters[1].x = 810;
+    // The jab comes out on its 5th tick; set P2 nearly dead just before it lands.
+    s = play(s, [[Light, 0]], 3).s;
+    s.fighters[1].health = 5;
+    s = play(s, [], 2).s;
+    expect(s.fighters[1].health).toBe(1);
+    s = play(s, [], 40).s;
+    expect(s.fighters[1].health).toBe(HEROES[JET].stats.maxHealth);
+    expect(s.timer).toBe(createInitialState(ROGUE, JET).timer);
+    expect(s.fighters[0].meter).toBe(METER_MAX);
   });
 });
 
@@ -190,10 +347,14 @@ describe('hero data', () => {
       expect(allIntegers(hero)).toBe(true);
       for (const key of MOVE_KEYS) {
         const m = hero.moves[key];
+        expect(m, `${hero.id} ${key}`).toBeDefined();
         expect(m.frames.length).toBe(m.startup + m.active + m.recovery);
+        expect(m.hits).toBeGreaterThanOrEqual(1);
         m.frames.forEach((f, i) => {
           const active = i >= m.startup && i < m.startup + m.active;
-          expect(f.hitboxes.length > 0).toBe(active);
+          // Projectile moves hit with the projectile, not the body.
+          if (m.projectile) expect(f.hitboxes.length).toBe(0);
+          else expect(f.hitboxes.length > 0, `${hero.id} ${key} frame ${i}`).toBe(active);
           expect(f.hurtboxes.length).toBeGreaterThan(0);
         });
       }
@@ -207,7 +368,7 @@ describe('sim purity', () => {
   it('sim source has no floats, division, randomness, clocks or renderer imports', () => {
     expect(Object.keys(sources).length).toBeGreaterThan(3);
     for (const [file, raw] of Object.entries(sources)) {
-      expect(raw, file).not.toMatch(/phaser|\.\.\/render|\.\.\/dev/i);
+      expect(raw, file).not.toMatch(/phaser|\.\.\/render|\.\.\/dev|\.\.\/input|\.\.\/ai/i);
       const code = raw
         .replace(/\/\*[\s\S]*?\*\//g, '')
         .replace(/\/\/.*$/gm, '')
