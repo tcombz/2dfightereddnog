@@ -44,7 +44,12 @@ export class GameScene extends Phaser.Scene {
   private messageText!: Phaser.GameObjects.Text;
   private debugText!: Phaser.GameObjects.Text;
   private cpuText!: Phaser.GameObjects.Text;
-  private sprites: Array<Phaser.GameObjects.Image | undefined> = [];
+  private sprites: Phaser.GameObjects.Image[] = [];
+  private nameTexts: Phaser.GameObjects.Text[] = [];
+  /** Fighter select screen: the sim is not stepped while this is true. */
+  private selecting = true;
+  private picks: [number, number] = [P1_HERO, P2_HERO];
+  private selectTick = 0;
 
   constructor(
     private readonly inputs: InputSource,
@@ -59,20 +64,17 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.gfx = this.add.graphics();
-    this.sprites = this.state.fighters.map((f) => {
-      const art = artFor(f.hero);
-      return art ? this.add.image(0, 0, art.key).setScale(art.scale) : undefined;
-    });
+    this.sprites = this.state.fighters.map(() => this.add.image(0, 0, ALL_ART[0].key).setVisible(false));
     this.cpuText = this.add.text(VIEW_WIDTH - 40, BAR_Y + BAR_H + 22, '', { ...FONT, fontSize: '12px', color: '#9fb4ff' }).setOrigin(1, 0);
     this.timerText = this.add.text(VIEW_WIDTH / 2, BAR_Y + BAR_H / 2, '', { ...FONT, fontSize: '40px' }).setOrigin(0.5);
     this.messageText = this.add
       .text(VIEW_WIDTH / 2, 200, '', { ...FONT, fontSize: '48px', align: 'center', stroke: '#000000', strokeThickness: 6 })
       .setOrigin(0.5);
     this.debugText = this.add.text(8, GROUND_Y + 8, '', { ...FONT, fontSize: '12px', color: '#9fe89f' });
-    this.add.text(40, BAR_Y + BAR_H + 4, `P1 ${HEROES[this.state.fighters[0].hero].name}`, { ...FONT, fontSize: '14px' });
-    this.add
-      .text(VIEW_WIDTH - 40, BAR_Y + BAR_H + 4, `${HEROES[this.state.fighters[1].hero].name} P2`, { ...FONT, fontSize: '14px' })
-      .setOrigin(1, 0);
+    this.nameTexts = [
+      this.add.text(40, BAR_Y + BAR_H + 4, '', { ...FONT, fontSize: '14px' }),
+      this.add.text(VIEW_WIDTH - 40, BAR_Y + BAR_H + 4, '', { ...FONT, fontSize: '14px' }).setOrigin(1, 0),
+    ];
 
     const kb = this.input.keyboard!;
     const toggle = (): void => {
@@ -80,17 +82,44 @@ export class GameScene extends Phaser.Scene {
     };
     kb.on('keydown-F2', toggle);
     kb.on('keydown-BACKTICK', toggle);
-    const rematch = (): void => {
-      if (this.state.phase === Phase.MatchEnd) this.state = createInitialState(P1_HERO, P2_HERO);
+    const cycle = (slot: number, by: number): void => {
+      if (!this.selecting) return;
+      this.picks[slot] = (this.picks[slot] + by + HEROES.length) % HEROES.length;
+      this.state = createInitialState(this.picks[0], this.picks[1]);
     };
-    kb.on('keydown-ENTER', rematch);
-    this.input.on('pointerdown', rematch);
+    const confirm = (): void => {
+      if (this.selecting) {
+        this.state = createInitialState(this.picks[0], this.picks[1]);
+        this.acc = 0;
+        this.selecting = false;
+      } else if (this.state.phase === Phase.MatchEnd) {
+        this.selecting = true;
+      }
+    };
+    kb.on('keydown-ENTER', confirm);
+    kb.on('keydown-A', () => cycle(0, -1));
+    kb.on('keydown-D', () => cycle(0, 1));
+    kb.on('keydown-LEFT', () => cycle(1, -1));
+    kb.on('keydown-RIGHT', () => cycle(1, 1));
+    // Touch: tap the left or right third to change that side's fighter, the middle to confirm.
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      if (!this.selecting) confirm();
+      else if (p.x < VIEW_WIDTH / 3) cycle(0, 1);
+      else if (p.x > (VIEW_WIDTH * 2) / 3) cycle(1, 1);
+      else confirm();
+    });
     kb.on('keydown-C', () => {
       this.cpuP2 = !this.cpuP2;
     });
   }
 
   update(_time: number, delta: number): void {
+    if (this.selecting) {
+      // Preview only: a throwaway copy with a moving tick so the idle animations play.
+      this.selectTick += 1;
+      this.draw({ ...this.state, tick: this.selectTick });
+      return;
+    }
     this.acc += delta;
     let steps = 0;
     while (this.acc >= TICK_MS && steps < MAX_STEPS_PER_FRAME) {
@@ -100,13 +129,12 @@ export class GameScene extends Phaser.Scene {
       steps += 1;
     }
     if (this.acc > TICK_MS * MAX_STEPS_PER_FRAME) this.acc = 0; // tab was hidden: drop the backlog
-    this.draw();
+    this.draw(this.state);
   }
 
   // ---------- drawing ----------
 
-  private draw(): void {
-    const s = this.state;
+  private draw(s: GameState): void {
     const g = this.gfx;
     g.clear();
 
@@ -117,6 +145,8 @@ export class GameScene extends Phaser.Scene {
 
     s.fighters.forEach((f, i) => this.drawFighter(s, i, f));
     this.cpuText.setText(this.cpuP2 ? 'CPU' : '');
+    this.nameTexts[0].setText(`P1 ${HEROES[s.fighters[0].hero].name}`);
+    this.nameTexts[1].setText(`${HEROES[s.fighters[1].hero].name} P2`);
     if (this.debug) for (const f of s.fighters) this.drawDebugBoxes(f);
     this.drawHud(s);
 
@@ -143,11 +173,13 @@ export class GameScene extends Phaser.Scene {
     const hero = HEROES[f.hero];
     const art = artFor(f.hero);
     const sprite = this.sprites[slot];
-    if (art && sprite) {
+    sprite.setVisible(art !== undefined);
+    if (art) {
       // Flipping mirrors the cell, so the feet anchor mirrors with it.
       const ox = f.facing === 1 ? art.feetX : art.cell - art.feetX;
       sprite
-        .setFrame(frameFor(art, s, slot))
+        .setTexture(art.key, frameFor(art, s, slot))
+        .setScale(art.scale)
         .setOrigin(ox / art.cell, art.feetY / art.cell)
         .setFlipX(f.facing !== 1)
         .setPosition(f.x, GROUND_Y - f.y)
@@ -229,10 +261,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.timerText.setText(String(Math.ceil(s.timer / TICK_RATE)));
+    this.messageText.setFontSize(this.selecting ? 26 : 48).setY(this.selecting ? 150 : 200);
     this.messageText.setText(this.message(s));
   }
 
   private message(s: GameState): string {
+    if (this.selecting) return 'CHOOSE YOUR FIGHTER\nP1: A / D or tap left     P2: ◀ / ▶ or tap right\nEnter or tap centre to FIGHT';
     const who = (r: number): string => (r === Result.Draw ? 'DRAW' : `P${r + 1} WINS`);
     switch (s.phase) {
       case Phase.Intro:
@@ -244,7 +278,7 @@ export class GameScene extends Phaser.Scene {
         return `${ko ? 'K.O.' : 'TIME UP'}\n${who(s.roundResult)} THE ROUND`.replace('DRAW THE ROUND', 'DRAW');
       }
       default:
-        return `${who(s.matchResult)}${s.matchResult === Result.Draw ? '' : ' THE MATCH'}\nEnter or tap: rematch`;
+        return `${who(s.matchResult)}${s.matchResult === Result.Draw ? '' : ' THE MATCH'}\nEnter or tap: fighter select`;
     }
   }
 }

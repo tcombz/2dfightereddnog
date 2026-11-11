@@ -20,6 +20,8 @@ export interface MoveData {
   blockstun: number;
   knockback: { x: number; y: number };
   knockdown: boolean;
+  /** Pixels per tick the attacker slides forward during the active frames (0 = stays put). */
+  advance: number;
   frames: MoveFrame[];
 }
 
@@ -39,7 +41,7 @@ export interface HeroData {
     crouchHeight: number;
   };
   hurtboxes: { stand: Rect[]; crouch: Rect[]; air: Rect[] };
-  moves: { light: MoveData; heavy: MoveData; special: MoveData };
+  moves: { light: MoveData; heavy: MoveData; special: MoveData; kick: MoveData };
 }
 
 export const FS = {

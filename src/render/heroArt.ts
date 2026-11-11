@@ -56,6 +56,7 @@ const ART: Record<string, HeroArt> = {
       light: { anim: 'light_punch', startup: [0], active: [1], recovery: [2] },
       heavy: { anim: 'heavy_punch', startup: [0, 1, 2], active: [3], recovery: [3, 0] },
       special: { anim: 'special', startup: [1, 2, 3], active: [4, 5], recovery: [6, 3] },
+      kick: { anim: 'kick', startup: [2, 3], active: [4, 5, 6], recovery: [7, 8] },
     },
   },
   jetsetter: {
@@ -78,6 +79,7 @@ const ART: Record<string, HeroArt> = {
       light: { anim: 'light_punch', startup: [0], active: [1], recovery: [2] },
       heavy: { anim: 'heavy_punch', startup: [2, 3, 4], active: [5, 6], recovery: [6, 3] },
       special: { anim: 'special', startup: [4, 5, 6], active: [7, 8], recovery: [8, 6] },
+      kick: { anim: 'kick', startup: [2, 3], active: [4, 5], recovery: [6, 1] },
     },
   },
 };

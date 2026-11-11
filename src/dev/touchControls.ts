@@ -1,12 +1,14 @@
 // TESTING ONLY: on-screen buttons for player 1 on touch devices. Not part of the sim.
 import { Input } from '../sim';
 
+// L light, K kick, H heavy, S special, BLK block.
 const BUTTONS: Array<{ label: string; bit: number; side: 'left' | 'right'; col: number; row: number }> = [
   { label: '◀', bit: Input.Left, side: 'left', col: 1, row: 2 },
   { label: '▶', bit: Input.Right, side: 'left', col: 3, row: 2 },
   { label: '▲', bit: Input.Up, side: 'left', col: 2, row: 1 },
   { label: '▼', bit: Input.Down, side: 'left', col: 2, row: 2 },
   { label: 'L', bit: Input.Light, side: 'right', col: 1, row: 2 },
+  { label: 'K', bit: Input.Down | Input.Heavy, side: 'right', col: 1, row: 1 },
   { label: 'H', bit: Input.Heavy, side: 'right', col: 2, row: 1 },
   { label: 'S', bit: Input.Special, side: 'right', col: 3, row: 1 },
   { label: 'BLK', bit: Input.Block, side: 'right', col: 2, row: 2 },

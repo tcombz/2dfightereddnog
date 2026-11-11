@@ -20,7 +20,7 @@ function move(body, spec) {
       hurtboxes: active ? [body, limb] : [body],
     });
   }
-  return { ...rest, frames };
+  return { advance: 0, ...rest, frames };
 }
 
 function hero({ id, name, color, stats, moves }) {
@@ -38,6 +38,7 @@ function hero({ id, name, color, stats, moves }) {
       light: move(stand, moves.light),
       heavy: move(stand, moves.heavy),
       special: move(stand, moves.special),
+      kick: move(stand, moves.kick),
     },
   };
 }
@@ -52,6 +53,7 @@ const heroes = [
       light: { startup: 4, active: 3, recovery: 8, damage: 40, chipDamage: 4, hitstun: 14, blockstun: 9, knockback: { x: 6, y: 0 }, knockdown: false, hitbox: { x: 20, y: 75, w: 70, h: 20 } },
       heavy: { startup: 9, active: 4, recovery: 18, damage: 90, chipDamage: 10, hitstun: 20, blockstun: 14, knockback: { x: 10, y: 0 }, knockdown: false, hitbox: { x: 20, y: 45, w: 95, h: 30 } },
       special: { startup: 14, active: 6, recovery: 26, damage: 140, chipDamage: 20, hitstun: 24, blockstun: 16, knockback: { x: 9, y: 14 }, knockdown: true, hitbox: { x: 10, y: 30, w: 110, h: 70 } },
+      kick: { startup: 7, active: 4, recovery: 15, damage: 60, chipDamage: 6, hitstun: 16, blockstun: 11, knockback: { x: 9, y: 0 }, knockdown: false, hitbox: { x: 20, y: 50, w: 85, h: 26 } },
     },
   }),
   hero({
@@ -63,6 +65,7 @@ const heroes = [
       light: { startup: 3, active: 3, recovery: 7, damage: 32, chipDamage: 3, hitstun: 12, blockstun: 8, knockback: { x: 5, y: 0 }, knockdown: false, hitbox: { x: 18, y: 78, w: 66, h: 18 } },
       heavy: { startup: 7, active: 4, recovery: 16, damage: 75, chipDamage: 8, hitstun: 18, blockstun: 12, knockback: { x: 9, y: 0 }, knockdown: false, hitbox: { x: 18, y: 20, w: 100, h: 26 } },
       special: { startup: 11, active: 8, recovery: 24, damage: 120, chipDamage: 16, hitstun: 22, blockstun: 15, knockback: { x: 11, y: 12 }, knockdown: true, hitbox: { x: 10, y: 40, w: 125, h: 40 } },
+      kick: { startup: 6, active: 4, recovery: 14, damage: 52, chipDamage: 5, hitstun: 16, blockstun: 11, knockback: { x: 9, y: 0 }, knockdown: false, hitbox: { x: 18, y: 50, w: 88, h: 24 } },
     },
   }),
   // Sprite heroes: art in assets/heroes/<id>/ is drawn at 2x, so these bodies are about 240 px tall.
@@ -73,8 +76,9 @@ const heroes = [
     stats: { maxHealth: 900, walkSpeed: 6, backWalkSpeed: 5, jumpVelocity: 28, jumpSpeedX: 7, gravity: 2, width: 70, height: 230, crouchHeight: 150 },
     moves: {
       light: { startup: 3, active: 3, recovery: 7, damage: 32, chipDamage: 3, hitstun: 12, blockstun: 8, knockback: { x: 6, y: 0 }, knockdown: false, hitbox: { x: 20, y: 150, w: 75, h: 30 } },
-      heavy: { startup: 8, active: 4, recovery: 16, damage: 78, chipDamage: 8, hitstun: 18, blockstun: 12, knockback: { x: 10, y: 0 }, knockdown: false, hitbox: { x: 20, y: 140, w: 105, h: 36 } },
+      heavy: { advance: 5, startup: 8, active: 4, recovery: 16, damage: 78, chipDamage: 8, hitstun: 18, blockstun: 12, knockback: { x: 10, y: 0 }, knockdown: false, hitbox: { x: 20, y: 140, w: 105, h: 36 } },
       special: { startup: 12, active: 8, recovery: 24, damage: 120, chipDamage: 16, hitstun: 22, blockstun: 15, knockback: { x: 12, y: 16 }, knockdown: true, hitbox: { x: 20, y: 50, w: 130, h: 160 } },
+      kick: { startup: 6, active: 4, recovery: 14, damage: 60, chipDamage: 6, hitstun: 16, blockstun: 11, knockback: { x: 9, y: 0 }, knockdown: false, hitbox: { x: 20, y: 150, w: 105, h: 40 } },
     },
   }),
   hero({
@@ -85,7 +89,8 @@ const heroes = [
     moves: {
       light: { startup: 4, active: 3, recovery: 8, damage: 40, chipDamage: 4, hitstun: 14, blockstun: 9, knockback: { x: 7, y: 0 }, knockdown: false, hitbox: { x: 20, y: 150, w: 78, h: 30 } },
       heavy: { startup: 9, active: 4, recovery: 18, damage: 90, chipDamage: 10, hitstun: 20, blockstun: 14, knockback: { x: 11, y: 0 }, knockdown: false, hitbox: { x: 20, y: 115, w: 115, h: 70 } },
-      special: { startup: 13, active: 6, recovery: 25, damage: 135, chipDamage: 18, hitstun: 24, blockstun: 16, knockback: { x: 11, y: 16 }, knockdown: true, hitbox: { x: 10, y: 60, w: 140, h: 100 } },
+      special: { advance: 14, startup: 13, active: 6, recovery: 25, damage: 135, chipDamage: 18, hitstun: 24, blockstun: 16, knockback: { x: 11, y: 16 }, knockdown: true, hitbox: { x: 10, y: 60, w: 140, h: 100 } },
+      kick: { startup: 7, active: 4, recovery: 15, damage: 68, chipDamage: 7, hitstun: 16, blockstun: 11, knockback: { x: 9, y: 0 }, knockdown: false, hitbox: { x: 20, y: 150, w: 110, h: 40 } },
     },
   }),
 ];

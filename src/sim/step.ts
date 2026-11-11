@@ -142,7 +142,9 @@ function act(f: FighterState, oppX: number, input: number): void {
   f.facing = oppX >= f.x ? 1 : -1;
 
   const pressed = input & ~f.prevInput;
-  const move = pressed & Input.Special ? 2 : pressed & Input.Heavy ? 1 : pressed & Input.Light ? 0 : -1;
+  // Kick is a command move: heavy pressed while holding down.
+  const heavy = input & Input.Down ? 3 : 1;
+  const move = pressed & Input.Special ? 2 : pressed & Input.Heavy ? heavy : pressed & Input.Light ? 0 : -1;
   if (move >= 0) {
     setState(f, FS.Attack);
     f.moveId = move;
@@ -197,9 +199,15 @@ function updateFighter(f: FighterState, oppX: number, input: number): void {
         setState(f, FS.Idle);
       }
       break;
-    case FS.Attack:
-      if (f.stateTick >= getMove(f.hero, f.moveId).frames.length) setState(f, FS.Idle);
+    case FS.Attack: {
+      const move = getMove(f.hero, f.moveId);
+      if (f.stateTick >= move.frames.length) setState(f, FS.Idle);
+      else {
+        const active = f.stateTick >= move.startup && f.stateTick < move.startup + move.active;
+        f.vx = active ? f.facing * move.advance : 0;
+      }
       break;
+    }
     case FS.Hitstun:
       f.vx = toward0(f.vx);
       f.stunTimer -= 1;

@@ -29,7 +29,8 @@ export function cpuInput(s: GameState, slot: number): number {
   if (dist > range) return r < 20 ? toward | Input.Up : r < 215 ? toward : 0;
   if (!press) return r < 40 ? away : 0;
   if (r < 90) return Input.Light;
-  if (r < 150) return Input.Heavy;
+  if (r < 130) return Input.Heavy;
+  if (r < 150) return Input.Down | Input.Heavy;
   if (r < 175) return Input.Special;
   if (r < 200) return Input.Block;
   return 0;

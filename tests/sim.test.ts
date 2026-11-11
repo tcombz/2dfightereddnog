@@ -72,7 +72,7 @@ describe('determinism', () => {
     expect(h2).toBe(h1);
     expect(h3).toBe(h1);
     // Golden value: pins the result across runs, machines and refactors.
-    expect(h1).toMatchInlineSnapshot(`"7e67ecb3"`);
+    expect(h1).toMatchInlineSnapshot(`"28f2cb1e"`);
   });
 
   it('resuming from a serialized mid-run state gives the same hash', () => {
@@ -156,13 +156,31 @@ describe('sprite heroes', () => {
 
   it('every move of both heroes connects at walk-up range', () => {
     for (const [att, def] of [[rogue, jet], [jet, rogue]]) {
-      for (const button of [Input.Light, Input.Heavy, Input.Special]) {
+      for (const button of [Input.Light, Input.Heavy, Input.Special, Input.Down | Input.Heavy]) {
         let s = createInitialState(att, def);
         // Walk in after the intro, pause one tick, then press the button once.
         for (let t = 0; t < 260; t += 1) s = step(s, t === 200 ? button : t < 198 ? Input.Right : 0, 0);
         expect(s.fighters[1].health, `${HEROES[att].id} ${button}`).toBeLessThan(HEROES[def].stats.maxHealth);
       }
     }
+  });
+});
+
+describe('command moves', () => {
+  it('down + heavy is the kick, and an advancing move carries the attacker forward', () => {
+    const jet = HEROES.findIndex((h) => h.id === 'jetsetter');
+    let s = createInitialState(jet, 0);
+    for (let t = 0; t < 100; t += 1) s = step(s, 0, 0);
+    const kick = step(s, Input.Down | Input.Heavy, 0);
+    expect(kick.fighters[0].state).toBe(FS.Attack);
+    expect(MOVE_KEYS[kick.fighters[0].moveId]).toBe('kick');
+
+    const x0 = s.fighters[0].x;
+    let d = step(s, Input.Special, 0);
+    for (let t = 0; t < 30; t += 1) d = step(d, 0, 0);
+    const m = HEROES[jet].moves.special;
+    expect(m.advance).toBeGreaterThan(0);
+    expect(d.fighters[0].x).toBe(x0 + m.advance * m.active);
   });
 });
 

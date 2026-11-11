@@ -16,6 +16,7 @@
    `Math.max`, `Math.imul` are allowed. `tests/sim.test.ts` scans `src/sim/` to enforce this.
 5. **Inputs are a bitmask per tick:** left=1, right=2, up=4, down=8, light=16, heavy=32,
    special=64, block=128 (see `src/sim/input.ts`).
+   Kick has no bit of its own: it is the command move down + heavy.
 6. **Fighters are data driven.** Each hero is one JSON file in `src/heroes/`: stats plus per-move
    frame data (startup, active, recovery, damage, hitstun, blockstun, knockback, and hitbox and
    hurtbox rects for every frame). No hero-specific logic in code.
@@ -39,6 +40,8 @@
   above the floor (up is positive). Stage is `0..STAGE_WIDTH` with walls at both ends.
 - Rects in hero JSON are fighter-local: `x` = forward offset of the near edge (mirrored by
   facing), `y` = bottom edge above the feet, `w`, `h`.
+- Every hero has four moves: `light`, `heavy`, `special`, `kick`. A move's `advance` is the pixels per
+  tick the attacker slides forward during its active frames (0 for none).
 - `frames.length` of a move must equal `startup + active + recovery`; hitboxes only on active frames.
 - Any new field on the state must be added to `cloneState` and `hashState`.
 

@@ -17,6 +17,7 @@ const P1: Binding = {
   KeyF: Input.Light,
   KeyG: Input.Heavy,
   KeyH: Input.Special,
+  KeyT: Input.Down | Input.Heavy, // kick shortcut (same as holding down and pressing heavy)
   KeyR: Input.Block,
 };
 
@@ -28,6 +29,7 @@ const P2: Binding = {
   KeyU: Input.Light,
   KeyI: Input.Heavy,
   KeyO: Input.Special,
+  KeyY: Input.Down | Input.Heavy,
   KeyP: Input.Block,
   Numpad1: Input.Light,
   Numpad2: Input.Heavy,

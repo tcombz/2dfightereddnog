@@ -13,7 +13,7 @@ export const HEROES: readonly HeroData[] = [
 ];
 
 /** FighterState.moveId indexes into this. */
-export const MOVE_KEYS = ['light', 'heavy', 'special'] as const;
+export const MOVE_KEYS = ['light', 'heavy', 'special', 'kick'] as const;
 
 export function getMove(hero: number, moveId: number): MoveData {
   return HEROES[hero].moves[MOVE_KEYS[moveId]];
