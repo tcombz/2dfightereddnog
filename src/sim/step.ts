@@ -356,8 +356,8 @@ function tryCancel(s: GameState, f: FighterState, slot: number, input: number): 
   if (m.air) return;
   const next = chooseMove(f, input, pressed, s.tick);
   if (next < 0) return;
-  // The second button of a throw or super pressed a tick or two late still counts.
-  if (m.kind === Kind.Normal && f.stateTick <= PRESS_LENIENCY && (next === Move.Throw || next === Move.Super)) {
+  // The second button of a throw or super pressed a few ticks late still counts (before the normal lands).
+  if (m.kind === Kind.Normal && f.moveHits === 0 && f.stateTick <= PRESS_LENIENCY && (next === Move.Throw || next === Move.Super)) {
     startMove(s, f, slot, next);
     return;
   }

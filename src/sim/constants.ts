@@ -30,7 +30,7 @@ export const MOTION_WINDOW = 15;
 /** Two taps of a direction within this many ticks make a dash. */
 export const DASH_WINDOW = 10;
 /** A move the button press is late for by up to this many ticks still counts (2-button presses). */
-export const PRESS_LENIENCY = 2;
+export const PRESS_LENIENCY = 4;
 /** A button pressed up to this many ticks before the fighter can act still comes out. */
 export const BUFFER_TICKS = 6;
 /** Most extra hits a launched opponent can take before landing. */

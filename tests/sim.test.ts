@@ -112,7 +112,7 @@ describe('determinism', () => {
     expect(h2).toBe(h1);
     expect(h3).toBe(h1);
     // Golden value: pins the result across runs, machines and refactors.
-    expect(h1).toMatchInlineSnapshot(`"b6ca8687"`);
+    expect(h1).toMatchInlineSnapshot(`"856bc197"`);
   });
 
   it('resuming from a serialized mid-run state gives the same hash', () => {
@@ -342,6 +342,22 @@ describe('feel and combo depth', () => {
     }
     expect(superStarted).toBe(true);
     expect(maxCombo).toBeGreaterThanOrEqual(2);
+  });
+
+  it('the second button of a super or throw still counts when pressed a few ticks late', () => {
+    for (const late of [1, 2, 3, 4]) {
+      let s = fight(JET, ROGUE, 500);
+      s.fighters[0].meter = METER_MAX;
+      s = step(s, Heavy, 0);
+      for (let t = 1; t < late; t += 1) s = step(s, Heavy, 0);
+      s = step(s, Heavy | Special, 0);
+      expect(s.fighters[0].moveId).toBe(Move.Super);
+    }
+    let s = fight(ROGUE, JET, 90);
+    s = step(s, Light, 0);
+    for (let t = 1; t < 3; t += 1) s = step(s, Light, 0);
+    s = step(s, Light | Heavy, 0);
+    expect(s.fighters[0].moveId).toBe(Move.Throw);
   });
 
   it('pressing throw back breaks a throw', () => {
