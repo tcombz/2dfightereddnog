@@ -84,6 +84,8 @@ export class FightScene extends Phaser.Scene {
   private camX = VIEW_W / 2;
   private camY = VIEW_H / 2;
   private punch = { z: 1 };
+  /** Playback speed of the sim (render only): the KO plays in slow motion, then eases back. */
+  private slowmo = { rate: 1 };
   private dummy = 3;
   private trainingText: Phaser.GameObjects.Text | null = null;
   /** Combo trials (training): the current trial, which are cleared, and what the current combo holds. */
@@ -119,6 +121,7 @@ export class FightScene extends Phaser.Scene {
     this.landedAt = [-99, -99];
     this.stoodAt = [-99, -99];
     this.punch = { z: 1 };
+    this.slowmo = { rate: 1 };
     this.matchOverTicks = 0;
     this.pauseObjects = [];
     this.moveListObjects = [];
@@ -237,7 +240,8 @@ export class FightScene extends Phaser.Scene {
     }
 
     if (!this.paused) {
-      this.acc += delta;
+      // After a KO the sim ignores input, so playing it slower changes nothing but the drama.
+      this.acc += delta * this.slowmo.rate;
       let steps = 0;
       while (this.acc >= TICK_MS && steps < MAX_STEPS_PER_FRAME) {
         const prev = this.state;
@@ -379,6 +383,9 @@ export class FightScene extends Phaser.Scene {
     }
     if (ko) {
       sfx(this, 'ko');
+      this.slowmo.rate = 0.3;
+      this.tweens.add({ targets: this.slowmo, rate: 1, delay: 900, duration: 500, ease: 'Quad.easeIn' });
+      this.tweens.add({ targets: this.punch, z: 1.12, duration: 220, ease: 'Quad.easeOut', yoyo: true, hold: 800 });
       this.cameras.main.flash(260, 255, 255, 255);
       this.cameras.main.shake(420, 0.012);
       this.hud.shout(a.health <= 0 && b.health <= 0 ? 'DOUBLE K.O.' : 'K.O.', sub, 1700);

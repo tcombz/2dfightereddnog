@@ -178,6 +178,11 @@ def main() -> None:
         return {'anim': name, 'startup': startup, 'active': active, 'recovery': recovery, **({'loopActive': True} if loop else {})}
 
     idle_h = sum(f['top'] for f in metrics['idle']) / len(metrics['idle'])
+
+    def crouched(a):
+        # A low attack never pops back up to standing: drop startup frames taller than a crouch.
+        low = [i for i in a['startup'] if metrics[a['anim']][i]['top'] <= 0.84 * idle_h]
+        return {**a, 'startup': low or a['active'][:1]}
     scale = round(world_h / idle_h, 3)
 
     jump = [i for i, f in enumerate(metrics['jump']) if f['air'] > 6] or list(range(2, max(3, count('jump') - 1)))
@@ -207,7 +212,7 @@ def main() -> None:
             'light': split(light, 'reach'),
             'heavy': heavy,
             'kick': split('kick', 'reach'),
-            'crouchLight': split('crouch_light', 'reach'),
+            'crouchLight': crouched(split('crouch_light', 'reach')),
             'sweep': split('sweep', 'low'),
             'jumpAttack': split('jump_attack', 'reach'),
             'throw': split('grab', 'reach') if 'grab' in anims else {

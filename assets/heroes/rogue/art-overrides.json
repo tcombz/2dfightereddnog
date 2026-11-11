@@ -1,5 +1,20 @@
 {
- "skip": ["jab6"],
- "recolor": { "projectile": 205 },
- "block": [3, 4, 6]
+ "skip": [
+  "jab6",
+  "block2"
+ ],
+ "recolor": {
+  "projectile": 205
+ },
+ "rename": {
+  "jab_st": "light_punch",
+  "crouch_jab": "crouch_light",
+  "special_st": "special",
+  "block_st": "block"
+ },
+ "block": [
+  2,
+  3,
+  5
+ ]
 }
