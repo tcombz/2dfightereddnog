@@ -37,6 +37,8 @@ function move(bodies, spec) {
     air: spec.air ?? false,
     juggle: spec.juggle ?? 0,
     counter: spec.counter ?? 0,
+    armor: spec.armor ?? 0,
+    teleport: spec.teleport ?? 0,
     meterCost: spec.meterCost ?? 0,
     projectile: spec.projectile
       ? {
@@ -98,19 +100,20 @@ const heroes = [
     },
     moves: {
       light: { name: 'Jab', startup: 4, active: 3, recovery: 7, damage: 30, hitstun: 15, blockstun: 11, kb: [3, 0], hitstop: 7, cancel: ALL, hitbox: { x: 15, y: 158, w: 86, h: 30 } },
-      heavy: { name: 'Straight', startup: 8, active: 4, recovery: 18, damage: 80, hitstun: 24, blockstun: 17, kb: [10, 0], hitstop: 11, advance: 3, cancel: SP, hitbox: { x: 15, y: 132, w: 108, h: 40 } },
+      heavy: { name: 'Devastating Strike', startup: 8, active: 4, recovery: 18, damage: 80, hitstun: 24, blockstun: 17, kb: [10, 0], hitstop: 11, advance: 3, cancel: SP, hitbox: { x: 15, y: 132, w: 108, h: 40 } },
       kick: { name: 'High Kick', startup: 10, active: 4, recovery: 17, damage: 72, hitstun: 22, blockstun: 15, kb: [12, 0], hitstop: 10, cancel: SP, hitbox: { x: 20, y: 146, w: 120, h: 56 } },
       crouchLight: { name: 'Low Jab', guard: Guard.Low, body: 'crouch', startup: 4, active: 3, recovery: 8, damage: 24, hitstun: 14, blockstun: 10, kb: [3, 0], hitstop: 7, cancel: ALL, hitbox: { x: 20, y: 112, w: 108, h: 52 } },
       sweep: { name: 'Sweep', guard: Guard.Low, body: 'crouch', startup: 9, active: 4, recovery: 24, damage: 70, knockdown: true, blockstun: 14, kb: [7, 6], hitstop: 10, cancel: Cancel.Super, hitbox: { x: 10, y: 0, w: 110, h: 80 } },
-      jumpAttack: { name: 'Flying Kick', guard: Guard.High, body: 'air', air: true, startup: 5, active: 14, recovery: 4, damage: 68, hitstun: 20, blockstun: 14, kb: [6, 0], hitstop: 10, hitbox: { x: 10, y: 50, w: 125, h: 120 } },
+      jumpAttack: { name: 'Strike From Above', guard: Guard.High, body: 'air', air: true, startup: 5, active: 14, recovery: 4, damage: 68, hitstun: 20, blockstun: 14, kb: [6, 0], hitstop: 10, hitbox: { x: 10, y: 50, w: 125, h: 120 } },
       throw: { name: 'Throw', kind: Kind.Throw, guard: Guard.Throw, limb: false, startup: 4, active: 2, recovery: 24, damage: 110, knockdown: true, kb: [14, 14], hitstop: 14, hitbox: { x: 10, y: 60, w: 70, h: 120 } },
-      special: { name: 'Storm Palm', kind: Kind.Special, startup: 12, active: 6, recovery: 24, damage: 110, chip: 18, hitstun: 24, blockstun: 18, kb: [12, 16], knockdown: true, hitstop: 14, cancel: Cancel.Super, hitbox: { x: 20, y: 60, w: 120, h: 150 } },
+      // Rogue's Rift: blinks in (invulnerable while he vanishes), strikes, and blinks back out on a hit.
+      special: { name: "Rogue's Rift", kind: Kind.Special, startup: 12, active: 5, recovery: 22, invuln: 11, teleport: 220, damage: 105, chip: 16, hitstun: 24, blockstun: 18, kb: [12, 16], knockdown: true, hitstop: 14, cancel: Cancel.Super, hitbox: { x: 10, y: 60, w: 125, h: 150 } },
       projectile: {
         name: 'Arc Bolt', kind: Kind.Special, startup: 12, active: 1, recovery: 28,
         projectile: { x: 70, y: 150, w: 70, h: 44, speed: 10, life: 110, damage: 70, chip: 12, hitstun: 20, blockstun: 16, kb: [10, 0], hitstop: 8 },
       },
       rising: { name: 'Rising Volt', kind: Kind.Special, juggle: 1, cancel: Cancel.Super, startup: 4, active: 10, recovery: 30, invuln: 7, damage: 120, chip: 16, hitstun: 30, blockstun: 20, kb: [6, 22], knockdown: true, hitstop: 12, hitbox: { x: 0, y: 100, w: 90, h: 180 } },
-      super: { name: 'Thunder Rush', kind: Kind.Super, juggle: 1, meterCost: 1000, startup: 6, active: 24, recovery: 24, hits: 5, rehit: 5, advance: 10, invuln: 14, damage: 55, chip: 20, hitstun: 30, blockstun: 20, kb: [3, 20], knockdown: true, hitstop: 6, hitbox: { x: 0, y: 30, w: 150, h: 200 } },
+      super: { name: 'Financial Freedom', kind: Kind.Super, juggle: 1, meterCost: 1000, startup: 6, active: 24, recovery: 24, hits: 5, rehit: 5, advance: 10, invuln: 14, damage: 55, chip: 20, hitstun: 30, blockstun: 20, kb: [3, 20], knockdown: true, hitstop: 6, hitbox: { x: 0, y: 30, w: 150, h: 200 } },
     },
   }),
   hero({
@@ -207,6 +210,38 @@ const heroes = [
       },
       rising: { name: 'Rise Up', kind: Kind.Special, juggle: 1, cancel: Cancel.Super, startup: 5, active: 9, recovery: 32, invuln: 7, damage: 135, chip: 16, hitstun: 30, blockstun: 20, kb: [6, 22], knockdown: true, hitstop: 13, hitbox: { x: 0, y: 100, w: 96, h: 185 } },
       super: { name: 'Main Character Energy', kind: Kind.Super, juggle: 1, meterCost: 1000, startup: 7, active: 26, recovery: 28, hits: 5, rehit: 5, advance: 9, invuln: 16, damage: 68, chip: 22, hitstun: 32, blockstun: 20, kb: [4, 22], knockdown: true, hitstop: 8, hitbox: { x: 0, y: 0, w: 170, h: 250 } },
+    },
+  }),
+  // Eddnog "The Tank": the biggest, slowest, toughest. Armor on his big moves lets him walk through pokes.
+  hero({
+    id: 'eddnog',
+    name: 'Eddnog',
+    color: '#e0a526',
+    stats: {
+      maxHealth: 1150, walkSpeed: 4, backWalkSpeed: 3, jumpVelocity: 20, jumpSpeedX: 5, gravity: 1,
+      width: 86, height: 246, crouchHeight: 160, dashSpeed: 11, dashTicks: 15, backdashSpeed: 9, backdashTicks: 17,
+    },
+    bodies: {
+      stand: { x: -43, y: 0, w: 86, h: 246 },
+      crouch: { x: -46, y: 0, w: 92, h: 160 },
+      air: { x: -43, y: 30, w: 86, h: 196 },
+    },
+    moves: {
+      light: { name: 'Keep the Pressure', startup: 5, active: 3, recovery: 9, damage: 40, hitstun: 15, blockstun: 11, kb: [3, 0], hitstop: 8, cancel: ALL, hitbox: { x: 15, y: 160, w: 92, h: 34 } },
+      heavy: { name: 'Bring the Hammer Down', startup: 12, active: 4, recovery: 22, armor: 1, damage: 104, hitstun: 26, blockstun: 19, kb: [13, 0], hitstop: 14, advance: 3, cancel: SP, hitbox: { x: 15, y: 120, w: 124, h: 70 } },
+      kick: { name: 'Shoulder Check', startup: 12, active: 4, recovery: 19, damage: 86, hitstun: 22, blockstun: 15, kb: [14, 0], hitstop: 12, cancel: SP, hitbox: { x: 20, y: 130, w: 126, h: 70 } },
+      crouchLight: { name: 'Low Jab', guard: Guard.Low, body: 'crouch', startup: 5, active: 3, recovery: 10, damage: 32, hitstun: 14, blockstun: 10, kb: [3, 0], hitstop: 8, cancel: ALL, hitbox: { x: 20, y: 110, w: 100, h: 54 } },
+      sweep: { name: 'Sweep the Leg', guard: Guard.Low, body: 'crouch', startup: 11, active: 4, recovery: 27, damage: 92, knockdown: true, blockstun: 15, kb: [8, 6], hitstop: 12, cancel: Cancel.Super, hitbox: { x: 10, y: 0, w: 122, h: 90 } },
+      jumpAttack: { name: 'Crush From Above', guard: Guard.High, body: 'air', air: true, startup: 6, active: 14, recovery: 4, damage: 90, hitstun: 21, blockstun: 15, kb: [7, 0], hitstop: 13, hitbox: { x: 0, y: 20, w: 130, h: 130 } },
+      throw: { name: 'Bear Hug', kind: Kind.Throw, guard: Guard.Throw, limb: false, startup: 5, active: 3, recovery: 26, damage: 150, knockdown: true, kb: [16, 14], hitstop: 16, hitbox: { x: 10, y: 60, w: 86, h: 140 } },
+      // Bulwark Rush: a shoulder-first charge behind a gold shield that soaks two hits.
+      special: { name: 'Bulwark Rush', kind: Kind.Special, startup: 12, active: 16, recovery: 26, armor: 2, advance: 10, damage: 118, chip: 18, hitstun: 26, blockstun: 20, kb: [14, 16], knockdown: true, hitstop: 15, cancel: Cancel.Super, hitbox: { x: 10, y: 40, w: 110, h: 190 } },
+      projectile: {
+        name: 'Ground Breaker', kind: Kind.Special, startup: 15, active: 1, recovery: 30,
+        projectile: { x: 50, y: 0, w: 96, h: 70, speed: 9, life: 60, damage: 82, chip: 14, hitstun: 22, blockstun: 17, kb: [10, 12], knockdown: true, hitstop: 11 },
+      },
+      rising: { name: 'Shield Uppercut', kind: Kind.Special, juggle: 1, cancel: Cancel.Super, startup: 6, active: 9, recovery: 32, invuln: 8, damage: 130, chip: 16, hitstun: 30, blockstun: 20, kb: [6, 21], knockdown: true, hitstop: 14, hitbox: { x: 0, y: 100, w: 100, h: 190 } },
+      super: { name: 'Titan Smash', kind: Kind.Super, juggle: 1, meterCost: 1000, startup: 8, active: 24, recovery: 30, hits: 4, rehit: 6, advance: 7, invuln: 18, damage: 78, chip: 24, hitstun: 32, blockstun: 22, kb: [4, 24], knockdown: true, hitstop: 10, hitbox: { x: 0, y: 0, w: 180, h: 240 } },
     },
   }),
 ];

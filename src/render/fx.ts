@@ -1,5 +1,6 @@
 // Procedural effect textures and one-shot effects (sparks, dust, rings, afterimages).
 import Phaser from 'phaser';
+import type { HitStyle } from './heroInfo';
 
 const TAU = Math.PI * 2;
 
@@ -42,6 +43,26 @@ function seeded(seed: number): () => number {
 
 /** Builds every procedural texture once per game. */
 export function makeTextures(scene: Phaser.Scene): void {
+  // A chunk of rock with a gold glint, for the Tank's impacts.
+  canvasTexture(scene, 'fx_rock', 24, 22, (ctx) => {
+    ctx.fillStyle = '#4a4238';
+    ctx.strokeStyle = '#141210';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(3, 12);
+    ctx.lineTo(8, 3);
+    ctx.lineTo(17, 2);
+    ctx.lineTo(22, 10);
+    ctx.lineTo(18, 20);
+    ctx.lineTo(7, 20);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#7a6d5c';
+    ctx.fillRect(8, 5, 6, 4);
+    ctx.fillStyle = '#ffcf4a';
+    ctx.fillRect(15, 6, 3, 2);
+  });
   canvasTexture(scene, 'fx_glow', 128, 128, (ctx) =>
     radial(ctx, 64, 64, 64, [
       [0, 'rgba(255,255,255,1)'],
@@ -444,14 +465,56 @@ export class Effects {
     if (big || counter) this.ring(x, y, counter ? 0xff4040 : color, size * 1.4);
   }
 
-  /** A blocked hit: a shield flash and a few sparks. */
-  block(x: number, y: number, dir: number): void {
-    const h = this.add(this.scene.add.image(x - dir * 6, y, 'fx_hex').setBlendMode(Phaser.BlendModes.ADD), 60);
+  /**
+   * The attacker's signature on a hit, on top of the spark: lightning forks, spinning records,
+   * flying cards, gold sparks with a crown flicker, or rock chunks and dust.
+   */
+  themed(style: HitStyle, x: number, y: number, dir: number, power: number): void {
+    const s = this.scene;
+    const n = power >= 10 ? 5 : 3;
+    if (style === 'volt') {
+      for (let i = 0; i < n; i += 1) {
+        const b = this.add(s.add.image(x + (Math.random() - 0.5) * 30, y, `fx_strike${i % 3}`).setBlendMode(Phaser.BlendModes.ADD), 63);
+        b.setOrigin(0.5, 0.5).setScale(0.18 + Math.random() * 0.12, 0.22 + power * 0.012).setRotation(dir * (0.9 + Math.random() * 1.2)).setTint(0x9fe8ff);
+        s.tweens.add({ targets: b, alpha: 0, duration: 120 + i * 30, onComplete: () => b.destroy() });
+      }
+      return;
+    }
+    const key = style === 'vinyl' ? 'fx_disc' : style === 'cards' ? 'fx_card' : style === 'quake' ? 'fx_rock' : 'fx_glow';
+    for (let i = 0; i < n + 1; i += 1) {
+      const a = (dir > 0 ? 0 : Math.PI) + (Math.random() - 0.5) * 2.4 - (style === 'quake' ? 0.6 * dir : 0);
+      const p = this.add(s.add.image(x, y, key), 63);
+      if (style === 'vinyl') p.setScale(0.32);
+      else if (style === 'cards') p.setScale(0.9).setRotation(Math.random() * 6);
+      else if (style === 'quake') p.setScale(0.9 + Math.random() * 0.8);
+      else p.setScale(0.12 + Math.random() * 0.1).setTint(Math.random() < 0.5 ? 0xffc23d : 0xfff2b0).setBlendMode(Phaser.BlendModes.ADD);
+      const len = 70 + Math.random() * 80 + power * 3;
+      s.tweens.add({
+        targets: p,
+        x: x + Math.cos(a) * len,
+        y: y + Math.sin(a) * len + (style === 'quake' ? 60 : 0),
+        rotation: p.rotation + dir * (4 + Math.random() * 6),
+        alpha: 0,
+        duration: 260 + Math.random() * 160,
+        ease: style === 'quake' ? 'Quad.easeIn' : 'Cubic.easeOut',
+        onComplete: () => p.destroy(),
+      });
+    }
+    if (style === 'crown' && power >= 10) {
+      const c = this.add(s.add.image(x, y - 30, 'fx_crown').setScale(0.12).setAlpha(0.95), 64);
+      s.tweens.add({ targets: c, y: y - 90, scale: 0.22, alpha: 0, duration: 420, ease: 'Quad.easeOut', onComplete: () => c.destroy() });
+    }
+    if (style === 'quake') this.dust(x, y + 40, power >= 10 ? 6 : 3, 90);
+  }
+
+  /** A blocked hit: a shield flash in the defender's colour and a few sparks. */
+  block(x: number, y: number, dir: number, color = 0x9fe6ff): void {
+    const h = this.add(this.scene.add.image(x - dir * 6, y, 'fx_hex').setBlendMode(Phaser.BlendModes.ADD).setTint(color), 60);
     h.setScale(0.55, 0.75);
     this.scene.tweens.add({ targets: h, scaleX: 0.75, scaleY: 0.95, alpha: 0, duration: 180, onComplete: () => h.destroy() });
     for (let i = 0; i < 5; i += 1) {
       const a = (dir > 0 ? Math.PI : 0) + (Math.random() - 0.5) * 1.6;
-      const s = this.add(this.scene.add.image(x, y, 'fx_streak').setBlendMode(Phaser.BlendModes.ADD).setTint(0x9fe6ff), 62);
+      const s = this.add(this.scene.add.image(x, y, 'fx_streak').setBlendMode(Phaser.BlendModes.ADD).setTint(color), 62);
       s.setRotation(a).setScale(0.45, 0.6);
       this.scene.tweens.add({ targets: s, x: x + Math.cos(a) * 50, y: y + Math.sin(a) * 50, alpha: 0, duration: 160, onComplete: () => s.destroy() });
     }

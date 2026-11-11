@@ -75,6 +75,10 @@ export interface MoveData extends HitData {
   juggle: number;
   /** 1 for a counter stance: a strike landing during the active frames is deflected and answered with this move's hit. */
   counter: number;
+  /** Strikes the move absorbs during its startup and active frames, taking half damage (throws and supers break it). */
+  armor: number;
+  /** Pixels the fighter blinks forward on the last startup tick (never past the opponent), and half that back out after landing it. */
+  teleport: number;
   /** Super meter spent to perform it. */
   meterCost: number;
   projectile: ProjectileData | null;
@@ -152,7 +156,7 @@ export const FS = {
 export const FS_NAMES = ['idle', 'walk', 'jump', 'crouch', 'attack', 'block', 'hitstun', 'knockdown', 'ko', 'dash'];
 
 /** What happened to a fighter this tick, for the renderer's sparks and sounds. */
-export const FX = { None: 0, Hit: 1, Block: 2, Counter: 3, Throw: 4, Clash: 5, Tech: 6, Parry: 7 } as const;
+export const FX = { None: 0, Hit: 1, Block: 2, Counter: 3, Throw: 4, Clash: 5, Tech: 6, Parry: 7, Armor: 8 } as const;
 
 export const Phase = { Intro: 0, Fight: 1, RoundEnd: 2, MatchEnd: 3 } as const;
 
@@ -187,6 +191,8 @@ export interface FighterState {
   comboDamage: number;
   /** Extra hits taken while launched; reset on landing. */
   juggles: number;
+  /** Strikes the current move's armor has absorbed. */
+  armorHits: number;
   /** Attack buttons pressed recently but not used yet, and how many ticks ago. */
   buf: number;
   bufAge: number;

@@ -69,6 +69,8 @@
    "air": false,
    "juggle": 0,
    "counter": 0,
+   "armor": 0,
+   "teleport": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -327,6 +329,8 @@
    "air": false,
    "juggle": 0,
    "counter": 0,
+   "armor": 0,
+   "teleport": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -832,6 +836,8 @@
    "air": false,
    "juggle": 0,
    "counter": 0,
+   "armor": 0,
+   "teleport": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -1320,6 +1326,8 @@
    "air": false,
    "juggle": 0,
    "counter": 0,
+   "armor": 0,
+   "teleport": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -1589,6 +1597,8 @@
    "air": false,
    "juggle": 0,
    "counter": 0,
+   "armor": 0,
+   "teleport": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -2172,6 +2182,8 @@
    "air": true,
    "juggle": 0,
    "counter": 0,
+   "armor": 0,
+   "teleport": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -2660,6 +2672,8 @@
    "air": false,
    "juggle": 0,
    "counter": 0,
+   "armor": 0,
+   "teleport": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -3034,6 +3048,8 @@
    "air": false,
    "juggle": 0,
    "counter": 0,
+   "armor": 0,
+   "teleport": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -3698,6 +3714,8 @@
    "air": false,
    "juggle": 0,
    "counter": 0,
+   "armor": 0,
+   "teleport": 0,
    "meterCost": 0,
    "projectile": {
     "spawnTick": 14,
@@ -4241,6 +4259,8 @@
    "air": false,
    "juggle": 1,
    "counter": 0,
+   "armor": 0,
+   "teleport": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -4990,6 +5010,8 @@
    "air": false,
    "juggle": 1,
    "counter": 0,
+   "armor": 0,
+   "teleport": 0,
    "meterCost": 1000,
    "projectile": null,
    "frames": [

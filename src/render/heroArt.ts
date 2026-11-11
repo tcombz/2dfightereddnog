@@ -5,6 +5,12 @@ import chrisPng from '../../assets/heroes/chris/atlas.png';
 import chrisBase from '../../assets/heroes/chris/base/east.png';
 import chrisSheet from '../../assets/heroes/chris/sheet_portrait.jpg';
 import chrisSuper from '../../assets/heroes/chris/super_art.jpg';
+import eddnogArt from '../../assets/heroes/eddnog/art.json';
+import eddnogAtlas from '../../assets/heroes/eddnog/atlas.json';
+import eddnogPng from '../../assets/heroes/eddnog/atlas.png';
+import eddnogBase from '../../assets/heroes/eddnog/base/east.png';
+import eddnogSheet from '../../assets/heroes/eddnog/sheet_portrait.jpg';
+import eddnogSuper from '../../assets/heroes/eddnog/super_art.jpg';
 import jetsetterArt from '../../assets/heroes/jetsetter/art.json';
 import jetsetterAtlas from '../../assets/heroes/jetsetter/atlas.json';
 import jetsetterSheet from '../../assets/heroes/jetsetter/sheet_portrait.jpg';
@@ -21,6 +27,8 @@ import rogueAtlas from '../../assets/heroes/rogue/atlas.json';
 import roguePng from '../../assets/heroes/rogue/atlas.png';
 import rogueArt from '../../assets/heroes/rogue/art.json';
 import rogueBase from '../../assets/heroes/rogue/base/east.png';
+import rogueSheet from '../../assets/heroes/rogue/sheet_portrait.jpg';
+import rogueSuper from '../../assets/heroes/rogue/super_art.jpg';
 import { FS, HEROES, KNOCKDOWN_TICKS, MOVE_KEYS, getMove } from '../sim';
 import type { FighterState, MoveKey } from '../sim';
 
@@ -117,6 +125,8 @@ const ART: Record<string, HeroArt> = {
     png: roguePng,
     atlas: rogueAtlas,
     base: rogueBase,
+    sheet: rogueSheet,
+    superArt: rogueSuper,
     projectiles: { projectile: 'bolt' },
     ...fromJson(rogueArt),
   },
@@ -149,6 +159,16 @@ const ART: Record<string, HeroArt> = {
     superArt: leaderSuper,
     projectiles: { special: 'crew', projectile: 'wave' },
     ...fromJson(leaderArt),
+  },
+  eddnog: {
+    key: 'eddnog',
+    png: eddnogPng,
+    atlas: eddnogAtlas,
+    base: eddnogBase,
+    sheet: eddnogSheet,
+    superArt: eddnogSuper,
+    projectiles: { projectile: 'wave' },
+    ...fromJson(eddnogArt),
   },
 };
 

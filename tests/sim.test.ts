@@ -30,7 +30,8 @@ const ROGUE = heroIndex('rogue');
 const JET = heroIndex('jetsetter');
 const CHRIS = heroIndex('chris');
 const LEADER = heroIndex('leader');
-const ALL_HEROES = [ROGUE, JET, CHRIS, LEADER];
+const EDD = heroIndex('eddnog');
+const ALL_HEROES = [ROGUE, JET, CHRIS, LEADER, EDD];
 const { Left: L, Right: R, Up: U, Down: D, Light, Heavy, Special, Block } = Input;
 
 /** Test-side integer LCG. The sim itself has no randomness. */
@@ -115,7 +116,7 @@ describe('determinism', () => {
     expect(h2).toBe(h1);
     expect(h3).toBe(h1);
     // Golden value: pins the result across runs, machines and refactors.
-    expect(h1).toMatchInlineSnapshot(`"9f7a8228"`);
+    expect(h1).toMatchInlineSnapshot(`"0c4692a0"`);
   });
 
   it('resuming from a serialized mid-run state gives the same hash', () => {
@@ -524,6 +525,49 @@ describe('every hero', () => {
         expect(hashState(run(log, createInitialState(a, b)))).toBe(hashState(run(log, createInitialState(a, b))));
       }
     }
+  });
+});
+
+describe('armor and teleports', () => {
+  it("Eddnog's Bulwark Rush soaks a jab and still lands", () => {
+    // Eddnog starts his rush; the Rogue jabs into its startup.
+    let s = fight(EDD, ROGUE, 110);
+    const fx: number[] = [];
+    s = step(s, Special, 0);
+    for (let t = 0; t < 4; t += 1) s = step(s, 0, 0);
+    for (let t = 0; t < 60; t += 1) {
+      s = step(s, 0, t === 0 ? Light : 0);
+      fx.push(s.fighters[0].fx);
+    }
+    expect(fx).toContain(FX.Armor);
+    expect(s.fighters[1].comboDamage).toBeGreaterThan(0);
+    expect(s.fighters[1].health).toBeLessThan(HEROES[ROGUE].stats.maxHealth);
+    expect(s.fighters[0].health).toBeGreaterThan(HEROES[EDD].stats.maxHealth - getMove(ROGUE, Move.Light).damage);
+  });
+
+  it('a throw breaks through armor', () => {
+    let s = fight(EDD, ROGUE, 90);
+    s = step(s, Special, 0);
+    s = step(s, 0, Light | Heavy);
+    for (let t = 0; t < 30; t += 1) s = step(s, 0, 0);
+    // Thrown out of his startup: a counter hit, so at least the throw's full damage.
+    expect(s.fighters[0].health).toBeLessThanOrEqual(HEROES[EDD].stats.maxHealth - getMove(ROGUE, Move.Throw).damage);
+    expect(s.fighters[0].armorHits).toBe(0);
+  });
+
+  it("Rogue's Rift blinks in from range, strikes without crossing over, and blinks back out", () => {
+    let s = fight(ROGUE, JET, 330);
+    const startX = s.fighters[0].x;
+    s = step(s, Special, 0);
+    let closest = Infinity;
+    for (let t = 0; t < 60; t += 1) {
+      s = step(s, 0, 0);
+      closest = Math.min(closest, s.fighters[1].x - s.fighters[0].x);
+    }
+    expect(s.fighters[1].comboDamage).toBeGreaterThan(0);
+    expect(closest).toBeGreaterThan(0);
+    expect(s.fighters[0].x).toBeGreaterThan(startX + 60);
+    expect(s.fighters[1].x - s.fighters[0].x).toBeGreaterThan(closest);
   });
 });
 

@@ -17,6 +17,7 @@ const LOOPS: Record<string, { start: number; end: number }> = {
   alley: { start: 52.082, end: 152.844 },
   embassy: { start: 55.124, end: 148.599 },
   crown: { start: 50.55, end: 152.455 },
+  fortress: { start: 46.347, end: 128.182 },
 };
 
 interface Settings {

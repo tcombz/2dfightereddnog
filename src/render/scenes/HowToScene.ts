@@ -8,15 +8,15 @@ import { BASICS, COMBOS, moveList } from '../moves';
 import { backdrop, body, display, goTo, goldFill } from '../ui';
 
 const CONTROLS: Array<[string, string, string, string]> = [
-  ['', 'PLAYER 1', 'PLAYER 2', 'GAMEPAD'],
+  ['', 'PLAYER 1', 'PLAYER 2', 'GAMEPAD (XBOX / PS)'],
   ['Move', 'W A S D', 'Arrow keys', 'Stick or d-pad'],
-  ['Light', 'F or J', 'U or Numpad 1', 'A or X'],
-  ['Heavy', 'G or K', 'I or Numpad 2', 'Y'],
-  ['Special', 'H or L', 'O or Numpad 3', 'B'],
-  ['Block', 'Hold back (or R, Space)', 'Hold back (or P)', 'Hold back (or LB)'],
-  ['Throw', 'Light + Heavy', 'Light + Heavy', 'RB'],
-  ['Super', 'Heavy + Special', 'Heavy + Special', 'RT'],
-  ['Pause', 'Esc', 'Esc', 'Start'],
+  ['Light', 'F or J', 'U or Numpad 1', 'A / ✕  or  X / □'],
+  ['Heavy', 'G or K', 'I or Numpad 2', 'Y / △'],
+  ['Special', 'H or L', 'O or Numpad 3', 'B / ○'],
+  ['Block', 'Hold back (or R, Space)', 'Hold back (or P)', 'Hold back, LB / L1, LT / L2'],
+  ['Throw', 'Light + Heavy', 'Light + Heavy', 'RB / R1'],
+  ['Super', 'Heavy + Special', 'Heavy + Special', 'RT / R2'],
+  ['Pause', 'Esc', 'Esc', 'Start / Options'],
 ];
 
 /** Controls, basics and both heroes' move lists, one page at a time. */
@@ -67,6 +67,7 @@ export class HowToScene extends Phaser.Scene {
           add(this.add.text(x, y, cell, style));
         });
       });
+      add(this.add.text(70, 476, 'Any controller works, plugged in or Bluetooth. Title screen > Controllers to test, remap or swap pads.', body(14, CSS.muted)));
     } else if (this.page === 2) {
       add(this.add.text(70, 112, 'Every fighter shares these routes. "," chains a normal into the next; ">" cancels into a special or super.', body(14, CSS.muted)).setWordWrapWidth(820));
       COMBOS.forEach(([name, route], r) => {
@@ -76,7 +77,7 @@ export class HowToScene extends Phaser.Scene {
       });
     } else if (this.page === 1) {
       BASICS.forEach(([name, text], r) => {
-        const y = 112 + r * 37;
+        const y = 108 + r * 34;
         add(this.add.text(70, y, name.toUpperCase(), display(16, CSS.gold, 4)));
         add(this.add.text(290, y, text, body(16, CSS.ink)).setWordWrapWidth(590));
       });

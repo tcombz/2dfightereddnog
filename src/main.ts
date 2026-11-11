@@ -4,6 +4,7 @@ import '@fontsource/chakra-petch/600.css';
 import Phaser from 'phaser';
 import { VIEW_H, VIEW_W } from './render/config';
 import { BootScene } from './render/scenes/BootScene';
+import { ControllerScene } from './render/scenes/ControllerScene';
 import { FightScene } from './render/scenes/FightScene';
 import { HowToScene } from './render/scenes/HowToScene';
 import { ResultScene } from './render/scenes/ResultScene';
@@ -27,7 +28,7 @@ async function start(): Promise<void> {
     pixelArt: true,
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     input: { gamepad: false },
-    scene: [BootScene, TitleScene, SelectScene, VersusScene, FightScene, ResultScene, HowToScene],
+    scene: [BootScene, TitleScene, SelectScene, VersusScene, FightScene, ResultScene, HowToScene, ControllerScene],
   });
   // Exposed for automated play-testing.
   (window as unknown as { __game: Phaser.Game }).__game = game;

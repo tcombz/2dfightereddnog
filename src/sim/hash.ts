@@ -21,6 +21,7 @@ export const FIGHTER_KEYS = [
   'combo',
   'comboDamage',
   'juggles',
+  'armorHits',
   'buf',
   'bufAge',
   'bufTick',

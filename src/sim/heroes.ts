@@ -1,4 +1,5 @@
 import chris from '../heroes/chris.json';
+import eddnog from '../heroes/eddnog.json';
 import jetsetter from '../heroes/jetsetter.json';
 import leader from '../heroes/leader.json';
 import rogue from '../heroes/rogue.json';
@@ -13,6 +14,7 @@ export const HEROES: readonly HeroData[] = [
   jetsetter as unknown as HeroData,
   chris as unknown as HeroData,
   leader as unknown as HeroData,
+  eddnog as unknown as HeroData,
 ];
 
 export function getMove(hero: number, moveId: number): MoveData {

@@ -31,12 +31,15 @@ export function moveList(hero: number): MoveLine[] {
     const damage = m.projectile ? m.projectile.damage : m.damage * m.hits;
     let text = note;
     if (key === 'special') {
-      if (m.counter) text = 'Counter stance: catches a strike and hits back. Loses to throws.';
+      if (m.teleport) text = 'Invincible blink in, strike, blink out.';
+      else if (m.armor) text = `Armored charge (${m.armor} hits). Knocks down.`;
+      else if (m.counter) text = 'Counter stance: catches a strike and hits back. Loses to throws.';
       else if (m.projectile) text = 'Sends the crew charging across the screen.';
       else if (m.advance) text = 'Dashes forward. Knocks down.';
       else text = 'Close-range blast. Knocks down.';
     }
     if (key === 'super') text = `${m.hits}-hit super. Needs a full meter.`;
+    if (key === 'heavy' && m.armor) text = `Armored (${m.armor} hit). Cancels on hit.`;
     return { key, name: m.name, input, note: text, damage };
   });
 }
@@ -52,6 +55,7 @@ export const BASICS: Array<[string, string]> = [
   ['Throw break', 'Press LIGHT + HEAVY as you are grabbed to break the throw.'],
   ['Buffer', 'Press your next attack a moment early: it comes out on the first free frame.'],
   ['Simple specials', 'Options menu: → + SPECIAL for the projectile, ↓ + SPECIAL for the rising attack.'],
+  ['Armor', 'Some big moves soak hits and keep coming. Throw them, or hit them with a super.'],
 ];
 
 /** Routes that work for every fighter (the combo trials). ">" is a cancel, "," a chain. */

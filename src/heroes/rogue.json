@@ -69,6 +69,8 @@
    "air": false,
    "juggle": 0,
    "counter": 0,
+   "armor": 0,
+   "teleport": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -286,7 +288,7 @@
    ]
   },
   "heavy": {
-   "name": "Straight",
+   "name": "Devastating Strike",
    "kind": 0,
    "guard": 0,
    "startup": 8,
@@ -310,6 +312,8 @@
    "air": false,
    "juggle": 0,
    "counter": 0,
+   "armor": 0,
+   "teleport": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -776,6 +780,8 @@
    "air": false,
    "juggle": 0,
    "counter": 0,
+   "armor": 0,
+   "teleport": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -1247,6 +1253,8 @@
    "air": false,
    "juggle": 0,
    "counter": 0,
+   "armor": 0,
+   "teleport": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -1505,6 +1513,8 @@
    "air": false,
    "juggle": 0,
    "counter": 0,
+   "armor": 0,
+   "teleport": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -2042,7 +2052,7 @@
    ]
   },
   "jumpAttack": {
-   "name": "Flying Kick",
+   "name": "Strike From Above",
    "kind": 0,
    "guard": 2,
    "startup": 5,
@@ -2066,6 +2076,8 @@
    "air": true,
    "juggle": 0,
    "counter": 0,
+   "armor": 0,
+   "teleport": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -2543,6 +2555,8 @@
    "air": false,
    "juggle": 0,
    "counter": 0,
+   "armor": 0,
+   "teleport": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -2893,14 +2907,14 @@
    ]
   },
   "special": {
-   "name": "Storm Palm",
+   "name": "Rogue's Rift",
    "kind": 1,
    "guard": 0,
    "startup": 12,
-   "active": 6,
-   "recovery": 24,
-   "damage": 110,
-   "chipDamage": 18,
+   "active": 5,
+   "recovery": 22,
+   "damage": 105,
+   "chipDamage": 16,
    "hitstun": 24,
    "blockstun": 18,
    "knockback": {
@@ -2913,10 +2927,12 @@
    "hits": 1,
    "rehit": 0,
    "cancel": 4,
-   "invuln": 0,
+   "invuln": 11,
    "air": false,
    "juggle": 0,
    "counter": 0,
+   "armor": 0,
+   "teleport": 220,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -3055,9 +3071,9 @@
     {
      "hitboxes": [
       {
-       "x": 20,
+       "x": 10,
        "y": 60,
-       "w": 120,
+       "w": 125,
        "h": 150
       }
      ],
@@ -3069,9 +3085,9 @@
        "h": 228
       },
       {
-       "x": 20,
+       "x": 10,
        "y": 60,
-       "w": 95,
+       "w": 100,
        "h": 150
       }
      ]
@@ -3079,9 +3095,9 @@
     {
      "hitboxes": [
       {
-       "x": 20,
+       "x": 10,
        "y": 60,
-       "w": 120,
+       "w": 125,
        "h": 150
       }
      ],
@@ -3093,9 +3109,9 @@
        "h": 228
       },
       {
-       "x": 20,
+       "x": 10,
        "y": 60,
-       "w": 95,
+       "w": 100,
        "h": 150
       }
      ]
@@ -3103,9 +3119,9 @@
     {
      "hitboxes": [
       {
-       "x": 20,
+       "x": 10,
        "y": 60,
-       "w": 120,
+       "w": 125,
        "h": 150
       }
      ],
@@ -3117,9 +3133,9 @@
        "h": 228
       },
       {
-       "x": 20,
+       "x": 10,
        "y": 60,
-       "w": 95,
+       "w": 100,
        "h": 150
       }
      ]
@@ -3127,9 +3143,9 @@
     {
      "hitboxes": [
       {
-       "x": 20,
+       "x": 10,
        "y": 60,
-       "w": 120,
+       "w": 125,
        "h": 150
       }
      ],
@@ -3141,9 +3157,9 @@
        "h": 228
       },
       {
-       "x": 20,
+       "x": 10,
        "y": 60,
-       "w": 95,
+       "w": 100,
        "h": 150
       }
      ]
@@ -3151,9 +3167,9 @@
     {
      "hitboxes": [
       {
-       "x": 20,
+       "x": 10,
        "y": 60,
-       "w": 120,
+       "w": 125,
        "h": 150
       }
      ],
@@ -3165,33 +3181,9 @@
        "h": 228
       },
       {
-       "x": 20,
+       "x": 10,
        "y": 60,
-       "w": 95,
-       "h": 150
-      }
-     ]
-    },
-    {
-     "hitboxes": [
-      {
-       "x": 20,
-       "y": 60,
-       "w": 120,
-       "h": 150
-      }
-     ],
-     "hurtboxes": [
-      {
-       "x": -35,
-       "y": 0,
-       "w": 70,
-       "h": 228
-      },
-      {
-       "x": 20,
-       "y": 60,
-       "w": 95,
+       "w": 100,
        "h": 150
       }
      ]
@@ -3206,9 +3198,9 @@
        "h": 228
       },
       {
-       "x": 20,
+       "x": 10,
        "y": 60,
-       "w": 95,
+       "w": 100,
        "h": 150
       }
      ]
@@ -3223,9 +3215,9 @@
        "h": 228
       },
       {
-       "x": 20,
+       "x": 10,
        "y": 60,
-       "w": 95,
+       "w": 100,
        "h": 150
       }
      ]
@@ -3240,9 +3232,9 @@
        "h": 228
       },
       {
-       "x": 20,
+       "x": 10,
        "y": 60,
-       "w": 95,
+       "w": 100,
        "h": 150
       }
      ]
@@ -3257,9 +3249,9 @@
        "h": 228
       },
       {
-       "x": 20,
+       "x": 10,
        "y": 60,
-       "w": 95,
+       "w": 100,
        "h": 150
       }
      ]
@@ -3274,9 +3266,9 @@
        "h": 228
       },
       {
-       "x": 20,
+       "x": 10,
        "y": 60,
-       "w": 95,
+       "w": 100,
        "h": 150
       }
      ]
@@ -3291,9 +3283,9 @@
        "h": 228
       },
       {
-       "x": 20,
+       "x": 10,
        "y": 60,
-       "w": 95,
+       "w": 100,
        "h": 150
       }
      ]
@@ -3308,9 +3300,9 @@
        "h": 228
       },
       {
-       "x": 20,
+       "x": 10,
        "y": 60,
-       "w": 95,
+       "w": 100,
        "h": 150
       }
      ]
@@ -3325,9 +3317,9 @@
        "h": 228
       },
       {
-       "x": 20,
+       "x": 10,
        "y": 60,
-       "w": 95,
+       "w": 100,
        "h": 150
       }
      ]
@@ -3342,9 +3334,9 @@
        "h": 228
       },
       {
-       "x": 20,
+       "x": 10,
        "y": 60,
-       "w": 95,
+       "w": 100,
        "h": 150
       }
      ]
@@ -3359,9 +3351,9 @@
        "h": 228
       },
       {
-       "x": 20,
+       "x": 10,
        "y": 60,
-       "w": 95,
+       "w": 100,
        "h": 150
       }
      ]
@@ -3376,38 +3368,10 @@
        "h": 228
       },
       {
-       "x": 20,
+       "x": 10,
        "y": 60,
-       "w": 95,
+       "w": 100,
        "h": 150
-      }
-     ]
-    },
-    {
-     "hitboxes": [],
-     "hurtboxes": [
-      {
-       "x": -35,
-       "y": 0,
-       "w": 70,
-       "h": 228
-      },
-      {
-       "x": 20,
-       "y": 60,
-       "w": 95,
-       "h": 150
-      }
-     ]
-    },
-    {
-     "hitboxes": [],
-     "hurtboxes": [
-      {
-       "x": -35,
-       "y": 0,
-       "w": 70,
-       "h": 228
       }
      ]
     },
@@ -3559,6 +3523,8 @@
    "air": false,
    "juggle": 0,
    "counter": 0,
+   "armor": 0,
+   "teleport": 0,
    "meterCost": 0,
    "projectile": {
     "spawnTick": 12,
@@ -4058,6 +4024,8 @@
    "air": false,
    "juggle": 1,
    "counter": 0,
+   "armor": 0,
+   "teleport": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -4768,7 +4736,7 @@
    ]
   },
   "super": {
-   "name": "Thunder Rush",
+   "name": "Financial Freedom",
    "kind": 2,
    "guard": 0,
    "startup": 6,
@@ -4792,6 +4760,8 @@
    "air": false,
    "juggle": 1,
    "counter": 0,
+   "armor": 0,
+   "teleport": 0,
    "meterCost": 1000,
    "projectile": null,
    "frames": [

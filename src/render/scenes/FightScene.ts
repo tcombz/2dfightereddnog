@@ -291,18 +291,35 @@ export class FightScene extends Phaser.Scene {
         const moveId = att.state === FS.Attack ? att.moveId : -1;
         const kind = moveId >= 0 ? getMove(att.hero, moveId).kind : Kind.Special;
         const special = projectileHit || kind === Kind.Special || kind === Kind.Super;
-        const color = special ? heroInfo(HEROES[att.hero].id).accent : f.fxPower >= 10 ? 0xffb347 : 0xfff3c4;
+        const attInfo = heroInfo(HEROES[att.hero].id);
+        // Every hit carries the attacker's identity: his colours, his particles, his sound on the big ones.
+        const color = special ? attInfo.accent : f.fxPower >= 10 ? attInfo.color : 0xfff3c4;
         this.fx.hit(x, y, dir, f.fxPower, color, f.fx === FX.Counter);
+        this.fx.themed(attInfo.hitStyle, x, y, dir, f.fxPower);
         if (f.fx === FX.Throw) sfx(this, 'throw');
         else if (moveId === Move.Light || moveId === Move.CrouchLight) sfx(this, 'hit_light', 1, (Math.random() - 0.5) * 200);
         else if (moveId === Move.Kick || moveId === Move.Sweep || moveId === Move.JumpAttack) sfx(this, 'hit_kick');
         else sfx(this, 'hit_heavy', 1, (Math.random() - 0.5) * 150);
         if (special) sfx(this, this.signature(1 - i), 0.55);
+        else if (f.fxPower >= 10) sfx(this, attInfo.hitSfx, 0.35, (Math.random() - 0.5) * 200);
         if (f.fxPower >= 10) this.cameras.main.shake(90 + f.fxPower * 6, 0.002 + f.fxPower * 0.00035);
+        // Rumble: the one who got hit feels it most.
+        controls.rumble(i, Math.min(1, 0.25 + f.fxPower * 0.045), 70 + f.fxPower * 9);
+        controls.rumble(1 - i, Math.min(0.6, 0.1 + f.fxPower * 0.02), 50);
         if (f.fx === FX.Counter) this.fx.popText(f.x, GROUND_Y - f.y - 250, 'COUNTER', '#ff6a4a');
       } else if (f.fx === FX.Block) {
-        this.fx.block(x, y, dir);
+        this.fx.block(x, y, dir, heroInfo(HEROES[f.hero].id).accent);
         sfx(this, 'block', 0.9, (Math.random() - 0.5) * 200);
+        controls.rumble(i, 0.2, 50);
+      } else if (f.fx === FX.Armor) {
+        // Armor soaks it: a steel clang, and he keeps coming.
+        this.fx.block(x, y, dir, 0xfff2c0);
+        this.fx.ring(x, y, heroInfo(HEROES[f.hero].id).accent, 1.1);
+        this.fx.popText(f.x, GROUND_Y - f.y - 260, 'ARMOR', '#ffe08a');
+        sfx(this, 'block', 1, -700);
+        sfx(this, 'hit_heavy', 0.5, -500);
+        this.cameras.main.shake(120, 0.004);
+        controls.rumble(i, 0.5, 110);
       } else if (f.fx === FX.Tech) {
         this.fx.block(x, y, dir);
         this.fx.popText(f.x, GROUND_Y - 260, 'BREAK!', '#9fe6ff');
@@ -334,6 +351,16 @@ export class FightScene extends Phaser.Scene {
         sfx(this, this.signature(i, f.projMove === Move.Projectile ? 'projectile' : 'special'), 0.9);
         const r = getProjectile(f);
         if (r) this.fx.ring(r.x + r.w / 2, GROUND_Y - r.y - r.h / 2, heroInfo(HEROES[f.hero].id).accent, 0.7);
+      }
+      // A blink (Rogue's Rift): leave a lightning ghost where he was, and strike where he lands.
+      if (f.state === FS.Attack && p.state === FS.Attack && Math.abs(f.x - p.x) > 40 && getMove(f.hero, f.moveId).teleport !== 0) {
+        const accent = heroInfo(HEROES[f.hero].id).accent;
+        this.fx.afterimage(this.sprites[i], accent);
+        this.fx.ring(p.x, GROUND_Y - p.y - 120, accent, 1.2);
+        this.fx.ring(f.x, GROUND_Y - f.y - 120, accent, 1.6);
+        this.fx.themed(heroInfo(HEROES[f.hero].id).hitStyle, f.x, GROUND_Y - f.y - 120, f.facing, 12);
+        sfx(this, 'zap', 0.9);
+        this.cameras.main.flash(70, 160, 220, 255);
       }
       if (f.state === FS.Dash && p.state !== FS.Dash) {
         sfx(this, 'dash', 0.8);
@@ -384,6 +411,8 @@ export class FightScene extends Phaser.Scene {
     if (ko) {
       sfx(this, 'ko');
       this.slowmo.rate = 0.3;
+      controls.rumble(0, 1, 500);
+      controls.rumble(1, 1, 500);
       this.tweens.add({ targets: this.slowmo, rate: 1, delay: 900, duration: 500, ease: 'Quad.easeIn' });
       this.tweens.add({ targets: this.punch, z: 1.12, duration: 220, ease: 'Quad.easeOut', yoyo: true, hold: 800 });
       this.cameras.main.flash(260, 255, 255, 255);
@@ -403,6 +432,7 @@ export class FightScene extends Phaser.Scene {
     const cam = this.cameras.main;
     this.tweens.add({ targets: this.punch, z: 1.14, duration: 160, ease: 'Quad.easeOut', yoyo: true, hold: 440 });
     cam.shake(200, 0.004);
+    controls.rumble(slot, 0.8, 350);
     this.fx.ring(f.x, GROUND_Y - f.y - 120, heroInfo(id).accent, 2.6);
     this.superFx.flash(heroInfo(id), id, slot, move.name, f.x, GROUND_Y - f.y, f.facing);
   }

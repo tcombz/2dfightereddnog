@@ -52,6 +52,7 @@ function createFighter(hero: number, slot: number): FighterState {
     combo: 0,
     comboDamage: 0,
     juggles: 0,
+    armorHits: 0,
     buf: 0,
     bufAge: 0,
     bufTick: 0,
@@ -332,6 +333,7 @@ function startMove(s: GameState, f: FighterState, slot: number, moveId: number):
   f.moveId = moveId;
   f.buf = 0;
   f.bufAge = 0;
+  f.armorHits = 0;
   if (!m.air) {
     f.vx = 0;
     f.vy = 0;
@@ -470,6 +472,17 @@ function updateFighter(s: GameState, f: FighterState, slot: number, opp: Fighter
       } else if (f.stateTick >= m.frames.length) {
         setState(f, FS.Idle);
       } else {
+        if (m.teleport !== 0 && f.stateTick === m.startup - 1) {
+          // Blink in: straight to the opponent, stopping in front of them rather than passing through.
+          const gap = Math.abs(opp.x - f.x) - ((HEROES[f.hero].stats.width + HEROES[opp.hero].stats.width) >> 1);
+          const toward = opp.x >= f.x ? 1 : -1;
+          f.x += toward * Math.max(0, Math.min(m.teleport, gap));
+          clampX(f);
+        } else if (m.teleport !== 0 && f.stateTick === m.startup + m.active && f.moveHits > 0) {
+          // Strike out: blink back after landing it.
+          f.x -= f.facing * (m.teleport >> 1);
+          clampX(f);
+        }
         f.vx = isActiveTick(m, f.stateTick) ? f.facing * m.advance : 0;
         const p = m.projectile;
         if (p !== null && f.stateTick === p.spawnTick && f.projLife === 0) spawnProjectile(f, p);
@@ -701,6 +714,19 @@ function applyHit(s: GameState, att: FighterState, def: FighterState, c: Contact
     s.hitstop = Math.max(s.hitstop, 8);
     setFx(def, FX.Tech, c.x, c.y, 8);
     return;
+  }
+
+  // Armor: a big move shrugs off a strike or two and keeps coming (throws and supers break through).
+  if (def.state === FS.Attack && c.kind !== Kind.Throw && c.kind !== Kind.Super) {
+    const dm = getMove(def.hero, def.moveId);
+    if (def.armorHits < dm.armor && def.stateTick < dm.startup + dm.active) {
+      def.armorHits += 1;
+      def.health = Math.max(1, def.health - Math.max(1, d.damage >> 1));
+      att.meter = Math.min(METER_MAX, att.meter + (d.damage >> 2));
+      s.hitstop = Math.max(s.hitstop, d.hitstop);
+      setFx(def, FX.Armor, c.x, c.y, d.hitstop);
+      return;
+    }
   }
 
   if (guarding(def, c.guard, dir)) {

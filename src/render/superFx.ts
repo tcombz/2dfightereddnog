@@ -10,6 +10,7 @@ const TINT: Record<SuperStyle, number> = {
   crowd: 0x26083f,
   world: 0x031431,
   crown: 0x2a1200,
+  quake: 0x1c1404,
 };
 
 export class SuperFx {
@@ -87,6 +88,24 @@ export class SuperFx {
         });
         this.fadeOut([card], 1000, 300);
       }
+    } else if (style === 'quake') {
+      // Titan Smash: the ground gives way. Rocks erupt along the floor and shockwaves roll out.
+      for (let i = 0; i < 18; i += 1) {
+        s.time.delayedCall(80 + i * 35, () => {
+          const rx = x + (Math.random() - 0.5) * 700;
+          const r = this.w(s.add.image(rx, footY + 10, 'fx_rock').setScale(1.2 + Math.random() * 1.6), 34);
+          s.tweens.add({ targets: r, y: footY - 120 - Math.random() * 220, rotation: (Math.random() - 0.5) * 8, duration: 420, ease: 'Quad.easeOut', yoyo: true, onComplete: () => r.destroy() });
+        });
+      }
+      for (let k = 0; k < 3; k += 1) {
+        s.time.delayedCall(300 + k * 260, () => {
+          const ring = this.w(s.add.image(x, footY - 10, 'fx_glow').setTint(0xffc23d).setBlendMode(Phaser.BlendModes.ADD).setScale(0.6, 0.18), 33);
+          s.tweens.add({ targets: ring, scaleX: 9, scaleY: 1.1, alpha: 0, duration: 520, ease: 'Quad.easeOut', onComplete: () => ring.destroy() });
+          this.scene.cameras.main.shake(180, 0.008);
+        });
+      }
+      const glow = this.w(s.add.image(x, footY - 120, 'fx_glow').setTint(0xffb020).setBlendMode(Phaser.BlendModes.ADD).setScale(0.6).setAlpha(0.8), 10);
+      s.tweens.add({ targets: glow, scale: 5, alpha: 0, duration: 1000, onComplete: () => glow.destroy() });
     } else {
       // The crown drops in over his head as the cut-in clears, and stays through the rush.
       const crown = this.w(s.add.image(x, footY - 470, 'fx_crown').setScale(0.3).setAlpha(0), 33);
@@ -116,6 +135,14 @@ export class SuperFx {
     else if (style === 'crown') {
       if (clock % 2 === 0) this.embers(x + facing * 60, footY, 3);
       for (const o of this.crown) if (o.active) o.x += (x - o.x) * 0.35;
+    } else if (style === 'quake' && clock % 6 === 0) {
+      // Every slam kicks up rocks and dust in front of him.
+      const s = this.scene;
+      for (let i = 0; i < 4; i += 1) {
+        const r = this.w(s.add.image(x + facing * (70 + Math.random() * 90), footY, 'fx_rock').setScale(0.9 + Math.random()), 34);
+        s.tweens.add({ targets: r, y: footY - 60 - Math.random() * 120, x: r.x + facing * Math.random() * 80, rotation: Math.random() * 6, alpha: 0, duration: 480, onComplete: () => r.destroy() });
+      }
+      s.cameras.main.shake(90, 0.005);
     }
   }
 

@@ -1,0 +1,86 @@
+{
+ "skip": [
+  "jab6",
+  "block2"
+ ],
+ "rename": {
+  "jab_st": "light_punch",
+  "crouch_jab": "crouch_light",
+  "special_st": "special",
+  "block_st": "block",
+  "hammer_st": "heavy_punch"
+ },
+ "block": [
+  3,
+  4,
+  5
+ ],
+ "attacks": {
+  "heavy": {
+   "anim": "heavy_punch",
+   "startup": [
+    1,
+    2,
+    3
+   ],
+   "active": [
+    4,
+    5
+   ],
+   "recovery": [
+    6,
+    8
+   ]
+  },
+  "kick": {
+   "anim": "kick",
+   "startup": [
+    1,
+    2
+   ],
+   "active": [
+    3,
+    4
+   ],
+   "recovery": [
+    5,
+    6
+   ]
+  },
+  "special": {
+   "anim": "special",
+   "startup": [
+    1,
+    2,
+    3
+   ],
+   "active": [
+    4,
+    5
+   ],
+   "recovery": [
+    6,
+    7,
+    8
+   ],
+   "loopActive": true
+  },
+  "super": {
+   "anim": "smash",
+   "startup": [
+    1,
+    2
+   ],
+   "active": [
+    3,
+    4,
+    5
+   ],
+   "recovery": [
+    6,
+    8
+   ],
+   "loopActive": true
+  }
+ }
+}

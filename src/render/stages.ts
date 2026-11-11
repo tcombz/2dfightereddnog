@@ -2,6 +2,7 @@ import alley from '../../assets/stages/alley.png';
 import concert from '../../assets/stages/concert.png';
 import crown from '../../assets/stages/crown.png';
 import embassy from '../../assets/stages/embassy.png';
+import fortress from '../../assets/stages/fortress.png';
 import rooftop from '../../assets/stages/rooftop.png';
 
 export type Ambient = 'storm' | 'concert' | 'rain' | 'smoke' | 'embers';
@@ -80,5 +81,16 @@ export const STAGES: StageDef[] = [
     ambient: 'embers',
     tint: 0xffe6d2,
     glow: { x: 452, y: 196, r: 70, color: 0xffa040 },
+  },
+  {
+    id: 'fortress',
+    name: 'THE FORTRESS',
+    place: 'Ruins under a green storm',
+    url: fortress,
+    groundSrcY: 292,
+    music: 'fortress',
+    ambient: 'embers',
+    tint: 0xf2ffe8,
+    glow: { x: 104, y: 192, r: 46, color: 0xffb040 },
   },
 ];

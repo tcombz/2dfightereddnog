@@ -1,5 +1,11 @@
-// Keyboard and gamepad input for both players. Produces the sim's input bitmask per player
-// and edge-triggered menu events. Not part of the sim.
+// Keyboard and gamepad input for both players. Produces the sim's input bitmask per player and
+// edge-triggered menu events. Not part of the sim.
+//
+// Gamepads: any controller the browser can see, wired or Bluetooth. Each pad gets a player slot
+// when it connects (and keeps it until it disconnects). Pads the browser maps as "standard" (Xbox,
+// PlayStation, Switch Pro and most modern pads) work straight away; others start from a best guess
+// (sticks, d-pad buttons, d-pad axes or a hat switch) and can be remapped on the Controllers screen.
+// Remaps are saved per controller name in this browser.
 import { Input } from '../sim';
 
 export type MenuAction = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back' | 'pause';
@@ -53,34 +59,156 @@ const MENU_FROM_BITS: Array<[number, MenuAction]> = [
   [Input.Heavy, 'back'],
 ];
 
-/** Standard gamepad mapping: A or X light, Y heavy, B special, bumpers and triggers block or macros. */
-function padBits(p: Gamepad): number {
-  const b = (i: number): boolean => p.buttons[i]?.pressed ?? false;
-  const ax = p.axes[0] ?? 0;
-  const ay = p.axes[1] ?? 0;
-  let bits = 0;
-  if (b(14) || ax < -0.5) bits |= Input.Left;
-  if (b(15) || ax > 0.5) bits |= Input.Right;
-  if (b(12) || ay < -0.5) bits |= Input.Up;
-  if (b(13) || ay > 0.5) bits |= Input.Down;
-  if (b(0) || b(2)) bits |= Input.Light;
-  if (b(3)) bits |= Input.Heavy;
-  if (b(1)) bits |= Input.Special;
-  if (b(4) || b(6)) bits |= Input.Block;
-  if (b(5)) bits |= Input.Light | Input.Heavy; // throw
-  if (b(7)) bits |= Input.Heavy | Input.Special; // super
-  return bits;
+// ---------- gamepad mapping ----------
+
+/** Everything a pad can be asked to do. */
+export type PadAction = 'up' | 'down' | 'left' | 'right' | 'light' | 'heavy' | 'special' | 'block' | 'throw' | 'super' | 'start';
+
+/** Where an action comes from on a pad: a button, one direction of an axis, or a hat-switch direction. */
+export type PadSource =
+  | { kind: 'button'; index: number }
+  | { kind: 'axis'; index: number; dir: 1 | -1 }
+  | { kind: 'hat'; index: number; dirs: number };
+
+export type PadMap = Partial<Record<PadAction, PadSource[]>>;
+
+/** The actions the Controllers screen asks for, in order, with what to tell the player. */
+export const REMAP_STEPS: Array<[PadAction, string]> = [
+  ['light', 'LIGHT attack'],
+  ['heavy', 'HEAVY attack'],
+  ['special', 'SPECIAL'],
+  ['block', 'BLOCK'],
+  ['throw', 'THROW (light + heavy)'],
+  ['super', 'SUPER (heavy + special)'],
+  ['start', 'START / pause'],
+  ['up', 'UP on the d-pad'],
+  ['down', 'DOWN on the d-pad'],
+  ['left', 'LEFT on the d-pad'],
+  ['right', 'RIGHT on the d-pad'],
+];
+
+const BIT: Record<PadAction, number> = {
+  up: Input.Up,
+  down: Input.Down,
+  left: Input.Left,
+  right: Input.Right,
+  light: Input.Light,
+  heavy: Input.Heavy,
+  special: Input.Special,
+  block: Input.Block,
+  throw: Input.Light | Input.Heavy,
+  super: Input.Heavy | Input.Special,
+  start: 0,
+};
+
+const btn = (index: number): PadSource => ({ kind: 'button', index });
+const axis = (index: number, dir: 1 | -1): PadSource => ({ kind: 'axis', index, dir });
+
+/** Hat switch bits: up 1, right 2, down 4, left 8. */
+const HAT_UP = 1;
+const HAT_RIGHT = 2;
+const HAT_DOWN = 4;
+const HAT_LEFT = 8;
+/** A hat axis reports one of 8 positions from -1 (up) clockwise in steps of 2/7, and about 1.29 at rest. */
+const HAT_POSITIONS = [HAT_UP, HAT_UP | HAT_RIGHT, HAT_RIGHT, HAT_RIGHT | HAT_DOWN, HAT_DOWN, HAT_DOWN | HAT_LEFT, HAT_LEFT, HAT_LEFT | HAT_UP];
+
+function hatBits(v: number): number {
+  if (v < -1.1 || v > 1.1) return 0;
+  return HAT_POSITIONS[Math.max(0, Math.min(7, Math.round((v + 1) * 3.5)))];
 }
+
+/**
+ * The browser's standard layout: A/Cross light, X/Square light, Y/Triangle heavy, B/Circle special,
+ * LB/L1 and LT/L2 block, RB/R1 throw, RT/R2 super, Start pause, d-pad and left stick to move.
+ */
+const STANDARD: PadMap = {
+  up: [btn(12), axis(1, -1)],
+  down: [btn(13), axis(1, 1)],
+  left: [btn(14), axis(0, -1)],
+  right: [btn(15), axis(0, 1)],
+  light: [btn(0), btn(2)],
+  heavy: [btn(3)],
+  special: [btn(1)],
+  block: [btn(4), btn(6)],
+  throw: [btn(5)],
+  super: [btn(7)],
+  start: [btn(9)],
+};
+
+/** A best guess for a pad the browser could not map: left stick, every way a d-pad can show up. */
+function guessMap(p: Gamepad): PadMap {
+  const m: PadMap = {
+    up: [axis(1, -1)],
+    down: [axis(1, 1)],
+    left: [axis(0, -1)],
+    right: [axis(0, 1)],
+    light: [btn(0), btn(2)],
+    heavy: [btn(3)],
+    special: [btn(1)],
+    block: [btn(4), btn(6)],
+    throw: [btn(5)],
+    super: [btn(7)],
+    start: [btn(9)],
+  };
+  if (p.buttons.length > 15) {
+    m.up!.push(btn(12));
+    m.down!.push(btn(13));
+    m.left!.push(btn(14));
+    m.right!.push(btn(15));
+  }
+  // Many generic pads report the d-pad as a hat switch on axis 9, or as axes 6 and 7.
+  if (p.axes.length > 9) {
+    for (const [k, bit] of [['up', HAT_UP], ['down', HAT_DOWN], ['left', HAT_LEFT], ['right', HAT_RIGHT]] as Array<[PadAction, number]>) {
+      m[k]!.push({ kind: 'hat', index: 9, dirs: bit });
+    }
+  } else if (p.axes.length >= 8) {
+    m.up!.push(axis(7, -1));
+    m.down!.push(axis(7, 1));
+    m.left!.push(axis(6, -1));
+    m.right!.push(axis(6, 1));
+  }
+  return m;
+}
+
+const STORE_KEY = 'afterhours.pads';
+
+function loadMaps(): Record<string, PadMap> {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, PadMap>) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** A short readable name for a pad, from the browser's id string. */
+export function padName(p: Gamepad | null): string {
+  if (!p) return 'none';
+  const id = p.id.replace(/\(.*?(Vendor|STANDARD).*?\)/gi, '').replace(/[0-9a-f]{4}-[0-9a-f]{4}-/i, '').trim();
+  return (id || 'Controller').slice(0, 40);
+}
+
+// ---------- the controls ----------
 
 export class Controls {
   private readonly held = new Set<string>();
   private events: MenuEvent[] = [];
+  /** Gamepad index in each player slot (null: no pad). */
+  readonly slots: [number | null, number | null] = [null, null];
   private padPrev: [number, number] = [0, 0];
-  /** Previous A, B and Start states per pad, for menu edges. */
-  private padButtonsPrev: [boolean[], boolean[]] = [[false, false, false], [false, false, false]];
+  private menuPrev: [boolean[], boolean[]] = [[false, false, false], [false, false, false]];
   private padBitsNow: [number, number] = [0, 0];
+  private maps: Record<string, PadMap> = loadMaps();
+  /** While the Controllers screen listens for a button, pads do not drive menus. */
+  capturing = false;
+  rumbleOn = true;
 
   constructor() {
+    try {
+      this.rumbleOn = localStorage.getItem('afterhours.rumble') !== '0';
+    } catch {
+      // Defaults apply.
+    }
     window.addEventListener('keydown', (e) => {
       const p1 = P1[e.code];
       const p2 = P2[e.code];
@@ -97,30 +225,139 @@ export class Controls {
     });
     window.addEventListener('keyup', (e) => this.held.delete(e.code));
     window.addEventListener('blur', () => this.held.clear());
+    window.addEventListener('gamepadconnected', (e) => this.attach((e as GamepadEvent).gamepad));
+    window.addEventListener('gamepaddisconnected', (e) => this.detach((e as GamepadEvent).gamepad));
   }
 
   private pushFromBits(player: number, bits: number): void {
     for (const [bit, action] of MENU_FROM_BITS) if (bits & bit) this.events.push({ player, action });
   }
 
+  private pads(): Array<Gamepad | null> {
+    try {
+      return typeof navigator.getGamepads === 'function' ? Array.from(navigator.getGamepads()) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /** The pad in a player slot right now, if it is still there. */
+  pad(slot: number): Gamepad | null {
+    const index = this.slots[slot];
+    if (index === null) return null;
+    const p = this.pads()[index];
+    return p && p.connected ? p : null;
+  }
+
+  private attach(p: Gamepad): void {
+    if (this.slots.includes(p.index)) return;
+    const free = this.slots.indexOf(null);
+    if (free < 0) return;
+    this.slots[free] = p.index;
+    notify(`Player ${free + 1}: ${padName(p)}${p.mapping === 'standard' ? '' : ' (set it up under Controllers if buttons feel wrong)'}`);
+    this.rumble(free, 0.5, 120);
+  }
+
+  private detach(p: Gamepad): void {
+    const slot = this.slots.indexOf(p.index);
+    if (slot < 0) return;
+    this.slots[slot] = null;
+    this.padPrev[slot] = 0;
+    this.padBitsNow[slot] = 0;
+    notify(`Player ${slot + 1} controller disconnected`);
+    this.events.push({ player: slot, action: 'pause' });
+  }
+
+  swapSlots(): void {
+    const [a, b] = this.slots;
+    this.slots[0] = b;
+    this.slots[1] = a;
+  }
+
+  /** The mapping in use for a pad: its saved remap, else the standard layout, else a guess. */
+  mapFor(p: Gamepad): PadMap {
+    return this.maps[p.id] ?? (p.mapping === 'standard' ? STANDARD : guessMap(p));
+  }
+
+  hasRemap(p: Gamepad): boolean {
+    return this.maps[p.id] !== undefined;
+  }
+
+  saveRemap(p: Gamepad, map: PadMap): void {
+    this.maps[p.id] = map;
+    this.persist();
+  }
+
+  clearRemap(p: Gamepad): void {
+    delete this.maps[p.id];
+    this.persist();
+  }
+
+  private persist(): void {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify(this.maps));
+    } catch {
+      // Not saved; the remap still applies for this visit.
+    }
+  }
+
+  setRumble(on: boolean): void {
+    this.rumbleOn = on;
+    try {
+      localStorage.setItem('afterhours.rumble', on ? '1' : '0');
+    } catch {
+      // Applies for this visit.
+    }
+  }
+
+  /** Is this source pressed on this pad? */
+  static active(p: Gamepad, s: PadSource): boolean {
+    if (s.kind === 'button') {
+      const b = p.buttons[s.index];
+      return !!b && (b.pressed || b.value > 0.5);
+    }
+    const v = p.axes[s.index];
+    if (v === undefined) return false;
+    if (s.kind === 'hat') return (hatBits(v) & s.dirs) !== 0;
+    return s.dir > 0 ? v > 0.5 : v < -0.5;
+  }
+
+  private actionOn(p: Gamepad, map: PadMap, a: PadAction): boolean {
+    return (map[a] ?? []).some((s) => Controls.active(p, s));
+  }
+
+  private padBits(p: Gamepad): number {
+    const map = this.mapFor(p);
+    let bits = 0;
+    for (const a of Object.keys(BIT) as PadAction[]) if (this.actionOn(p, map, a)) bits |= BIT[a];
+    // Pressing opposite directions at once (a worn stick, a hat glitch) cancels them.
+    if ((bits & (Input.Left | Input.Right)) === (Input.Left | Input.Right)) bits &= ~(Input.Left | Input.Right);
+    if ((bits & (Input.Up | Input.Down)) === (Input.Up | Input.Down)) bits &= ~(Input.Up | Input.Down);
+    return bits;
+  }
+
   /** Call once per frame before reading: polls gamepads and turns their presses into menu events. */
   poll(): void {
-    const pads = typeof navigator.getGamepads === 'function' ? navigator.getGamepads() : [];
-    const connected = Array.from(pads).filter((p): p is Gamepad => p !== null && p.connected);
+    // Some browsers only report a pad after its first button press, without a connect event.
+    for (const p of this.pads()) if (p && p.connected && !this.slots.includes(p.index)) this.attach(p);
     for (let i = 0; i < 2; i += 1) {
-      const pad = connected[i];
-      const bits = pad ? padBits(pad) : 0;
-      // Menus on a pad: stick or d-pad to move, A to confirm, B to go back, Start to pause.
-      const fresh = bits & ~this.padPrev[i] & (Input.Left | Input.Right | Input.Up | Input.Down);
-      this.pushFromBits(i, fresh);
-      const now = [0, 1, 9].map((b) => (pad ? (pad.buttons[b]?.pressed ?? false) : false));
-      const actions: MenuAction[] = ['confirm', 'back', 'pause'];
-      now.forEach((down, k) => {
-        if (down && !this.padButtonsPrev[i][k]) this.events.push({ player: i, action: actions[k] });
-      });
-      this.padButtonsPrev[i] = now;
+      const pad = this.pad(i);
+      if (!pad && this.slots[i] !== null) this.slots[i] = null;
+      const bits = pad ? this.padBits(pad) : 0;
+      if (!this.capturing) {
+        // Menus on a pad: stick or d-pad to move, light (A) confirms, special (B) goes back, Start pauses.
+        const fresh = bits & ~this.padPrev[i] & (Input.Left | Input.Right | Input.Up | Input.Down);
+        this.pushFromBits(i, fresh);
+        const map = pad ? this.mapFor(pad) : {};
+        const now = pad ? (['light', 'special', 'start'] as PadAction[]).map((a) => this.actionOn(pad, map, a)) : [false, false, false];
+        const actions: MenuAction[] = ['confirm', 'back', 'pause'];
+        now.forEach((down, k) => {
+          if (down && !this.menuPrev[i][k]) this.events.push({ player: i, action: actions[k] });
+        });
+        this.menuPrev[i] = now;
+      }
       this.padPrev[i] = bits;
-      this.padBitsNow[i] = bits;
+      this.padBitsNow[i] = this.capturing ? 0 : bits;
     }
   }
 
@@ -140,9 +377,42 @@ export class Controls {
   }
 
   padsConnected(): number {
-    const pads = typeof navigator.getGamepads === 'function' ? navigator.getGamepads() : [];
-    return Array.from(pads).filter((p) => p !== null && p.connected).length;
+    return this.slots.filter((s) => s !== null).length;
   }
+
+  /** Shake a player's pad (where the browser and pad support it). Strength 0 to 1. */
+  rumble(player: number, strength: number, ms: number): void {
+    if (!this.rumbleOn) return;
+    const pad = this.pad(player) as (Gamepad & { vibrationActuator?: { playEffect?: (t: string, p: object) => Promise<unknown> } }) | null;
+    const act = pad?.vibrationActuator;
+    if (!act || typeof act.playEffect !== 'function') return;
+    const s = Math.max(0, Math.min(1, strength));
+    act.playEffect('dual-rumble', { duration: ms, strongMagnitude: s, weakMagnitude: Math.min(1, s * 1.3) }).catch(() => undefined);
+  }
+}
+
+// ---------- notices ----------
+
+let toast: HTMLDivElement | null = null;
+let toastTimer = 0;
+
+/** A small notice over the game (controller connected or lost), whatever scene is showing. */
+export function notify(text: string): void {
+  if (typeof document === 'undefined') return;
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.style.cssText =
+      'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);padding:10px 18px;border-radius:10px;' +
+      'background:rgba(8,10,22,0.92);color:#f3f1ff;font:600 15px system-ui,sans-serif;border:1px solid #ffc23d;' +
+      'z-index:10;pointer-events:none;transition:opacity 0.3s;opacity:0;max-width:90vw;text-align:center';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = text;
+  toast.style.opacity = '1';
+  window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => {
+    if (toast) toast.style.opacity = '0';
+  }, 3200);
 }
 
 /** One shared instance for the whole game. */
