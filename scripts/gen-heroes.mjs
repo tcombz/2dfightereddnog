@@ -88,7 +88,7 @@ const heroes = [
     name: 'The Rogue',
     color: '#2f7bff',
     stats: {
-      maxHealth: 950, walkSpeed: 6, backWalkSpeed: 5, jumpVelocity: 22, jumpSpeedX: 7, gravity: 1,
+      maxHealth: 980, walkSpeed: 6, backWalkSpeed: 5, jumpVelocity: 22, jumpSpeedX: 7, gravity: 1,
       width: 70, height: 228, crouchHeight: 150, dashSpeed: 14, dashTicks: 14, backdashSpeed: 12, backdashTicks: 16,
     },
     bodies: {
@@ -180,7 +180,7 @@ const heroes = [
     name: 'The Leader',
     color: '#d4a017',
     stats: {
-      maxHealth: 1100, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 21, jumpSpeedX: 6, gravity: 1,
+      maxHealth: 1000, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 21, jumpSpeedX: 6, gravity: 1,
       width: 76, height: 236, crouchHeight: 152, dashSpeed: 12, dashTicks: 15, backdashSpeed: 10, backdashTicks: 18,
     },
     bodies: {
@@ -189,17 +189,17 @@ const heroes = [
       air: { x: -38, y: 30, w: 76, h: 185 },
     },
     moves: {
-      light: { name: 'Lead the Charge', startup: 5, active: 3, recovery: 8, damage: 38, hitstun: 15, blockstun: 11, kb: [3, 0], hitstop: 8, cancel: ALL, hitbox: { x: 15, y: 156, w: 88, h: 32 } },
-      heavy: { name: 'Set the Tone', startup: 10, active: 4, recovery: 21, damage: 96, hitstun: 25, blockstun: 18, kb: [12, 0], hitstop: 13, advance: 4, cancel: SP, hitbox: { x: 15, y: 130, w: 122, h: 50 } },
-      kick: { name: 'Front Line', startup: 11, active: 4, recovery: 18, damage: 84, hitstun: 22, blockstun: 15, kb: [13, 0], hitstop: 11, cancel: SP, hitbox: { x: 20, y: 140, w: 124, h: 58 } },
+      light: { name: 'Lead the Charge', startup: 5, active: 3, recovery: 8, damage: 35, hitstun: 15, blockstun: 11, kb: [3, 0], hitstop: 8, cancel: ALL, hitbox: { x: 15, y: 156, w: 88, h: 32 } },
+      heavy: { name: 'Set the Tone', startup: 10, active: 4, recovery: 21, damage: 92, hitstun: 25, blockstun: 18, kb: [12, 0], hitstop: 13, advance: 4, cancel: SP, hitbox: { x: 15, y: 130, w: 122, h: 50 } },
+      kick: { name: 'Front Line', startup: 11, active: 4, recovery: 18, damage: 80, hitstun: 22, blockstun: 15, kb: [13, 0], hitstop: 11, cancel: SP, hitbox: { x: 20, y: 140, w: 124, h: 58 } },
       crouchLight: { name: 'Check In', guard: Guard.Low, body: 'crouch', startup: 5, active: 3, recovery: 9, damage: 30, hitstun: 14, blockstun: 10, kb: [3, 0], hitstop: 8, cancel: ALL, hitbox: { x: 20, y: 108, w: 98, h: 52 } },
-      sweep: { name: 'Keep Your Ground', guard: Guard.Low, body: 'crouch', startup: 10, active: 4, recovery: 26, damage: 88, knockdown: true, blockstun: 15, kb: [8, 6], hitstop: 11, cancel: Cancel.Super, hitbox: { x: 10, y: 0, w: 118, h: 90 } },
+      sweep: { name: 'Keep Your Ground', guard: Guard.Low, body: 'crouch', startup: 10, active: 4, recovery: 26, damage: 84, knockdown: true, blockstun: 15, kb: [8, 6], hitstop: 11, cancel: Cancel.Super, hitbox: { x: 10, y: 0, w: 118, h: 90 } },
       jumpAttack: { name: 'Take the High Ground', guard: Guard.High, body: 'air', air: true, startup: 6, active: 14, recovery: 4, damage: 82, hitstun: 20, blockstun: 14, kb: [6, 0], hitstop: 11, hitbox: { x: 10, y: 50, w: 118, h: 120 } },
       throw: { name: 'Family Business', kind: Kind.Throw, guard: Guard.Throw, limb: false, startup: 4, active: 2, recovery: 24, damage: 130, knockdown: true, kb: [15, 14], hitstop: 15, hitbox: { x: 10, y: 60, w: 74, h: 130 } },
       // The crew charges across the screen: a wide projectile that knocks down.
       special: {
         name: 'The Crew Call', kind: Kind.Special, startup: 16, active: 1, recovery: 30,
-        projectile: { x: 20, y: 0, w: 130, h: 210, speed: 10, life: 80, damage: 96, chip: 16, hitstun: 24, blockstun: 18, kb: [12, 14], knockdown: true, hitstop: 12 },
+        projectile: { x: 20, y: 0, w: 130, h: 180, speed: 10, life: 70, damage: 88, chip: 16, hitstun: 24, blockstun: 18, kb: [12, 14], knockdown: true, hitstop: 12 },
       },
       projectile: {
         name: 'Golden Rule', kind: Kind.Special, startup: 13, active: 1, recovery: 28,

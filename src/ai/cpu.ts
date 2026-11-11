@@ -78,6 +78,8 @@ export class Cpu {
   private lastConfirm = -1;
   private lastAntiAir = -1;
   private lastPunish = '';
+  private lastLink = -1;
+  private lastCounter = '';
 
   constructor(
     private readonly level: number,
@@ -130,6 +132,19 @@ export class Cpu {
     const actionable =
       me.state === FS.Idle || me.state === FS.Walk || me.state === FS.Crouch || (me.state === FS.Block && me.stunTimer === 0);
 
+    // Link: back on my feet (a jump-in landed) while they are still reeling, so keep the combo going.
+    if (actionable && opp.state === FS.Hitstun && opp.combo > 0 && dist < reach(me, Move.Heavy) + 20) {
+      const key = s.tick - opp.stateTick;
+      if (this.lastLink !== key) {
+        this.lastLink = key;
+        if (this.chance(L.confirm)) {
+          this.queue = [HEAVY];
+          return this.out(this.queue.shift() as number, me);
+        }
+      }
+    }
+
+
     // Defence: decide once per incoming attack whether to see it in time.
     const guard = incomingGuard(s, slot);
     if (guard >= 0 && actionable) {
@@ -145,6 +160,14 @@ export class Cpu {
           this.lastAntiAir = jumpKey;
           this.queue = [FWD, DOWN, DOWN | FWD | SPECIAL];
           return this.out(this.queue.shift() as number, me);
+        }
+      }
+      // A counter-stance fighter sometimes answers a strike with the stance instead of blocking.
+      if (this.counterHero(me) && opp.state === FS.Attack && s.tick >= this.reactAt && this.lastCounter !== key) {
+        this.lastCounter = key;
+        const om = getMove(opp.hero, opp.moveId);
+        if (om.kind !== Kind.Throw && !om.projectile && opp.stateTick < om.startup - 2 && this.chance(L.antiAir * 0.5)) {
+          return SPECIAL;
         }
       }
       if (this.willBlock && s.tick >= this.reactAt) {
@@ -184,6 +207,18 @@ export class Cpu {
     return this.queue.length > 0 ? this.out(this.queue.shift() as number, me) : 0;
   }
 
+  /** The fighter's plain special is a counter stance, which never ends a combo. */
+  private counterHero(me: FighterState): boolean {
+    return HEROES[me.hero].moves.special.counter !== 0;
+  }
+
+  /** A special that ends a combo: the plain special when it strikes, else the projectile. */
+  private finisher(me: FighterState): number[] {
+    const projectile = [0, DOWN, DOWN | FWD, FWD | SPECIAL];
+    if (this.counterHero(me)) return me.projLife === 0 ? projectile : [];
+    return me.projLife === 0 && this.chance(0.5) ? projectile : [0, SPECIAL];
+  }
+
   private comboAfter(me: FighterState): number[] {
     const superReady = me.meter >= HEROES[me.hero].moves.super.meterCost;
     switch (me.moveId) {
@@ -192,7 +227,7 @@ export class Cpu {
         return this.chance(0.4) ? [0, LIGHT] : [0, HEAVY];
       case Move.Heavy:
       case Move.Kick:
-        return superReady && this.chance(0.6) ? [0, HEAVY | SPECIAL] : [0, SPECIAL];
+        return superReady && this.chance(0.6) ? [0, HEAVY | SPECIAL] : this.finisher(me);
       case Move.Special:
       case Move.Rising:
         return superReady ? [0, HEAVY | SPECIAL] : [];
@@ -236,7 +271,11 @@ export class Cpu {
     else if (r < 0.5) this.push(DOWN | LIGHT);
     else if (r < 0.6) this.push(DOWN | HEAVY);
     else if (r < 0.7) this.push(HEAVY);
-    else if (r < 0.76) this.push(SPECIAL);
+    else if (r < 0.76) {
+      if (!this.counterHero(me)) this.push(SPECIAL);
+      else if (me.projLife === 0) this.push(DOWN, DOWN | FWD, FWD | SPECIAL);
+      else this.push(DOWN | HEAVY);
+    }
     else if (r < 0.88) this.hold(BACK, 12);
     else this.push(BACK, 0, BACK);
   }

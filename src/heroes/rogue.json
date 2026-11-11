@@ -3,7 +3,7 @@
  "name": "The Rogue",
  "color": "#2f7bff",
  "stats": {
-  "maxHealth": 950,
+  "maxHealth": 980,
   "walkSpeed": 6,
   "backWalkSpeed": 5,
   "jumpVelocity": 22,

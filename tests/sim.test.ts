@@ -20,6 +20,7 @@ import {
   step,
 } from '../src/sim';
 import type { GameState } from '../src/sim';
+import { Cpu } from '../src/ai/cpu';
 import { ComboTracker, TRIALS } from '../src/render/trials';
 import type { Trial } from '../src/render/trials';
 
@@ -521,6 +522,22 @@ describe('every hero', () => {
       for (const b of ALL_HEROES) {
         const log = makeLog(a * 31 + b, 6000);
         expect(hashState(run(log, createInitialState(a, b)))).toBe(hashState(run(log, createInitialState(a, b))));
+      }
+    }
+  });
+});
+
+describe('computer opponent', () => {
+  // The CPU is not part of the sim, but it plays through it: hard should beat easy with every hero.
+  it('hard beats easy with every fighter, on both sides', () => {
+    for (const hero of ALL_HEROES) {
+      const foe = ALL_HEROES[(hero + 1) % ALL_HEROES.length];
+      for (const side of [0, 1]) {
+        let s = side === 0 ? createInitialState(hero, foe) : createInitialState(foe, hero);
+        const cpus = side === 0 ? [new Cpu(2, 11 + hero), new Cpu(0, 5)] : [new Cpu(0, 5), new Cpu(2, 11 + hero)];
+        for (let t = 0; t < 60 * 60 * 6 && s.phase !== Phase.MatchEnd; t += 1) s = step(s, cpus[0].next(s, 0), cpus[1].next(s, 1));
+        expect(s.phase, HEROES[hero].id).toBe(Phase.MatchEnd);
+        expect(s.matchResult, HEROES[hero].id).toBe(side);
       }
     }
   });
