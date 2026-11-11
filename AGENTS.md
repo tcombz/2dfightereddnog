@@ -26,7 +26,11 @@
 - `src/heroes/*.json` hero data. The JSON is the source of truth. `scripts/gen-heroes.mjs`
   scaffolded the placeholders and overwrites hand edits if rerun.
 - `src/render/` Phaser scene: placeholder rectangles, HUD, debug overlay
-- `src/dev/localKeyboard.ts` two-players-on-one-machine input, for testing only
+- `src/render/heroArt.ts` maps sim state to sprite frames for heroes that have art
+- `assets/heroes/<id>/` sprite frames, `atlas.png` and `atlas.json` (repack with
+  `python3 scripts/pack-hero-atlas.py <id>`). Sprites draw at 2x, so sprite heroes are about 240 px tall.
+- `src/dev/` testing-only input: `localKeyboard.ts` (two players, one machine), `touchControls.ts`
+  (on-screen P1 buttons on touch devices), `cpu.ts` (simple computer P2; on by default on touch, `C` toggles)
 - `tests/sim.test.ts` determinism, full-match, purity and hero-data tests
 
 ## Sim conventions

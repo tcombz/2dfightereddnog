@@ -17,10 +17,15 @@ import {
   step,
 } from '../sim';
 import type { FighterState, GameState, Rect } from '../sim';
+import { cpuInput } from '../dev/cpu';
+import { ALL_ART, artFor, frameFor } from './heroArt';
 
 export const VIEW_WIDTH = STAGE_WIDTH;
 export const VIEW_HEIGHT = 540;
-const GROUND_Y = 470;
+const GROUND_Y = 480;
+/** Default match-up: the two sprite heroes. */
+const P1_HERO = Math.max(0, HEROES.findIndex((h) => h.id === 'rogue'));
+const P2_HERO = Math.max(0, HEROES.findIndex((h) => h.id === 'jetsetter'));
 const TICK_MS = 1000 / TICK_RATE;
 const MAX_STEPS_PER_FRAME = 5;
 const BAR_W = 400;
@@ -31,20 +36,34 @@ const FONT = { fontFamily: 'monospace', color: '#ffffff' };
 
 /** Read-only view of the sim. All game logic lives in src/sim. */
 export class GameScene extends Phaser.Scene {
-  private state: GameState = createInitialState(0, 1);
+  private state: GameState = createInitialState(P1_HERO, P2_HERO);
   private acc = 0;
   private debug = false;
   private gfx!: Phaser.GameObjects.Graphics;
   private timerText!: Phaser.GameObjects.Text;
   private messageText!: Phaser.GameObjects.Text;
   private debugText!: Phaser.GameObjects.Text;
+  private cpuText!: Phaser.GameObjects.Text;
+  private sprites: Array<Phaser.GameObjects.Image | undefined> = [];
 
-  constructor(private readonly inputs: InputSource) {
+  constructor(
+    private readonly inputs: InputSource,
+    private cpuP2 = false,
+  ) {
     super('game');
+  }
+
+  preload(): void {
+    for (const art of ALL_ART) this.load.atlas(art.key, art.png, art.atlas);
   }
 
   create(): void {
     this.gfx = this.add.graphics();
+    this.sprites = this.state.fighters.map((f) => {
+      const art = artFor(f.hero);
+      return art ? this.add.image(0, 0, art.key).setScale(art.scale) : undefined;
+    });
+    this.cpuText = this.add.text(VIEW_WIDTH - 40, BAR_Y + BAR_H + 22, '', { ...FONT, fontSize: '12px', color: '#9fb4ff' }).setOrigin(1, 0);
     this.timerText = this.add.text(VIEW_WIDTH / 2, BAR_Y + BAR_H / 2, '', { ...FONT, fontSize: '40px' }).setOrigin(0.5);
     this.messageText = this.add
       .text(VIEW_WIDTH / 2, 200, '', { ...FONT, fontSize: '48px', align: 'center', stroke: '#000000', strokeThickness: 6 })
@@ -61,8 +80,13 @@ export class GameScene extends Phaser.Scene {
     };
     kb.on('keydown-F2', toggle);
     kb.on('keydown-BACKTICK', toggle);
-    kb.on('keydown-ENTER', () => {
-      if (this.state.phase === Phase.MatchEnd) this.state = createInitialState(0, 1);
+    const rematch = (): void => {
+      if (this.state.phase === Phase.MatchEnd) this.state = createInitialState(P1_HERO, P2_HERO);
+    };
+    kb.on('keydown-ENTER', rematch);
+    this.input.on('pointerdown', rematch);
+    kb.on('keydown-C', () => {
+      this.cpuP2 = !this.cpuP2;
     });
   }
 
@@ -71,7 +95,7 @@ export class GameScene extends Phaser.Scene {
     let steps = 0;
     while (this.acc >= TICK_MS && steps < MAX_STEPS_PER_FRAME) {
       const [p1, p2] = this.inputs.read();
-      this.state = step(this.state, p1, p2);
+      this.state = step(this.state, p1, this.cpuP2 ? cpuInput(this.state, 1) : p2);
       this.acc -= TICK_MS;
       steps += 1;
     }
@@ -91,7 +115,8 @@ export class GameScene extends Phaser.Scene {
     g.fillStyle(0x596480).fillRect(0, GROUND_Y, VIEW_WIDTH, 3);
     g.fillStyle(0x596480).fillRect(0, 90, 6, GROUND_Y - 90).fillRect(VIEW_WIDTH - 6, 90, 6, GROUND_Y - 90);
 
-    for (const f of s.fighters) this.drawFighter(f);
+    s.fighters.forEach((f, i) => this.drawFighter(s, i, f));
+    this.cpuText.setText(this.cpuP2 ? 'CPU' : '');
     if (this.debug) for (const f of s.fighters) this.drawDebugBoxes(f);
     this.drawHud(s);
 
@@ -113,9 +138,25 @@ export class GameScene extends Phaser.Scene {
     this.gfx.strokeRect(r.x, GROUND_Y - r.y - r.h, r.w, r.h);
   }
 
-  private drawFighter(f: FighterState): void {
+  private drawFighter(s: GameState, slot: number, f: FighterState): void {
     const g = this.gfx;
     const hero = HEROES[f.hero];
+    const art = artFor(f.hero);
+    const sprite = this.sprites[slot];
+    if (art && sprite) {
+      // Flipping mirrors the cell, so the feet anchor mirrors with it.
+      const ox = f.facing === 1 ? art.feetX : art.cell - art.feetX;
+      sprite
+        .setFrame(frameFor(art, s, slot))
+        .setOrigin(ox / art.cell, art.feetY / art.cell)
+        .setFlipX(f.facing !== 1)
+        .setPosition(f.x, GROUND_Y - f.y)
+        .setDepth(f.state === FS.Attack ? 2 : 1);
+      if (f.state === FS.Hitstun && f.stateTick < 4) sprite.setTintFill(0xffffff);
+      else sprite.clearTint();
+      return;
+    }
+
     const st = hero.stats;
     const base = parseInt(hero.color.slice(1), 16);
     const light = Phaser.Display.Color.ValueToColor(base).lighten(30).color;
@@ -203,7 +244,7 @@ export class GameScene extends Phaser.Scene {
         return `${ko ? 'K.O.' : 'TIME UP'}\n${who(s.roundResult)} THE ROUND`.replace('DRAW THE ROUND', 'DRAW');
       }
       default:
-        return `${who(s.matchResult)}${s.matchResult === Result.Draw ? '' : ' THE MATCH'}\nEnter: rematch`;
+        return `${who(s.matchResult)}${s.matchResult === Result.Draw ? '' : ' THE MATCH'}\nEnter or tap: rematch`;
     }
   }
 }

@@ -65,6 +65,29 @@ const heroes = [
       special: { startup: 11, active: 8, recovery: 24, damage: 120, chipDamage: 16, hitstun: 22, blockstun: 15, knockback: { x: 11, y: 12 }, knockdown: true, hitbox: { x: 10, y: 40, w: 125, h: 40 } },
     },
   }),
+  // Sprite heroes: art in assets/heroes/<id>/ is drawn at 2x, so these bodies are about 240 px tall.
+  hero({
+    id: 'rogue',
+    name: 'The Rogue',
+    color: '#2f7bff',
+    stats: { maxHealth: 900, walkSpeed: 6, backWalkSpeed: 5, jumpVelocity: 28, jumpSpeedX: 7, gravity: 2, width: 70, height: 230, crouchHeight: 150 },
+    moves: {
+      light: { startup: 3, active: 3, recovery: 7, damage: 32, chipDamage: 3, hitstun: 12, blockstun: 8, knockback: { x: 6, y: 0 }, knockdown: false, hitbox: { x: 20, y: 150, w: 75, h: 30 } },
+      heavy: { startup: 8, active: 4, recovery: 16, damage: 78, chipDamage: 8, hitstun: 18, blockstun: 12, knockback: { x: 10, y: 0 }, knockdown: false, hitbox: { x: 20, y: 140, w: 105, h: 36 } },
+      special: { startup: 12, active: 8, recovery: 24, damage: 120, chipDamage: 16, hitstun: 22, blockstun: 15, knockback: { x: 12, y: 16 }, knockdown: true, hitbox: { x: 20, y: 50, w: 130, h: 160 } },
+    },
+  }),
+  hero({
+    id: 'jetsetter',
+    name: 'The Jetsetter',
+    color: '#e0b030',
+    stats: { maxHealth: 1000, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 28, jumpSpeedX: 6, gravity: 2, width: 72, height: 234, crouchHeight: 150 },
+    moves: {
+      light: { startup: 4, active: 3, recovery: 8, damage: 40, chipDamage: 4, hitstun: 14, blockstun: 9, knockback: { x: 7, y: 0 }, knockdown: false, hitbox: { x: 20, y: 150, w: 78, h: 30 } },
+      heavy: { startup: 9, active: 4, recovery: 18, damage: 90, chipDamage: 10, hitstun: 20, blockstun: 14, knockback: { x: 11, y: 0 }, knockdown: false, hitbox: { x: 20, y: 115, w: 115, h: 70 } },
+      special: { startup: 13, active: 6, recovery: 25, damage: 135, chipDamage: 18, hitstun: 24, blockstun: 16, knockback: { x: 11, y: 16 }, knockdown: true, hitbox: { x: 10, y: 60, w: 140, h: 100 } },
+    },
+  }),
 ];
 
 for (const h of heroes) {

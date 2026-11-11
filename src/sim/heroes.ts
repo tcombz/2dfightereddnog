@@ -1,4 +1,6 @@
 import brawler from '../heroes/brawler.json';
+import jetsetter from '../heroes/jetsetter.json';
+import rogue from '../heroes/rogue.json';
 import striker from '../heroes/striker.json';
 import type { HeroData, MoveData } from './types';
 
@@ -6,6 +8,8 @@ import type { HeroData, MoveData } from './types';
 export const HEROES: readonly HeroData[] = [
   brawler as unknown as HeroData,
   striker as unknown as HeroData,
+  rogue as unknown as HeroData,
+  jetsetter as unknown as HeroData,
 ];
 
 /** FighterState.moveId indexes into this. */

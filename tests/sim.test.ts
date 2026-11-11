@@ -141,6 +141,31 @@ describe('match flow', () => {
   });
 });
 
+describe('sprite heroes', () => {
+  const rogue = HEROES.findIndex((h) => h.id === 'rogue');
+  const jet = HEROES.findIndex((h) => h.id === 'jetsetter');
+
+  it('Rogue vs Jetsetter plays a full deterministic match', () => {
+    expect(rogue).toBeGreaterThanOrEqual(0);
+    expect(jet).toBeGreaterThanOrEqual(0);
+    const a = run(LOG, createInitialState(rogue, jet));
+    const b = run(LOG, createInitialState(rogue, jet));
+    expect(hashState(a)).toBe(hashState(b));
+    expect(a.phase).toBe(Phase.MatchEnd);
+  });
+
+  it('every move of both heroes connects at walk-up range', () => {
+    for (const [att, def] of [[rogue, jet], [jet, rogue]]) {
+      for (const button of [Input.Light, Input.Heavy, Input.Special]) {
+        let s = createInitialState(att, def);
+        // Walk in after the intro, pause one tick, then press the button once.
+        for (let t = 0; t < 260; t += 1) s = step(s, t === 200 ? button : t < 198 ? Input.Right : 0, 0);
+        expect(s.fighters[1].health, `${HEROES[att].id} ${button}`).toBeLessThan(HEROES[def].stats.maxHealth);
+      }
+    }
+  });
+});
+
 describe('hero data', () => {
   it('frame data is consistent and integer-only', () => {
     for (const hero of HEROES) {
