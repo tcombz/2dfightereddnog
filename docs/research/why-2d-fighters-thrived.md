@@ -44,10 +44,10 @@ decisions, while the full scheme keeps its depth.
 
 | Lesson | In the game |
 | --- | --- |
-| Combos are the hook | Light chains, heavy-to-special cancels, special-to-super cancels, damage scaling, combo counter. Adding: juggles after launchers, an input buffer, and listed combo routes per hero. |
+| Combos are the hook | Light chains, heavy-to-special cancels, special-to-super cancels, damage scaling, combo counter, juggles after launchers (rising attack into super), and combo routes per hero on the How to Play page, each checked by a test. |
 | Readable characters | Four fighters with distinct colours and silhouettes taken straight from the character sheets: blue lightning, black and gold, navy and burgundy, black gold and red. |
 | Attack / block / throw | Hold back to block, lows and overheads, throws beat block, strikes beat throws. |
-| Responsive controls | 60 Hz fixed sim, hitstop, motion leniency, press leniency for two-button moves; adding a short attack buffer. |
+| Responsive controls | 60 Hz fixed sim, hitstop, a 6-tick attack buffer (presses during hitstop count), motion leniency, a 4-tick window for two-button moves, throw breaks, and an optional simple-specials mode. |
 | Spectacle | Super freeze, camera zoom, portrait cut-in using the character sheet art, per-hero super effects that match each sheet. |
 | Community | Two players on one keyboard, gamepads, shareable web link. The sim is a pure, deterministic `step()`, which is exactly what rollback netcode needs, so online versus is a realistic next step. |
 | On-ramps | Training mode with a guarding dummy, move lists, How to Play pages, CPU difficulty levels. |

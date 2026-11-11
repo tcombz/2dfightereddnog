@@ -25,12 +25,13 @@ import { playMusic, sfx } from '../audio';
 import { C, CSS, GROUND_Y, VIEW_H, VIEW_W } from '../config';
 import type { MatchSetup } from '../config';
 import { Effects } from '../fx';
-import { artFor, poseFor } from '../heroArt';
+import { artFor, frameName, poseFor } from '../heroArt';
 import { heroInfo } from '../heroInfo';
 import { Hud } from '../hud';
 import { SuperFx } from '../superFx';
 import { moveList } from '../moves';
 import { STAGES } from '../stages';
+import { ComboTracker, TRIALS, stepLabel } from '../trials';
 import type { StageDef } from '../stages';
 import { Menu, body, display, goTo, goldFill } from '../ui';
 
@@ -68,9 +69,21 @@ export class FightScene extends Phaser.Scene {
   private pauseMenu: Menu | null = null;
   private moveListObjects: Phaser.GameObjects.GameObject[] = [];
   private celebrate = [0, 0];
+  /** Render-only settle poses: the sim tick a fighter landed or stood up from a crouch (-99 none). */
+  private landedAt = [-99, -99];
+  private stoodAt = [-99, -99];
   private matchOverTicks = 0;
   private dummy = 3;
   private trainingText: Phaser.GameObjects.Text | null = null;
+  /** Combo trials (training): the current trial, which are cleared, and what the current combo holds. */
+  private trialOn = false;
+  private trialIndex = 0;
+  private trialCleared: boolean[] = TRIALS.map(() => false);
+  private trialWatch = new ComboTracker(0);
+  private trialObjs: Phaser.GameObjects.GameObject[] = [];
+  private trialChips: Phaser.GameObjects.Text[] = [];
+  /** The trial was just cleared and the next one is about to appear. */
+  private trialLocked = false;
   private rain: Phaser.GameObjects.Image[] = [];
   private nextLightning = 0;
   private ambientT = 0;
@@ -92,6 +105,8 @@ export class FightScene extends Phaser.Scene {
     this.clock = 0;
     this.paused = false;
     this.celebrate = [0, 0];
+    this.landedAt = [-99, -99];
+    this.stoodAt = [-99, -99];
     this.matchOverTicks = 0;
     this.pauseObjects = [];
     this.moveListObjects = [];
@@ -99,6 +114,11 @@ export class FightScene extends Phaser.Scene {
     this.rain = [];
     this.projViews = [];
     this.trainingText = null;
+    this.trialOn = false;
+    this.trialObjs = [];
+    this.trialChips = [];
+    this.trialLocked = false;
+    this.trialWatch = new ComboTracker(0);
     this.cpu = setup.mode === 'cpu' ? new Cpu(setup.cpuLevel, Date.now() & 0xffff) : setup.mode === 'training' ? new Cpu(1, 99) : null;
 
     const main = this.cameras.main;
@@ -150,7 +170,7 @@ export class FightScene extends Phaser.Scene {
 
     const kb = this.input.keyboard;
     if (kb) {
-      kb.addCapture('F1,F2,F3');
+      kb.addCapture('F1,F2,F3,F4,F5');
       kb.on('keydown-F2', () => (this.debug = !this.debug));
       kb.on('keydown-BACKTICK', () => (this.debug = !this.debug));
       kb.on('keydown-F1', () => {
@@ -158,6 +178,10 @@ export class FightScene extends Phaser.Scene {
       });
       kb.on('keydown-F3', () => {
         if (this.setup.mode === 'training') this.state = createInitialState(this.setup.p1, this.setup.p2, { training: true });
+      });
+      kb.on('keydown-F4', () => this.toggleTrials());
+      kb.on('keydown-F5', () => {
+        if (this.trialOn) this.nextTrial();
       });
     }
     controls.take();
@@ -233,6 +257,11 @@ export class FightScene extends Phaser.Scene {
   }
 
   private simEvents(prev: GameState, next: GameState): void {
+    if (this.trialOn) {
+      this.trialWatch.update(prev, next);
+      const t = TRIALS[this.trialIndex];
+      if (!this.trialLocked && this.trialWatch.progress(t) === t.steps.length) this.clearTrial();
+    }
     for (let i = 0; i < 2; i += 1) {
       const f = next.fighters[i];
       const p = prev.fighters[i];
@@ -300,8 +329,12 @@ export class FightScene extends Phaser.Scene {
           this.fx.dust(f.x, GROUND_Y, 10, 110);
           sfx(this, 'fall', 0.9);
           this.cameras.main.shake(140, 0.004);
-        } else this.fx.dust(f.x, GROUND_Y, 3, 40);
+        } else {
+          this.fx.dust(f.x, GROUND_Y, 3, 40);
+          this.landedAt[i] = next.tick;
+        }
       }
+      if (p.state === FS.Crouch && (f.state === FS.Idle || f.state === FS.Walk)) this.stoodAt[i] = next.tick;
     }
 
     if (next.freezeSlot >= 0 && prev.freezeSlot < 0) this.superFlash(next.freezeSlot);
@@ -377,6 +410,14 @@ export class FightScene extends Phaser.Scene {
       const won = (s.phase === Phase.RoundEnd || s.phase === Phase.MatchEnd) && s.roundResult === i && f.state === FS.Idle && f.y === 0;
       if (won && s.hitstop === 0) this.celebrate[i] += 1;
       const pose = poseFor(art, f, this.clock + i * 13, won && this.celebrate[i] > 0, this.celebrate[i]);
+      // Settle into stance: knees bend on landing, and the fighter rises out of a crouch.
+      if ((f.state === FS.Idle || f.state === FS.Walk) && !won) {
+        const c = art.crouch;
+        const sinceLand = s.tick - this.landedAt[i];
+        const sinceStand = s.tick - this.stoodAt[i];
+        if (sinceLand >= 0 && sinceLand < 6) pose.frame = frameName('crouch', c[Math.max(0, Math.min(c.length - 1, 2) - (sinceLand >> 1))]);
+        else if (sinceStand >= 0 && sinceStand < 4) pose.frame = frameName('crouch', c[Math.max(0, c.length - 3 - (sinceStand >> 1))]);
+      }
       const ox = f.facing === 1 ? art.feetX : art.cell - art.feetX;
       sprite
         .setFrame(pose.frame)
@@ -445,8 +486,14 @@ export class FightScene extends Phaser.Scene {
     if (this.trainingText) {
       const def = s.fighters[1];
       this.trainingText.setText(
-        `TRAINING  ·  DUMMY: ${DUMMY_MODES[this.dummy]} (F1)  ·  HITBOXES (F2)  ·  RESET (F3)  ·  LAST COMBO: ${def.comboDamage} DMG`,
+        `TRAINING  ·  DUMMY: ${DUMMY_MODES[this.dummy]} (F1)  ·  HITBOXES (F2)  ·  RESET (F3)  ·  TRIALS (F4)  ·  LAST COMBO: ${def.comboDamage} DMG`,
       );
+    }
+    if (this.trialOn && this.trialChips.length > 0) {
+      // Light up the steps of the route the current combo has done so far.
+      const t = TRIALS[this.trialIndex];
+      const n = this.trialLocked ? t.steps.length : this.trialWatch.progress(t);
+      this.trialChips.forEach((c, k) => c.setColor(k < n ? (this.trialLocked ? '#7dff9a' : CSS.gold) : CSS.ink));
     }
     this.drawDebug();
   }
@@ -595,6 +642,76 @@ export class FightScene extends Phaser.Scene {
     }
   }
 
+  // ---------- combo trials ----------
+
+  private toggleTrials(): void {
+    if (this.setup.mode !== 'training') return;
+    this.trialOn = !this.trialOn;
+    this.trialLocked = false;
+    this.trialWatch.reset();
+    if (this.trialOn) {
+      // Trials need a dummy that takes the hits.
+      this.dummy = 0;
+      this.buildTrial();
+    } else this.clearTrialUi();
+    sfx(this, 'ui_move', 0.7);
+  }
+
+  private nextTrial(): void {
+    this.trialIndex = (this.trialIndex + 1) % TRIALS.length;
+    this.trialLocked = false;
+    this.trialWatch.reset();
+    this.buildTrial();
+    sfx(this, 'ui_move', 0.7);
+  }
+
+  private clearTrial(): void {
+    const index = this.trialIndex;
+    this.trialLocked = true;
+    this.trialCleared[index] = true;
+    const all = this.trialCleared.every(Boolean);
+    this.hud.shout('TRIAL CLEAR!', all ? 'Every trial done. Try them with the others!' : '', 1000);
+    sfx(this, 'ui_confirm');
+    sfx(this, 'crowd', 0.5);
+    this.time.delayedCall(1500, () => {
+      if (this.trialOn && this.trialLocked && this.trialIndex === index) this.nextTrial();
+    });
+  }
+
+  private clearTrialUi(): void {
+    this.trialObjs.forEach((o) => o.destroy());
+    this.trialObjs = [];
+    this.trialChips = [];
+  }
+
+  /** The trial panel under the training bar: name, the route's steps, and a tip. */
+  private buildTrial(): void {
+    this.clearTrialUi();
+    const t = TRIALS[this.trialIndex];
+    const simple = (this.registry.get('simple') as boolean | undefined) ?? false;
+    const y = 108;
+    const done = this.trialCleared[this.trialIndex] ? '  ✓' : '';
+    const title = this.add.text(VIEW_W / 2, y, `TRIAL ${this.trialIndex + 1}/${TRIALS.length}  ·  ${t.name.toUpperCase()}${done}`, display(18, '#ffffff', 5)).setOrigin(0.5, 0);
+    goldFill(title);
+    const chips = t.steps.map(([key, link]) =>
+      this.add
+        .text(0, y + 30, (link === '' ? '' : link === ',' ? ',  ' : '  >  ') + stepLabel(key, simple), body(18, CSS.ink))
+        .setShadow(0, 2, '#000000', 3),
+    );
+    const total = chips.reduce((w, c) => w + c.width, 0);
+    let x = VIEW_W / 2 - total / 2;
+    for (const c of chips) {
+      c.setX(x);
+      x += c.width;
+    }
+    const tip = this.add.text(VIEW_W / 2, y + 60, `${t.tip}   ·   F5 next   ·   F4 off`, body(12, CSS.muted)).setOrigin(0.5, 0);
+    const w = Math.max(total, tip.width, title.width) + 44;
+    const bg = this.add.rectangle(VIEW_W / 2, y - 8, w, 88, 0x0b0e1c, 0.82).setOrigin(0.5, 0).setStrokeStyle(2, C.gold, 0.55);
+    this.trialObjs = [bg, title, ...chips, tip];
+    this.trialChips = chips;
+    this.ui.add(this.trialObjs);
+  }
+
   // ---------- pause menu ----------
 
   private openPause(): void {
@@ -602,13 +719,25 @@ export class FightScene extends Phaser.Scene {
     const shade = this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x05060c, 0.72).setOrigin(0, 0);
     const title = this.add.text(VIEW_W / 2, 120, 'PAUSED', display(48, '#ffffff', 8)).setOrigin(0.5);
     goldFill(title);
-    this.pauseMenu = new Menu(this, VIEW_W / 2 - 170, 200, [
+    const training = this.setup.mode === 'training';
+    const items = [
       { label: 'RESUME', onSelect: () => this.closePause() },
       { label: 'MOVE LIST', onSelect: () => this.showMoveList() },
+    ];
+    if (training) {
+      const after = (fn: () => void) => () => {
+        this.closePause();
+        fn();
+      };
+      items.push({ label: this.trialOn ? 'TRIALS OFF' : 'COMBO TRIALS', onSelect: after(() => this.toggleTrials()) });
+      if (this.trialOn) items.push({ label: 'NEXT TRIAL', onSelect: after(() => this.nextTrial()) });
+    }
+    items.push(
       { label: 'RESTART', onSelect: () => goTo(this, 'fight', this.setup) },
       { label: 'CHARACTER SELECT', onSelect: () => goTo(this, 'select', { mode: this.setup.mode, cpuLevel: this.setup.cpuLevel }) },
       { label: 'MAIN MENU', onSelect: () => goTo(this, 'title', { skipIntro: true }) },
-    ]);
+    );
+    this.pauseMenu = new Menu(this, VIEW_W / 2 - 170, items.length > 5 ? 186 : 200, items, 340, items.length > 5 ? 42 : 46);
     this.pauseObjects = [shade, title, ...this.pauseMenu.objects];
     this.ui.add(this.pauseObjects);
     sfx(this, 'ui_confirm', 0.7);

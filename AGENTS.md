@@ -33,14 +33,16 @@
     (splash), Fight, Result, HowTo (controls, basics, move lists)
   - `heroArt.ts` maps sim state to atlas frames; `heroInfo.ts` titles, quotes and ratings;
     `stages.ts` stage art and ambience; `hud.ts`; `fx.ts` procedural effects; `audio.ts` music and
-    sound; `ui.ts` menu widgets; `moves.ts` move list text; `config.ts` sizes, colours, game title
+    sound; `ui.ts` menu widgets; `moves.ts` move list text; `trials.ts` combo trials and the combo tracker
+    (training mode, F4); `superFx.ts` super cinematics; `config.ts` sizes, colours, game title
 - `src/input/controls.ts` keyboard (two players on one keyboard) and gamepads, plus menu events
 - `src/ai/cpu.ts` computer opponent (easy, normal, hard) and the training dummy's auto-guard
 - `assets/heroes/<id>/` sprite frames, `atlas.png` and `atlas.json` (repack with
   `python3 scripts/pack-hero-atlas.py <id>`). Frames are feet-aligned on a 200 px cell, anchor
   (100, 170), and drawn at 2x, so heroes are about 240 px tall.
 - `assets/stages/` stage art (768x320, drawn at 2x); `assets/audio/` sound effects and music loops
-- `tests/sim.test.ts` determinism, match flow, guarding, specials, combos, movement, training and data tests
+- `tests/sim.test.ts` determinism, match flow, guarding, specials, combos (every trial route for every
+  pair of fighters), movement, training and data tests
 
 ## Sim conventions
 

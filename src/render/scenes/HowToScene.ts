@@ -70,7 +70,7 @@ export class HowToScene extends Phaser.Scene {
     } else if (this.page === 2) {
       add(this.add.text(70, 112, 'Every fighter shares these routes. "," chains a normal into the next; ">" cancels into a special or super.', body(14, CSS.muted)).setWordWrapWidth(820));
       COMBOS.forEach(([name, route], r) => {
-        const y = 160 + r * 52;
+        const y = 158 + r * 46;
         add(this.add.text(70, y, name.toUpperCase(), display(16, CSS.gold, 4)));
         add(this.add.text(290, y, route, body(19, CSS.ink)));
       });

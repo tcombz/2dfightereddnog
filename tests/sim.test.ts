@@ -20,6 +20,8 @@ import {
   step,
 } from '../src/sim';
 import type { GameState } from '../src/sim';
+import { ComboTracker, TRIALS } from '../src/render/trials';
+import type { Trial } from '../src/render/trials';
 
 type InputLog = Array<[number, number]>;
 
@@ -112,7 +114,7 @@ describe('determinism', () => {
     expect(h2).toBe(h1);
     expect(h3).toBe(h1);
     // Golden value: pins the result across runs, machines and refactors.
-    expect(h1).toMatchInlineSnapshot(`"856bc197"`);
+    expect(h1).toMatchInlineSnapshot(`"9f7a8228"`);
   });
 
   it('resuming from a serialized mid-run state gives the same hash', () => {
@@ -383,49 +385,118 @@ describe('feel and combo depth', () => {
 
 /**
  * Plays a combo route like a player confirming each hit: perform a step, wait for the hit to land,
- * then input the next step. Returns the longest combo the defender took.
+ * then input the next step. Returns the longest combo the defender took, and whether the trial tracker
+ * saw the route cleared.
  */
-function comboTrial(att: number, def: number, steps: InputLog[], gap = 105): number {
+function comboTrial(att: number, def: number, steps: InputLog[], trialName: string, gap = 105): { best: number; cleared: boolean } {
   let s = fight(att, def, gap);
   s.fighters[0].meter = METER_MAX;
+  const watch = new ComboTracker(0);
+  const trial = TRIALS.find((t) => t.name === trialName) as Trial;
   let best = 0;
+  let cleared = false;
+  const adv = (a: number, b: number): void => {
+    const next = step(s, a, b);
+    watch.update(s, next);
+    if (watch.progress(trial) === trial.steps.length) cleared = true;
+    s = next;
+    best = Math.max(best, s.fighters[1].combo);
+  };
   for (let k = 0; k < steps.length; k += 1) {
     if (k > 0) {
       const before = s.fighters[1].combo;
       let waited = 0;
       while (s.fighters[1].combo <= before && waited < 60) {
-        s = step(s, 0, 0);
-        best = Math.max(best, s.fighters[1].combo);
+        adv(0, 0);
         waited += 1;
       }
     }
-    for (const [a, b] of steps[k]) {
-      s = step(s, a, b);
-      best = Math.max(best, s.fighters[1].combo);
-    }
+    for (const [a, b] of steps[k]) adv(a, b);
   }
-  for (let t = 0; t < 90; t += 1) {
-    s = step(s, 0, 0);
-    best = Math.max(best, s.fighters[1].combo);
-  }
-  return best;
+  for (let t = 0; t < 90; t += 1) adv(0, 0);
+  return { best, cleared };
 }
 
-describe('combo routes from the How to Play page work for every fighter', () => {
+describe('every combo trial works for every fighter, and the trial tracker sees it', () => {
   const qcf: InputLog = [[D, 0], [D | R, 0], [R | Special, 0]];
   const routes: Array<[string, InputLog[], number]> = [
-    ['LIGHT, LIGHT, HEAVY > projectile', [[[Light, 0]], [[Light, 0]], [[Heavy, 0]], qcf], 4],
-    ['low LIGHT, low LIGHT, sweep', [[[D | Light, 0]], [[D, 0], [D | Light, 0]], [[D, 0], [D | Heavy, 0]]], 3],
-    ['HEAVY > super', [[[Heavy, 0]], [[Heavy | Special, 0]]], 3],
-    ['rising > super juggle', [[[R, 0], [0, 0], [D, 0], [D | R | Special, 0]], [[Heavy | Special, 0]]], 2],
+    ['Starter', [[[Light, 0]], [[Light, 0]], [[Heavy, 0]], qcf], 4],
+    ['Low starter', [[[D | Light, 0]], [[D, 0], [D | Light, 0]], [[D, 0], [D | Heavy, 0]]], 3],
+    ['Meter dump', [[[Heavy, 0]], [[Heavy | Special, 0]]], 3],
+    ['Launcher', [[[R, 0], [0, 0], [D, 0], [D | R | Special, 0]], [[Heavy | Special, 0]]], 2],
   ];
+  it('every trial has a route here', () => {
+    expect(TRIALS.map((t) => t.name).sort()).toEqual([...routes.map(([n]) => n), 'Jump in'].sort());
+  });
   for (const [name, steps, expected] of routes) {
     it(name, () => {
       for (const hero of ALL_HEROES) {
-        expect(comboTrial(hero, JET, steps), HEROES[hero].id).toBeGreaterThanOrEqual(expected);
+        for (const foe of ALL_HEROES) {
+          const r = comboTrial(hero, foe, steps, name);
+          const who = `${HEROES[hero].id} on ${HEROES[foe].id}`;
+          expect(r.best, who).toBeGreaterThanOrEqual(expected);
+          expect(r.cleared, who).toBe(true);
+        }
       }
     });
   }
+
+  it('Jump in', () => {
+    // A jump-in from some spacing, attacking early on the way down, leads into a grounded combo.
+    const trial = TRIALS.find((t) => t.name === 'Jump in') as Trial;
+    const jumpIn = (hero: number, gap: number, height: number): boolean => {
+      let s = fight(hero, JET, gap);
+      const watch = new ComboTracker(0);
+      s = step(s, U | R, 0);
+      let phase = 0;
+      let qcf: number[] = [];
+      for (let t = 0; t < 160; t += 1) {
+        const f = s.fighters[0];
+        let input = 0;
+        if (phase === 0 && f.vy < 0 && f.y <= height) {
+          input = Heavy;
+          phase = 1;
+        } else if (phase === 1 && f.y === 0 && f.state !== FS.Attack && s.fighters[1].combo >= 1) {
+          input = Heavy;
+          phase = 2;
+        } else if (phase === 2 && f.state === FS.Attack && f.moveHits > 0) {
+          qcf = [D, D | R, R | Special];
+          phase = 3;
+        }
+        if (phase === 3 && qcf.length) input = qcf.shift() as number;
+        const next = step(s, input, 0);
+        watch.update(s, next);
+        if (watch.progress(trial) === trial.steps.length) return true;
+        s = next;
+      }
+      return false;
+    };
+    for (const hero of ALL_HEROES) {
+      let cleared = false;
+      for (let gap = 150; gap <= 320 && !cleared; gap += 10) {
+        for (const height of [100, 130, 160, 190]) cleared = cleared || jumpIn(hero, gap, height);
+      }
+      expect(cleared, HEROES[hero].id).toBe(true);
+    }
+  });
+
+  it('the tracker does not count a blocked string or a whiff', () => {
+    let s = fight(ROGUE, JET, 105);
+    const watch = new ComboTracker(0);
+    const starter = TRIALS[0];
+    for (const [a, b] of [[Light, L], [0, L], [0, L], [0, L], [0, L], [0, L], [0, L], [0, L], [Light, L]] as InputLog) {
+      const next = step(s, a, b);
+      watch.update(s, next);
+      s = next;
+    }
+    for (let t = 0; t < 30; t += 1) {
+      const next = step(s, 0, L);
+      watch.update(s, next);
+      s = next;
+    }
+    expect(watch.moves).toEqual([]);
+    expect(watch.progress(starter)).toBe(0);
+  });
 });
 
 describe('counter stance', () => {

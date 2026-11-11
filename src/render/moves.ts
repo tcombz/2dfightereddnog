@@ -1,5 +1,6 @@
 import { HEROES, METER_MAX } from '../sim';
 import type { MoveKey } from '../sim';
+import { TRIALS, routeText } from './trials';
 
 export interface MoveLine {
   key: MoveKey;
@@ -53,12 +54,9 @@ export const BASICS: Array<[string, string]> = [
   ['Simple specials', 'Options menu: → + SPECIAL for the projectile, ↓ + SPECIAL for the rising attack.'],
 ];
 
-/** Routes that work for every fighter. ">" is a cancel, "," a chain. */
+/** Routes that work for every fighter (the combo trials). ">" is a cancel, "," a chain. */
 export const COMBOS: Array<[string, string]> = [
-  ['Starter', 'LIGHT, LIGHT, HEAVY > SPECIAL'],
-  ['Low starter', '↓ LIGHT, ↓ LIGHT, ↓ HEAVY  (knocks down)'],
-  ['Jump in', 'Jump attack, HEAVY > ↓↘→ SPECIAL'],
-  ['Meter dump', 'HEAVY > SPECIAL > HEAVY + SPECIAL'],
-  ['Launcher', '→↓↘ SPECIAL > HEAVY + SPECIAL  (juggles)'],
-  ['Punish', 'Block a big move, then HEAVY > SPECIAL'],
+  ...TRIALS.map((t): [string, string] => [t.name, routeText(t, false)]),
+  ['Punish', 'Block a big move, then HEAVY > ↓↘→ SPECIAL'],
+  ['Practise', 'Training mode: F4 (or the pause menu) starts the combo trials.'],
 ];

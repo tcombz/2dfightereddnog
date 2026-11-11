@@ -312,9 +312,12 @@ function chooseMove(f: FighterState, input: number, pressed: number, tick: numbe
   }
   if ((light || heavy) && holdLight && holdHeavy) return Move.Throw;
 
-  const dir = numpad(input, f.facing);
+  // A buffered press keeps the direction held when it was pressed: down + LIGHT pressed during a
+  // hit is still a low jab if down is let go before it comes out.
+  const buffered = pressed === f.buf && f.buf !== 0;
+  const dir = buffered ? dirAt(f, f.bufTick, 0) : numpad(input, f.facing);
   if (special) {
-    const m = motion(f, pressed === f.buf && f.buf !== 0 ? f.bufTick : tick);
+    const m = motion(f, buffered ? f.bufTick : tick);
     if (m === MOTION_DP || (f.simple && dir <= 3)) return Move.Rising;
     if ((m === MOTION_QCF || (f.simple && dir === 6)) && f.projLife === 0) return Move.Projectile;
     return Move.Special;
