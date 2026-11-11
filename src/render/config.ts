@@ -47,6 +47,16 @@ export interface MatchSetup {
   stage: number;
   /** 0 easy, 1 normal, 2 hard. */
   cpuLevel: number;
+  /** Set when this match is part of an arcade run. */
+  arcade?: ArcadeRun;
+}
+
+/** An arcade run: the opponents in order, which fight is next, continues used, and the difficulty. */
+export interface ArcadeRun {
+  order: number[];
+  fight: number;
+  continues: number;
+  base: number;
 }
 
 export const CPU_LEVELS = ['EASY', 'NORMAL', 'HARD'];

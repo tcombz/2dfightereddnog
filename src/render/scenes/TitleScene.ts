@@ -50,8 +50,15 @@ export class TitleScene extends Phaser.Scene {
     this.menu = new Menu(
       this,
       VIEW_W / 2 - 190,
-      268,
+      254,
       [
+        {
+          label: 'ARCADE',
+          value: () => `◀ ${CPU_LEVELS[cpuLevel()]} ▶`,
+          onSelect: () => goTo(this, 'select', { mode: 'cpu', cpuLevel: cpuLevel(), arcadeStart: true }),
+          onLeft: () => this.registry.set('cpuLevel', (cpuLevel() + 2) % 3),
+          onRight: () => this.registry.set('cpuLevel', (cpuLevel() + 1) % 3),
+        },
         {
           label: 'VS CPU',
           value: () => `◀ ${CPU_LEVELS[cpuLevel()]} ▶`,
@@ -78,8 +85,8 @@ export class TitleScene extends Phaser.Scene {
         },
       ],
       380,
-      31,
-      20,
+      29,
+      19,
     );
     this.menu.setVisible(false);
     if (data?.skipIntro) this.open();

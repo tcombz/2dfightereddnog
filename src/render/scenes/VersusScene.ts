@@ -71,6 +71,16 @@ export class VersusScene extends Phaser.Scene {
       onStart: () => sfx(this, 'round', 0.9),
       onComplete: () => this.cameras.main.shake(180, 0.008),
     });
+    if (setup.arcade) {
+      const run = setup.arcade;
+      const last = run.fight === run.order.length - 1;
+      const label = last ? 'FINAL FIGHT' : `FIGHT ${run.fight + 1} OF ${run.order.length}`;
+      this.add
+        .text(VIEW_W / 2, VIEW_H / 2 + 86, label, display(22, last ? '#ffd27a' : '#ffffff', 5))
+        .setOrigin(0.5)
+        .setBackgroundColor('#00000088')
+        .setPadding(12, 4, 12, 4);
+    }
     this.add
       .text(VIEW_W / 2, VIEW_H - 14, `${stage.name}  ·  ${stage.place}`, display(14, CSS.ink, 4))
       .setOrigin(0.5, 1)

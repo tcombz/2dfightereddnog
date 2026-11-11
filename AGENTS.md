@@ -34,7 +34,8 @@
   - `heroArt.ts` maps sim state to atlas frames; `heroInfo.ts` titles, quotes and ratings;
     `stages.ts` stage art and ambience; `hud.ts`; `fx.ts` procedural effects; `audio.ts` music and
     sound; `ui.ts` menu widgets; `moves.ts` move list text; `trials.ts` combo trials and the combo tracker
-    (training mode, F4); `superFx.ts` super cinematics; `config.ts` sizes, colours, game title
+    (training mode, F4); `arcade.ts` the arcade ladder (opponent order, home stages, CPU levels);
+    `superFx.ts` super cinematics; `config.ts` sizes, colours, game title
 - `src/input/controls.ts` keyboard (two players on one keyboard) and gamepads, plus menu events
 - `src/ai/cpu.ts` computer opponent (easy, normal, hard) and the training dummy's auto-guard
 - `assets/heroes/<id>/` sprite frames, `atlas.png` and `atlas.json` (repack with

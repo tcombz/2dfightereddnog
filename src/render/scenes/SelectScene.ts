@@ -3,7 +3,9 @@ import { controls } from '../../input/controls';
 import { HEROES } from '../../sim';
 import { playMusic, sfx } from '../audio';
 import { C, CSS, VIEW_H, VIEW_W } from '../config';
+import { CPU_LEVELS } from '../config';
 import type { MatchSetup } from '../config';
+import { arcadeSetup, newArcadeRun } from '../arcade';
 import { artFor, frameName } from '../heroArt';
 import { heroInfo } from '../heroInfo';
 import { STAGES } from '../stages';
@@ -35,6 +37,9 @@ export class SelectScene extends Phaser.Scene {
   private g!: Phaser.GameObjects.Graphics;
   private tiles: Phaser.GameObjects.Image[] = [];
   private phase: 'heroes' | 'stage' = 'heroes';
+  /** Arcade: only player 1 picks; the opponents come from the ladder. */
+  private arcade = false;
+  private arcadeTimer: Phaser.Time.TimerEvent | null = null;
   private stage = 0;
   private stageBg!: Phaser.GameObjects.Image;
   private stageCards: Phaser.GameObjects.Image[] = [];
@@ -53,8 +58,10 @@ export class SelectScene extends Phaser.Scene {
     return HEROES.length + 1;
   }
 
-  create(data: Partial<MatchSetup>): void {
+  create(data: Partial<MatchSetup> & { arcadeStart?: boolean }): void {
     (this as unknown as { leaving: boolean }).leaving = false;
+    this.arcade = data.arcadeStart === true;
+    this.arcadeTimer = null;
     this.setup = { mode: data.mode ?? 'cpu', p1: 0, p2: 1, stage: 0, cpuLevel: data.cpuLevel ?? 1 };
     this.phase = 'heroes';
     this.stage = Math.floor(Math.random() * STAGES.length);
@@ -70,7 +77,7 @@ export class SelectScene extends Phaser.Scene {
 
     this.header = this.add.text(VIEW_W / 2, 34, 'CHOOSE YOUR FIGHTER', display(32, '#ffffff', 7)).setOrigin(0.5);
     goldFill(this.header);
-    const vsLabel = this.setup.mode === 'versus' ? 'PLAYER 2' : this.setup.mode === 'training' ? 'DUMMY' : 'CPU';
+    const vsLabel = this.arcade ? 'ARCADE' : this.setup.mode === 'versus' ? 'PLAYER 2' : this.setup.mode === 'training' ? 'DUMMY' : 'CPU';
     this.add.text(30, 70, 'PLAYER 1', display(16, CSS.p1, 4));
     this.add.text(VIEW_W - 30, 70, vsLabel, display(16, CSS.p2, 4)).setOrigin(1, 0);
 
@@ -115,7 +122,8 @@ export class SelectScene extends Phaser.Scene {
     for (let i = 0; i < 2; i += 1) {
       RATING_NAMES.forEach(([, label], row) => {
         const t = this.add.text(i === 0 ? 32 : VIEW_W - 32, 182 + row * 18, label, body(12, CSS.muted)).setOrigin(i === 0 ? 0 : 1, 0);
-        this.ratingLabels.push(t);
+        if (i === 1 && this.arcade) t.setVisible(false);
+        else this.ratingLabels.push(t);
       });
     }
 
@@ -135,14 +143,19 @@ export class SelectScene extends Phaser.Scene {
   /** Which side the menu input moves right now (one person picks both in CPU and training). */
   private activeSide(player: number): number {
     if (this.setup.mode === 'versus') return player === 1 ? 1 : player === 0 ? 0 : this.sides[0].locked ? 1 : 0;
-    return this.sides[0].locked ? 1 : 0;
+    return this.sides[0].locked && !this.arcade ? 1 : 0;
   }
 
   private refresh(): void {
     for (let i = 0; i < 2; i += 1) {
       const side = this.sides[i];
       const hero = side.cursor < HEROES.length ? side.cursor : -1;
-      if (hero >= 0) {
+      if (i === 1 && this.arcade) {
+        side.preview.setVisible(false);
+        side.name.setText('THE LADDER');
+        side.style.setText(`Beat the other ${HEROES.length - 1} fighters in a row  ·  ${CPU_LEVELS[this.setup.cpuLevel]}`);
+        side.tagline.setText('Lose and you can continue.');
+      } else if (hero >= 0) {
         const info = heroInfo(HEROES[hero].id);
         const art = artFor(hero);
         side.preview.setTexture(art.key, frameName('idle', 0)).setVisible(true).setOrigin(art.feetX / art.cell, art.feetY / art.cell);
@@ -156,7 +169,8 @@ export class SelectScene extends Phaser.Scene {
         side.tagline.setText('');
       }
     }
-    const who = this.setup.mode === 'versus' ? 'Each player: move and confirm' : this.sides[0].locked ? 'Now pick the opponent' : 'Pick your fighter';
+    const who =
+      this.setup.mode === 'versus' ? 'Each player: move and confirm' : this.sides[0].locked && !this.arcade ? 'Now pick the opponent' : 'Pick your fighter';
     this.hint.setText(
       this.phase === 'stage'
         ? 'Choose a stage  ·  Left / Right  ·  Confirm: Enter, F or A  ·  Back: Esc, G or B'
@@ -174,6 +188,11 @@ export class SelectScene extends Phaser.Scene {
     sfx(this, 'ui_confirm');
     sfx(this, HEROES[side.cursor].id === 'rogue' ? 'zap' : 'scratch', 0.6);
     this.refresh();
+    if (this.arcade && i === 0) {
+      const run = newArcadeRun(side.cursor, this.setup.cpuLevel);
+      this.arcadeTimer = this.time.delayedCall(650, () => goTo(this, 'versus', arcadeSetup(side.cursor, run), 300));
+      return;
+    }
     if (this.sides[0].locked && this.sides[1].locked) this.time.delayedCall(450, () => this.openStages());
   }
 
@@ -212,6 +231,8 @@ export class SelectScene extends Phaser.Scene {
     if (side.locked) {
       side.locked = false;
       side.ready.setVisible(false);
+      this.arcadeTimer?.remove();
+      this.arcadeTimer = null;
     } else if (i === 1 && this.setup.mode !== 'versus' && this.sides[0].locked) {
       this.sides[0].locked = false;
       this.sides[0].ready.setVisible(false);
@@ -270,7 +291,7 @@ export class SelectScene extends Phaser.Scene {
     // Ratings.
     for (let i = 0; i < 2; i += 1) {
       const side = this.sides[i];
-      if (side.cursor >= HEROES.length || this.phase === 'stage') continue;
+      if (side.cursor >= HEROES.length || this.phase === 'stage' || (i === 1 && this.arcade)) continue;
       const r = heroInfo(HEROES[side.cursor].id).ratings;
       RATING_NAMES.forEach(([k], row) => {
         const y = 186 + row * 18;
@@ -286,7 +307,7 @@ export class SelectScene extends Phaser.Scene {
       g.lineStyle(2, C.panelEdge, 1).strokeRect(t.x - TILE / 2 - 4, t.y - TILE / 2 - 4, TILE + 8, TILE + 8);
       for (let i = 0; i < 2; i += 1) {
         const side = this.sides[i];
-        if (side.cursor !== k || this.phase === 'stage') continue;
+        if (side.cursor !== k || this.phase === 'stage' || (i === 1 && this.arcade)) continue;
         const color = i === 0 ? C.p1 : C.p2;
         const blink = side.locked ? 1 : 0.65 + 0.35 * Math.sin(tick * 0.2);
         const pad = 8 + i * 6;
