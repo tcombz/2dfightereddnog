@@ -13,6 +13,9 @@ const TINT: Record<SuperStyle, number> = {
 };
 
 export class SuperFx {
+  /** The Leader's crown and halo, kept over his head while the rush runs. */
+  private crown: Phaser.GameObjects.Image[] = [];
+
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly world: Phaser.GameObjects.Layer,
@@ -92,6 +95,7 @@ export class SuperFx {
       s.tweens.add({ targets: halo, scale: 4.5, alpha: 0.75, duration: 380, delay: 640 });
       s.time.delayedCall(1020, () => this.scene.cameras.main.shake(160, 0.006));
       this.fadeOut([crown, halo], 1500, 400);
+      this.crown = [crown, halo];
       for (const side of [-1, 1]) {
         const crew = this.w(s.add.image(x + side * 190, footY + 4, 'fx_crew').setOrigin(0.5, 1).setScale(1.25).setFlipX(side > 0).setAlpha(0), 11);
         s.tweens.add({ targets: crew, alpha: 0.95, x: x + side * 150, duration: 400, delay: 150 });
@@ -109,7 +113,10 @@ export class SuperFx {
     if (style === 'storm' && clock % 5 === 0) this.strike(x + facing * (60 + Math.random() * 90), footY);
     else if (style === 'crowd' && clock % 3 === 0) this.flyer('fx_disc', x, footY - 130, facing, 0.45);
     else if (style === 'world' && clock % 2 === 0) this.flyer('fx_card', x, footY - 120, facing, 1.3);
-    else if (style === 'crown' && clock % 2 === 0) this.embers(x + facing * 60, footY, 3);
+    else if (style === 'crown') {
+      if (clock % 2 === 0) this.embers(x + facing * 60, footY, 3);
+      for (const o of this.crown) if (o.active) o.x += (x - o.x) * 0.35;
+    }
   }
 
   private strike(x: number, footY: number): void {

@@ -1,5 +1,6 @@
 import alley from '../../assets/stages/alley.png';
 import concert from '../../assets/stages/concert.png';
+import crown from '../../assets/stages/crown.png';
 import embassy from '../../assets/stages/embassy.png';
 import rooftop from '../../assets/stages/rooftop.png';
 
@@ -68,5 +69,16 @@ export const STAGES: StageDef[] = [
     ambient: 'smoke',
     tint: 0xfff0e2,
     glow: { x: 236, y: 205, r: 60, color: 0xffc860 },
+  },
+  {
+    id: 'crown',
+    name: 'THE TERRACE',
+    place: 'Sunset over the capital',
+    url: crown,
+    groundSrcY: 292,
+    music: 'crown',
+    ambient: 'embers',
+    tint: 0xffe6d2,
+    glow: { x: 452, y: 196, r: 70, color: 0xffa040 },
   },
 ];
