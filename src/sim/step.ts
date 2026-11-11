@@ -1,10 +1,12 @@
 import {
+  BUFFER_TICKS,
   COMBO_SCALE,
   DASH_WINDOW,
   GUARD_RANGE,
   HIST_LEN,
   HIST_MASK,
   INTRO_TICKS,
+  JUGGLE_LIMIT,
   KNOCKDOWN_TICKS,
   KO_FREEZE,
   LAUNCH_MIN_VY,
@@ -49,6 +51,11 @@ function createFighter(hero: number, slot: number): FighterState {
     low: 0,
     combo: 0,
     comboDamage: 0,
+    juggles: 0,
+    buf: 0,
+    bufAge: 0,
+    bufTick: 0,
+    simple: 0,
     prevInput: 0,
     hist,
     projX: 0,
@@ -66,6 +73,8 @@ function createFighter(hero: number, slot: number): FighterState {
 export interface MatchOptions {
   /** No timer, no KOs, health refills after every combo and meter stays full. */
   training?: boolean;
+  /** Simple specials per player (accessibility): direction + special instead of motions. */
+  simple?: [boolean, boolean];
 }
 
 export function createInitialState(p1Hero: number, p2Hero: number, options: MatchOptions = {}): GameState {
@@ -83,6 +92,9 @@ export function createInitialState(p1Hero: number, p2Hero: number, options: Matc
     training: options.training ? 1 : 0,
     fighters: [createFighter(p1Hero, 0), createFighter(p2Hero, 1)],
   };
+  s.fighters.forEach((f, i) => {
+    f.simple = options.simple?.[i] ? 1 : 0;
+  });
   if (s.training) {
     s.phase = Phase.Fight;
     s.phaseTimer = 0;
@@ -119,6 +131,8 @@ function localHurtboxes(f: FighterState): Rect[] {
   const boxes = HEROES[f.hero].hurtboxes;
   switch (f.state) {
     case FS.Knockdown:
+      // Launched: only juggle moves can connect (checked in findHit).
+      return f.y > 0 ? boxes.air : [];
     case FS.KO:
       return [];
     case FS.Attack: {
@@ -289,9 +303,10 @@ function chooseMove(f: FighterState, input: number, pressed: number, tick: numbe
   if (!light && !heavy && !special) return -1;
   if (f.y > 0 || f.state === FS.Jump) return light || heavy ? Move.JumpAttack : -1;
 
-  const holdLight = (input & Input.Light) !== 0;
-  const holdHeavy = (input & Input.Heavy) !== 0;
-  const holdSpecial = (input & Input.Special) !== 0;
+  // A buffered press counts as held, so two-button moves still work when pressed early.
+  const holdLight = ((input | pressed) & Input.Light) !== 0;
+  const holdHeavy = ((input | pressed) & Input.Heavy) !== 0;
+  const holdSpecial = ((input | pressed) & Input.Special) !== 0;
   if ((heavy || special) && holdHeavy && holdSpecial && f.meter >= HEROES[f.hero].moves.super.meterCost) {
     return Move.Super;
   }
@@ -299,9 +314,9 @@ function chooseMove(f: FighterState, input: number, pressed: number, tick: numbe
 
   const dir = numpad(input, f.facing);
   if (special) {
-    const m = motion(f, tick);
-    if (m === MOTION_DP) return Move.Rising;
-    if (m === MOTION_QCF && f.projLife === 0) return Move.Projectile;
+    const m = motion(f, pressed === f.buf && f.buf !== 0 ? f.bufTick : tick);
+    if (m === MOTION_DP || (f.simple && dir <= 3)) return Move.Rising;
+    if ((m === MOTION_QCF || (f.simple && dir === 6)) && f.projLife === 0) return Move.Projectile;
     return Move.Special;
   }
   if (heavy) return dir <= 3 ? Move.Sweep : dir === 6 ? Move.Kick : Move.Heavy;
@@ -312,6 +327,8 @@ function startMove(s: GameState, f: FighterState, slot: number, moveId: number):
   const m = getMove(f.hero, moveId);
   setState(f, FS.Attack);
   f.moveId = moveId;
+  f.buf = 0;
+  f.bufAge = 0;
   if (!m.air) {
     f.vx = 0;
     f.vy = 0;
@@ -333,7 +350,7 @@ function cancelBit(kind: number): number {
 
 /** Combos: a move that connected may be cancelled into what its data allows. */
 function tryCancel(s: GameState, f: FighterState, slot: number, input: number): void {
-  const pressed = input & ~f.prevInput;
+  const pressed = f.buf;
   if (pressed === 0) return;
   const m = getMove(f.hero, f.moveId);
   if (m.air) return;
@@ -356,8 +373,7 @@ function act(s: GameState, f: FighterState, slot: number, opp: FighterState, inp
   const st = HEROES[f.hero].stats;
   if (opp.x !== f.x) f.facing = opp.x > f.x ? 1 : -1;
 
-  const pressed = input & ~f.prevInput;
-  const move = chooseMove(f, input, pressed, s.tick);
+  const move = chooseMove(f, input, f.buf, s.tick);
   if (move >= 0) {
     startMove(s, f, slot, move);
     return;
@@ -420,6 +436,20 @@ function spawnProjectile(f: FighterState, p: ProjectileData): void {
 function updateFighter(s: GameState, f: FighterState, slot: number, opp: FighterState, input: number): void {
   f.stateTick += 1;
 
+  // Input buffer: remember fresh attack presses for a few ticks so early presses still come out.
+  const fresh = input & ~f.prevInput & (Input.Light | Input.Heavy | Input.Special);
+  if (fresh !== 0) {
+    f.buf = fresh;
+    f.bufAge = 0;
+    f.bufTick = s.tick;
+  } else if (f.buf !== 0) {
+    f.bufAge += 1;
+    if (f.bufAge > BUFFER_TICKS) {
+      f.buf = 0;
+      f.bufAge = 0;
+    }
+  }
+
   switch (f.state) {
     case FS.Jump:
       if (fall(f)) {
@@ -469,6 +499,7 @@ function updateFighter(s: GameState, f: FighterState, slot: number, opp: Fighter
       if (f.y > 0 || f.vy > 0) {
         if (fall(f)) {
           f.vx = 0;
+          f.juggles = 0;
           f.stunTimer = KNOCKDOWN_TICKS;
         }
       } else if (f.state === FS.Knockdown) {
@@ -489,7 +520,7 @@ function updateFighter(s: GameState, f: FighterState, slot: number, opp: Fighter
     if (f.y === 0 || (f.stateTick & 1) === 0) f.push = toward0(f.push);
   }
 
-  if (f.state === FS.Jump && (input & ~f.prevInput & (Input.Light | Input.Heavy)) !== 0) {
+  if (f.state === FS.Jump && (f.buf & (Input.Light | Input.Heavy)) !== 0) {
     startMove(s, f, slot, Move.JumpAttack);
   }
   if (f.state === FS.Attack) tryCancel(s, f, slot, input);
@@ -597,6 +628,7 @@ function findHit(att: FighterState, def: FighterState): Contact | null {
   if (att.moveHits >= m.hits) return null;
   if (att.moveHits > 0 && att.stateTick - att.hitTick < m.rehit) return null;
   if (m.kind === Kind.Throw && !throwable(def)) return null;
+  if (def.state === FS.Knockdown && (m.juggle === 0 || def.juggles >= JUGGLE_LIMIT)) return null;
   const hits = getHitboxes(att);
   if (hits.length === 0) return null;
   const hurts = getHurtboxes(def);
@@ -610,7 +642,7 @@ function findHit(att: FighterState, def: FighterState): Contact | null {
 
 function findProjectileHit(att: FighterState, def: FighterState): Contact | null {
   const r = getProjectile(att);
-  if (r === null) return null;
+  if (r === null || def.state === FS.Knockdown) return null;
   for (const u of getHurtboxes(def)) {
     if (overlaps(r, u)) return contact(projData(att), Guard.Mid, Kind.Special, 1, true, r, u);
   }
@@ -654,6 +686,20 @@ function applyHit(s: GameState, att: FighterState, def: FighterState, c: Contact
   }
   s.freezeSlot = -1;
 
+  // Throw break: the defender is holding throw or throwing too, so both are pushed apart unhurt.
+  const breaking =
+    ((def.prevInput & Input.Light) !== 0 && (def.prevInput & Input.Heavy) !== 0) ||
+    (def.state === FS.Attack && def.moveId === Move.Throw);
+  if (c.kind === Kind.Throw && breaking) {
+    att.moveHits = c.hits;
+    att.push = -dir * 10;
+    def.push = dir * 10;
+    if (def.state === FS.Attack) setState(def, FS.Idle);
+    s.hitstop = Math.max(s.hitstop, 8);
+    setFx(def, FX.Tech, c.x, c.y, 8);
+    return;
+  }
+
   if (guarding(def, c.guard, dir)) {
     def.health = Math.max(1, def.health - d.chipDamage);
     if (def.state !== FS.Block) setState(def, FS.Block);
@@ -675,7 +721,8 @@ function applyHit(s: GameState, att: FighterState, def: FighterState, c: Contact
     const dm = getMove(def.hero, def.moveId);
     counter = def.stateTick < dm.startup + dm.active;
   }
-  const inCombo = def.state === FS.Hitstun || def.state === FS.Knockdown;
+  const juggled = def.state === FS.Knockdown;
+  const inCombo = def.state === FS.Hitstun || juggled;
   def.combo = inCombo ? def.combo + 1 : 1;
   if (def.combo === 1) def.comboDamage = 0;
   let dmg = (d.damage * COMBO_SCALE[Math.min(def.combo - 1, COMBO_SCALE.length - 1)]) >> 4;
@@ -691,6 +738,7 @@ function applyHit(s: GameState, att: FighterState, def: FighterState, c: Contact
   if (launch) {
     if (ko) def.health = 0;
     setState(def, ko ? FS.KO : FS.Knockdown);
+    def.juggles = juggled ? def.juggles + 1 : 0;
     def.stunTimer = 0;
     def.vx = 0;
     def.low = 0;
@@ -711,6 +759,22 @@ function applyHit(s: GameState, att: FighterState, def: FighterState, c: Contact
   setFx(def, counter ? FX.Counter : c.kind === Kind.Throw ? FX.Throw : FX.Hit, c.x, c.y, d.hitstop);
 }
 
+/** The defender is in the active frames of a counter stance and this is a strike it can answer. */
+function countering(def: FighterState, c: Contact): boolean {
+  if (def.state !== FS.Attack || c.projectile || c.kind === Kind.Throw) return false;
+  const m = getMove(def.hero, def.moveId);
+  return m.counter !== 0 && def.moveHits === 0 && isActiveTick(m, def.stateTick);
+}
+
+/** A counter stance caught a strike: the strike is deflected and the defender hits back. */
+function counterStrike(s: GameState, def: FighterState, att: FighterState, c: Contact): void {
+  const m = getMove(def.hero, def.moveId);
+  def.facing = att.x >= def.x ? 1 : -1;
+  setFx(def, FX.Parry, c.x, c.y, m.hitstop);
+  def.stateTick = m.startup + m.active; // straight into the answering strike
+  applyHit(s, def, att, { data: m, guard: Guard.Throw, kind: m.kind, hits: m.hits, projectile: false, x: c.x, y: c.y });
+}
+
 function resolveHits(s: GameState): void {
   const [a, b] = s.fighters;
   const ra = getProjectile(a);
@@ -726,8 +790,14 @@ function resolveHits(s: GameState): void {
   const hitByB = findHit(b, a);
   const projA = findProjectileHit(a, b);
   const projB = findProjectileHit(b, a);
-  if (hitByA) applyHit(s, a, b, hitByA);
-  if (hitByB) applyHit(s, b, a, hitByB);
+  if (hitByA) {
+    if (countering(b, hitByA)) counterStrike(s, b, a, hitByA);
+    else applyHit(s, a, b, hitByA);
+  }
+  if (hitByB) {
+    if (countering(a, hitByB)) counterStrike(s, a, b, hitByB);
+    else applyHit(s, b, a, hitByB);
+  }
   if (projA) {
     applyHit(s, a, b, projA);
     a.projLife = 0;
@@ -793,6 +863,7 @@ function advancePhase(s: GameState): void {
     const f = createFighter(old.hero, i);
     f.prevInput = old.prevInput;
     f.meter = old.meter; // super meter carries over between rounds
+    f.simple = old.simple;
     s.fighters[i] = f;
   }
 }
@@ -824,6 +895,18 @@ export function step(state: GameState, p1Input: number, p2Input: number): GameSt
   // Freeze frames: nothing moves, but the stick is still read (motions done during a freeze count)
   // and button presses wait, because prevInput is not updated.
   if (s.hitstop > 0) {
+    // Attack presses during a freeze go into the buffer (which does not age while frozen), so the
+    // next button of a combo can be pressed while the hit is still landing.
+    for (let i = 0; i < 2; i += 1) {
+      const f = s.fighters[i];
+      const fresh = inputs[i] & ~f.prevInput & (Input.Light | Input.Heavy | Input.Special);
+      if (fresh !== 0) {
+        f.buf = fresh;
+        f.bufAge = 0;
+        f.bufTick = s.tick;
+      }
+      f.prevInput = inputs[i];
+    }
     s.hitstop -= 1;
     if (s.hitstop === 0) s.freezeSlot = -1;
     return s;

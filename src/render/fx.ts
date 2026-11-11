@@ -178,6 +178,192 @@ export function makeTextures(scene: Phaser.Scene): void {
       }
     });
   }
+  // Chris's playing card.
+  canvasTexture(scene, 'fx_card', 28, 38, (ctx) => {
+    ctx.fillStyle = '#fdfaf2';
+    ctx.strokeStyle = '#1b1b24';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(1, 1, 26, 36, 4);
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = '#b8323f';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(5, 5, 18, 28);
+    ctx.fillStyle = '#c62a3a';
+    ctx.beginPath();
+    ctx.moveTo(14, 11);
+    ctx.lineTo(20, 19);
+    ctx.lineTo(14, 27);
+    ctx.lineTo(8, 19);
+    ctx.closePath();
+    ctx.fill();
+  });
+  // The Leader's golden wave.
+  canvasTexture(scene, 'fx_wave', 110, 90, (ctx) => {
+    radial(ctx, 70, 45, 45, [
+      [0, 'rgba(255,240,180,0.95)'],
+      [0.4, 'rgba(255,190,60,0.7)'],
+      [1, 'rgba(255,120,0,0)'],
+    ]);
+    ctx.strokeStyle = 'rgba(255,236,150,1)';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(40, 45, 42, -1.1, 1.1);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,170,40,0.8)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(26, 45, 40, -1.0, 1.0);
+    ctx.stroke();
+  });
+  // The Leader's crew charging in: a row of silhouettes rimmed in gold.
+  canvasTexture(scene, 'fx_crew', 160, 220, (ctx) => {
+    const rnd = seeded(2024);
+    const people = [
+      { x: 30, s: 0.82 },
+      { x: 128, s: 0.86 },
+      { x: 58, s: 0.95 },
+      { x: 104, s: 0.98 },
+      { x: 80, s: 1.05 },
+    ];
+    for (const p of people) {
+      const h = 190 * p.s;
+      const top = 216 - h;
+      ctx.save();
+      ctx.shadowColor = 'rgba(255,190,60,0.9)';
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = '#16100a';
+      ctx.beginPath();
+      ctx.arc(p.x, top + 16 * p.s, 15 * p.s, 0, TAU); // head
+      ctx.fill();
+      ctx.beginPath(); // body leaning forward
+      ctx.moveTo(p.x - 18 * p.s, top + 34 * p.s);
+      ctx.lineTo(p.x + 20 * p.s, top + 34 * p.s);
+      ctx.lineTo(p.x + 16 * p.s, top + 110 * p.s);
+      ctx.lineTo(p.x - 14 * p.s, top + 110 * p.s);
+      ctx.closePath();
+      ctx.fill();
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#16100a';
+      ctx.lineWidth = 11 * p.s;
+      const up = rnd() < 0.5;
+      ctx.beginPath(); // arms: one raised, one forward
+      ctx.moveTo(p.x + 10 * p.s, top + 42 * p.s);
+      ctx.lineTo(p.x + (up ? 24 : 40) * p.s, top + (up ? 0 : 50) * p.s);
+      ctx.moveTo(p.x - 10 * p.s, top + 42 * p.s);
+      ctx.lineTo(p.x - 30 * p.s, top + 76 * p.s);
+      ctx.stroke();
+      ctx.lineWidth = 13 * p.s;
+      ctx.beginPath(); // legs mid-stride
+      ctx.moveTo(p.x, top + 106 * p.s);
+      ctx.lineTo(p.x + 26 * p.s, top + 150 * p.s);
+      ctx.lineTo(p.x + 22 * p.s, 214);
+      ctx.moveTo(p.x, top + 106 * p.s);
+      ctx.lineTo(p.x - 22 * p.s, top + 160 * p.s);
+      ctx.lineTo(p.x - 34 * p.s, 210);
+      ctx.stroke();
+      ctx.restore();
+    }
+  });
+  // A golden crown for the Leader's super.
+  canvasTexture(scene, 'fx_crown', 200, 140, (ctx) => {
+    const g = ctx.createLinearGradient(0, 10, 0, 130);
+    g.addColorStop(0, '#fff3b0');
+    g.addColorStop(0.5, '#ffc83d');
+    g.addColorStop(1, '#b8740e');
+    ctx.fillStyle = g;
+    ctx.strokeStyle = '#5a3200';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(20, 120);
+    ctx.lineTo(10, 40);
+    ctx.lineTo(55, 80);
+    ctx.lineTo(100, 12);
+    ctx.lineTo(145, 80);
+    ctx.lineTo(190, 40);
+    ctx.lineTo(180, 120);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillRect(20, 112, 160, 20);
+    ctx.strokeRect(20, 112, 160, 20);
+    for (const [x, y, c] of [
+      [100, 60, '#d6283a'],
+      [55, 98, '#2f7bff'],
+      [145, 98, '#2f7bff'],
+      [100, 122, '#d6283a'],
+    ] as Array<[number, number, string]>) {
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.arc(x, y, 7, 0, TAU);
+      ctx.fill();
+    }
+    for (const [x, y] of [
+      [10, 40],
+      [100, 12],
+      [190, 40],
+    ]) {
+      ctx.fillStyle = '#fff6c8';
+      ctx.beginPath();
+      ctx.arc(x, y, 8, 0, TAU);
+      ctx.fill();
+    }
+  });
+  // A glowing world globe for Chris's super.
+  canvasTexture(scene, 'fx_globe', 256, 256, (ctx) => {
+    radial(ctx, 128, 128, 128, [
+      [0, 'rgba(120,200,255,0.9)'],
+      [0.62, 'rgba(30,90,200,0.75)'],
+      [0.8, 'rgba(20,50,140,0.55)'],
+      [1, 'rgba(10,30,90,0)'],
+    ]);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(128, 128, 100, 0, TAU);
+    ctx.clip();
+    const rnd = seeded(77);
+    ctx.fillStyle = 'rgba(255,205,90,0.75)';
+    for (let i = 0; i < 9; i += 1) {
+      ctx.beginPath();
+      ctx.ellipse(40 + rnd() * 176, 50 + rnd() * 156, 14 + rnd() * 30, 8 + rnd() * 22, rnd() * 3, 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(190,230,255,0.7)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(128, 128, 100, 0, TAU);
+    ctx.stroke();
+    for (const k of [0.35, 0.7]) {
+      ctx.beginPath();
+      ctx.ellipse(128, 128, 100 * k, 100, 0, 0, TAU);
+      ctx.stroke();
+    }
+    for (const y of [-55, 0, 55]) {
+      ctx.beginPath();
+      ctx.ellipse(128, 128 + y, Math.sqrt(100 * 100 - y * y), 10, 0, 0, TAU);
+      ctx.stroke();
+    }
+  });
+  // Vertical lightning strikes for the Rogue's super.
+  for (let f = 0; f < 3; f += 1) {
+    canvasTexture(scene, `fx_strike${f}`, 90, 560, (ctx) => {
+      const rnd = seeded(500 + f * 13);
+      const x0 = 45 + (rnd() - 0.5) * 20;
+      const x1 = 45 + (rnd() - 0.5) * 20;
+      ctx.lineCap = 'round';
+      for (const [w, col] of [
+        [14, 'rgba(60,140,255,0.35)'],
+        [6, 'rgba(120,200,255,0.9)'],
+        [2.5, 'rgba(240,252,255,1)'],
+      ] as Array<[number, string]>) {
+        ctx.lineWidth = w;
+        ctx.strokeStyle = col;
+        bolt(ctx, x0, 0, x1, 560, 50, seeded(900 + f * 7));
+      }
+    });
+  }
   // The Jetsetter's spinning record.
   canvasTexture(scene, 'fx_disc', 72, 72, (ctx) => {
     ctx.fillStyle = '#0c0c12';

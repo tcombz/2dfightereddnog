@@ -33,14 +33,22 @@ export class VersusScene extends Phaser.Scene {
       const info = heroInfo(HEROES[hero].id);
       const fromX = i === 0 ? -260 : VIEW_W + 260;
       const toX = i === 0 ? 250 : VIEW_W - 250;
-      const sprite = this.add
-        .image(fromX, VIEW_H + 40, art.key, frameName('win', art.win[Math.min(2, art.win.length - 1)]))
-        .setOrigin(art.feetX / art.cell, art.feetY / art.cell)
-        .setScale(3.2)
-        .setFlipX(i === 1);
-      this.tweens.add({ targets: sprite, x: toX, duration: 380, ease: 'Cubic.easeOut', delay: i * 120 });
+      const id = HEROES[hero].id;
+      if (this.textures.exists(`sheet_${id}`)) {
+        // The illustrated portrait from the character sheet, big.
+        const art2 = this.add.image(fromX, VIEW_H / 2 + 20, `sheet_${id}`).setFlipX(i === 1);
+        art2.setScale((VIEW_H - 60) / art2.height);
+        this.tweens.add({ targets: art2, x: toX, duration: 380, ease: 'Cubic.easeOut', delay: i * 120 });
+      } else {
+        const sprite = this.add
+          .image(fromX, VIEW_H + 40, art.key, frameName('win', art.win[Math.min(2, art.win.length - 1)]))
+          .setOrigin(art.feetX / art.cell, art.feetY / art.cell)
+          .setScale(3.2)
+          .setFlipX(i === 1);
+        this.tweens.add({ targets: sprite, x: toX, duration: 380, ease: 'Cubic.easeOut', delay: i * 120 });
+      }
       const name = this.add
-        .text(i === 0 ? 30 : VIEW_W - 30, i === 0 ? 40 : VIEW_H - 92, info.title, display(40, '#ffffff', 8))
+        .text(i === 0 ? 30 : VIEW_W - 30, i === 0 ? 40 : VIEW_H - 92, info.title, display(info.title.length > 14 ? 30 : 40, '#ffffff', 8))
         .setOrigin(i === 0 ? 0 : 1, 0)
         .setAlpha(0);
       goldFill(name);

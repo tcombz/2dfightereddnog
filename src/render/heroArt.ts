@@ -1,5 +1,17 @@
 // Render-only: maps sim fighter state to a sprite frame. The sim knows nothing about this.
+import chrisAtlas from '../../assets/heroes/chris/atlas.json';
+import chrisPng from '../../assets/heroes/chris/atlas.png';
+import chrisBase from '../../assets/heroes/chris/base/east.png';
+import chrisSheet from '../../assets/heroes/chris/sheet_portrait.jpg';
+import chrisSuper from '../../assets/heroes/chris/super_art.jpg';
 import jetsetterAtlas from '../../assets/heroes/jetsetter/atlas.json';
+import jetsetterSheet from '../../assets/heroes/jetsetter/sheet_portrait.jpg';
+import jetsetterSuper from '../../assets/heroes/jetsetter/super_art.jpg';
+import leaderAtlas from '../../assets/heroes/leader/atlas.json';
+import leaderPng from '../../assets/heroes/leader/atlas.png';
+import leaderBase from '../../assets/heroes/leader/base/east.png';
+import leaderSheet from '../../assets/heroes/leader/sheet_portrait.jpg';
+import leaderSuper from '../../assets/heroes/leader/super_art.jpg';
 import jetsetterPng from '../../assets/heroes/jetsetter/atlas.png';
 import jetsetterBase from '../../assets/heroes/jetsetter/base/east.png';
 import rogueAtlas from '../../assets/heroes/rogue/atlas.json';
@@ -18,12 +30,20 @@ interface AttackArt {
   loopActive?: boolean;
 }
 
+/** How a projectile is drawn. */
+export type ProjStyle = 'bolt' | 'disc' | 'cards' | 'wave' | 'crew';
+
 export interface HeroArt {
   key: string;
   png: string;
   atlas: object;
   /** Standing base sprite, for portraits and menus. */
   base: string;
+  /** Illustrated portrait and super art cut from the character sheet, when there is one. */
+  sheet?: string;
+  superArt?: string;
+  /** Which projectile look each projectile-throwing move uses. */
+  projectiles: Partial<Record<MoveKey, ProjStyle>>;
   /** Sprites are drawn at this multiple of their pixel size. */
   scale: number;
   /** Where the fighter's feet centre sits inside the atlas cell, in cell pixels. */
@@ -51,6 +71,7 @@ const ART: Record<string, HeroArt> = {
     png: roguePng,
     atlas: rogueAtlas,
     base: rogueBase,
+    projectiles: { projectile: 'bolt' },
     scale: 2,
     feetX: 100,
     feetY: 170,
@@ -85,6 +106,9 @@ const ART: Record<string, HeroArt> = {
     png: jetsetterPng,
     atlas: jetsetterAtlas,
     base: jetsetterBase,
+    sheet: jetsetterSheet,
+    superArt: jetsetterSuper,
+    projectiles: { projectile: 'disc' },
     scale: 2,
     feetX: 100,
     feetY: 170,
@@ -112,6 +136,81 @@ const ART: Record<string, HeroArt> = {
       projectile: { anim: 'projectile', startup: [0, 1, 2, 3], active: [4], recovery: [5, 6] },
       rising: { anim: 'uppercut', startup: [0, 1], active: [2, 3], recovery: [4, 5] },
       super: { anim: 'heavy_punch', startup: [1, 2, 3], active: [4, 5], recovery: [6], loopActive: true },
+    },
+  },
+  chris: {
+    key: 'chris',
+    png: chrisPng,
+    atlas: chrisAtlas,
+    base: chrisBase,
+    sheet: chrisSheet,
+    superArt: chrisSuper,
+    projectiles: { projectile: 'cards' },
+    scale: 2,
+    feetX: 100,
+    feetY: 170,
+    cell: 200,
+    face: { x: 52, y: 4, w: 36, h: 36 },
+    idle: [0, 1, 2, 3, 4, 5, 6, 7],
+    walk: [0, 1, 2, 3, 4, 5],
+    jump: [3, 4, 5, 6],
+    crouch: [1, 2, 3, 4],
+    block: [3, 4],
+    hit: [2, 3, 4, 5],
+    fall: [2, 3, 4],
+    lying: [5, 6],
+    getup: [0, 1, 2, 3, 4],
+    win: [1, 2, 3, 4, 5, 6, 7, 8],
+    attacks: {
+      light: { anim: 'light_punch', startup: [0], active: [1], recovery: [2] },
+      heavy: { anim: 'heavy_punch', startup: [1, 2, 3], active: [4], recovery: [3, 0] },
+      kick: { anim: 'kick', startup: [1, 2], active: [3, 4], recovery: [5] },
+      crouchLight: { anim: 'crouch_light', startup: [0, 1], active: [3], recovery: [2, 1] },
+      sweep: { anim: 'sweep', startup: [1, 2, 3], active: [4], recovery: [3, 5] },
+      jumpAttack: { anim: 'jump_attack', startup: [0, 1], active: [2, 3], recovery: [4] },
+      throw: { anim: 'heavy_punch', startup: [1], active: [4], recovery: [3, 1, 0] },
+      // The Diplomacy: cards swirl while he waits; the answer sends them flying.
+      special: { anim: 'special', startup: [1, 2], active: [3, 4, 5, 6], recovery: [7, 8, 0], loopActive: true },
+      projectile: { anim: 'projectile', startup: [0, 1, 2], active: [3], recovery: [4, 5, 6] },
+      rising: { anim: 'uppercut', startup: [0, 1], active: [2, 3], recovery: [4, 5, 6] },
+      super: { anim: 'special', startup: [4, 5], active: [5, 6, 7], recovery: [8], loopActive: true },
+    },
+  },
+  leader: {
+    key: 'leader',
+    png: leaderPng,
+    atlas: leaderAtlas,
+    base: leaderBase,
+    sheet: leaderSheet,
+    superArt: leaderSuper,
+    projectiles: { special: 'crew', projectile: 'wave' },
+    scale: 2,
+    feetX: 100,
+    feetY: 170,
+    cell: 200,
+    face: { x: 60, y: 2, w: 40, h: 40 },
+    idle: [0, 1, 2, 3, 4, 5, 6, 7],
+    walk: [0, 1, 2, 3, 4, 5],
+    jump: [3, 4, 5, 6],
+    crouch: [1, 2, 3, 4],
+    block: [3, 4],
+    hit: [2, 3, 4, 5],
+    fall: [2, 3, 4],
+    lying: [5, 6],
+    getup: [0, 1, 2, 3, 4],
+    win: [2, 3, 4, 5, 6, 7, 8],
+    attacks: {
+      light: { anim: 'light_punch', startup: [0, 1], active: [2], recovery: [1] },
+      heavy: { anim: 'heavy_punch', startup: [1, 2, 3], active: [5], recovery: [4, 0] },
+      kick: { anim: 'kick', startup: [1, 2], active: [3, 4], recovery: [5] },
+      crouchLight: { anim: 'crouch_light', startup: [0, 1], active: [2], recovery: [1] },
+      sweep: { anim: 'sweep', startup: [1, 2, 3], active: [4], recovery: [3, 5] },
+      jumpAttack: { anim: 'jump_attack', startup: [0, 1], active: [2, 3], recovery: [4] },
+      throw: { anim: 'heavy_punch', startup: [1], active: [5], recovery: [4, 1, 0] },
+      special: { anim: 'special', startup: [1, 2, 3, 4, 5], active: [8], recovery: [8, 7, 6] },
+      projectile: { anim: 'projectile', startup: [0, 1, 2, 3], active: [4], recovery: [5] },
+      rising: { anim: 'uppercut', startup: [0, 1], active: [2, 3], recovery: [4, 5] },
+      super: { anim: 'special', startup: [2, 3], active: [3, 4, 5], recovery: [8], loopActive: true },
     },
   },
 };

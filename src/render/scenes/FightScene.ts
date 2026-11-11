@@ -28,6 +28,7 @@ import { Effects } from '../fx';
 import { artFor, poseFor } from '../heroArt';
 import { heroInfo } from '../heroInfo';
 import { Hud } from '../hud';
+import { SuperFx } from '../superFx';
 import { moveList } from '../moves';
 import { STAGES } from '../stages';
 import type { StageDef } from '../stages';
@@ -40,6 +41,8 @@ const DUMMY_MODES = ['STAND', 'CROUCH', 'JUMP', 'BLOCK ALL', 'CPU'];
 interface ProjectileView {
   img: Phaser.GameObjects.Image;
   glow: Phaser.GameObjects.Image;
+  /** Extra cards for Chris's fan of cards. */
+  extra: Phaser.GameObjects.Image[];
 }
 
 export class FightScene extends Phaser.Scene {
@@ -56,6 +59,7 @@ export class FightScene extends Phaser.Scene {
   private darken!: Phaser.GameObjects.Rectangle;
   private debugG!: Phaser.GameObjects.Graphics;
   private fx!: Effects;
+  private superFx!: SuperFx;
   private hud!: Hud;
   private cpu: Cpu | null = null;
   private debug = false;
@@ -79,7 +83,11 @@ export class FightScene extends Phaser.Scene {
     (this as unknown as { leaving: boolean }).leaving = false;
     this.setup = setup;
     this.stage = STAGES[setup.stage];
-    this.state = createInitialState(setup.p1, setup.p2, { training: setup.mode === 'training' });
+    const simple = (this.registry.get('simple') as boolean | undefined) ?? false;
+    this.state = createInitialState(setup.p1, setup.p2, {
+      training: setup.mode === 'training',
+      simple: [simple, simple && setup.mode === 'versus'],
+    });
     this.acc = 0;
     this.clock = 0;
     this.paused = false;
@@ -114,13 +122,15 @@ export class FightScene extends Phaser.Scene {
       this.sprites.push(this.add.image(f.x, GROUND_Y, art.key).setScale(art.scale).setDepth(30 + i));
       this.projViews.push({
         glow: this.add.image(0, 0, 'fx_glow').setBlendMode(Phaser.BlendModes.ADD).setVisible(false).setDepth(44),
-        img: this.add.image(0, 0, HEROES[f.hero].id === 'rogue' ? 'fx_bolt0' : 'fx_disc').setVisible(false).setDepth(45),
+        img: this.add.image(0, 0, 'fx_disc').setVisible(false).setDepth(45),
+        extra: [0, 1].map(() => this.add.image(0, 0, 'fx_card').setVisible(false).setDepth(45)),
       });
     });
-    this.world.add([...this.shadows, ...this.sprites, ...this.projViews.flatMap((p) => [p.glow, p.img])]);
+    this.world.add([...this.shadows, ...this.sprites, ...this.projViews.flatMap((p) => [p.glow, p.img, ...p.extra])]);
     this.debugG = this.add.graphics().setDepth(90);
     this.world.add(this.debugG);
     this.fx = new Effects(this, this.world);
+    this.superFx = new SuperFx(this, this.world, this.ui);
 
     // The HUD gets its own camera so shakes and zooms leave it still.
     const cpuSide = setup.mode === 'cpu' ? 1 : -1;
@@ -218,8 +228,8 @@ export class FightScene extends Phaser.Scene {
 
   // ---------- sim events to sound and effects ----------
 
-  private signature(slot: number): string {
-    return HEROES[this.state.fighters[slot].hero].id === 'rogue' ? 'zap' : 'scratch';
+  private signature(slot: number, kind: 'special' | 'projectile' = 'special'): string {
+    return heroInfo(HEROES[this.state.fighters[slot].hero].id).sfx[kind];
   }
 
   private simEvents(prev: GameState, next: GameState): void {
@@ -248,6 +258,18 @@ export class FightScene extends Phaser.Scene {
       } else if (f.fx === FX.Block) {
         this.fx.block(x, y, dir);
         sfx(this, 'block', 0.9, (Math.random() - 0.5) * 200);
+      } else if (f.fx === FX.Tech) {
+        this.fx.block(x, y, dir);
+        this.fx.popText(f.x, GROUND_Y - 260, 'BREAK!', '#9fe6ff');
+        sfx(this, 'block');
+        sfx(this, 'whoosh_heavy', 0.8);
+      } else if (f.fx === FX.Parry) {
+        const info = heroInfo(HEROES[f.hero].id);
+        this.fx.ring(f.x, GROUND_Y - f.y - 120, info.accent, 1.6);
+        this.fx.popText(f.x, GROUND_Y - f.y - 270, `${getMove(f.hero, Move.Special).name.toUpperCase()}!`, '#ffd25a');
+        this.cameras.main.flash(120, 255, 230, 160);
+        sfx(this, 'block');
+        sfx(this, this.signature(i), 0.8);
       } else if (f.fx === FX.Clash) {
         this.fx.hit(x, y, 1, 10, 0xffffff, false);
         this.fx.ring(x, y, 0xffffff, 1.4);
@@ -260,10 +282,11 @@ export class FightScene extends Phaser.Scene {
         const key = MOVE_KEYS[f.moveId];
         if (key === 'light' || key === 'crouchLight' || key === 'jumpAttack') sfx(this, 'whoosh_light', 0.7, (Math.random() - 0.5) * 300);
         else if (key === 'heavy' || key === 'kick' || key === 'sweep' || key === 'throw') sfx(this, 'whoosh_heavy', 0.8);
-        else if (key === 'special' || key === 'rising') sfx(this, this.signature(i), 0.8);
+        else if (key === 'rising') sfx(this, 'whoosh_heavy', 0.9);
+        else if (key === 'special' && !getMove(f.hero, f.moveId).projectile) sfx(this, this.signature(i), 0.8);
       }
       if (p.projLife === 0 && f.projLife > 0) {
-        sfx(this, this.signature(i), 0.9);
+        sfx(this, this.signature(i, f.projMove === Move.Projectile ? 'projectile' : 'special'), 0.9);
         const r = getProjectile(f);
         if (r) this.fx.ring(r.x + r.w / 2, GROUND_Y - r.y - r.h / 2, heroInfo(HEROES[f.hero].id).accent, 0.7);
       }
@@ -321,34 +344,15 @@ export class FightScene extends Phaser.Scene {
 
   private superFlash(slot: number): void {
     const f = this.state.fighters[slot];
-    const info = heroInfo(HEROES[f.hero].id);
+    const id = HEROES[f.hero].id;
     const move = getMove(f.hero, Move.Super);
     sfx(this, 'super');
-    this.tweens.add({ targets: this.darken, fillAlpha: 0.62, duration: 120 });
-    this.time.delayedCall(700, () => this.tweens.add({ targets: this.darken, fillAlpha: 0, duration: 250 }));
+    sfx(this, this.signature(slot), 0.7);
     const cam = this.cameras.main;
-    this.tweens.add({ targets: cam, zoom: 1.12, duration: 160, ease: 'Quad.easeOut', yoyo: true, hold: 420 });
-    this.fx.ring(f.x, GROUND_Y - f.y - 120, info.accent, 2.4);
-
-    // Cut-in banner across the HUD.
-    const band = this.add.graphics();
-    const y = 196;
-    band.fillStyle(0x000000, 0.75).fillRect(0, y - 58, VIEW_W, 116);
-    band.fillStyle(info.color, 0.9).fillRect(0, y - 52, VIEW_W, 104);
-    band.fillStyle(0xffffff, 0.12);
-    for (let k = 0; k < VIEW_W; k += 36) band.fillRect(k, y - 52, 14, 104);
-    const portrait = this.add.image(slot === 0 ? -120 : VIEW_W + 120, y, `portrait_${HEROES[f.hero].id}`).setDisplaySize(150, 150).setFlipX(slot === 1);
-    const name = this.add.text(slot === 0 ? 240 : VIEW_W - 240, y, move.name.toUpperCase(), display(46, '#ffffff', 9)).setOrigin(slot === 0 ? 0 : 1, 0.5).setAlpha(0);
-    goldFill(name);
-    const group = [band, portrait, name];
-    this.ui.add(group);
-    band.setAlpha(0);
-    this.tweens.add({ targets: band, alpha: 1, duration: 90 });
-    this.tweens.add({ targets: portrait, x: slot === 0 ? 150 : VIEW_W - 150, duration: 220, ease: 'Cubic.easeOut' });
-    this.tweens.add({ targets: name, alpha: 1, x: name.x + (slot === 0 ? 20 : -20), duration: 220, delay: 80 });
-    this.time.delayedCall(640, () =>
-      this.tweens.add({ targets: group, alpha: 0, duration: 140, onComplete: () => group.forEach((o) => o.destroy()) }),
-    );
+    this.tweens.add({ targets: cam, zoom: 1.14, duration: 160, ease: 'Quad.easeOut', yoyo: true, hold: 440 });
+    cam.shake(200, 0.004);
+    this.fx.ring(f.x, GROUND_Y - f.y - 120, heroInfo(id).accent, 2.6);
+    this.superFx.flash(heroInfo(id), id, slot, move.name, f.x, GROUND_Y - f.y, f.facing);
   }
 
   // ---------- drawing ----------
@@ -403,17 +407,37 @@ export class FightScene extends Phaser.Scene {
       if (r) {
         const cx = r.x + r.w / 2;
         const cy = GROUND_Y - (r.y + r.h / 2);
-        const rogue = HEROES[f.hero].id === 'rogue';
+        const dir = f.projVx > 0 ? 1 : -1;
+        const style = art.projectiles[MOVE_KEYS[f.projMove]] ?? 'disc';
         const color = heroInfo(HEROES[f.hero].id).accent;
-        view.img.setVisible(true).setPosition(cx, cy).setFlipX(f.projVx < 0);
-        if (rogue) view.img.setTexture(`fx_bolt${Math.floor(this.clock / 2) % 4}`).setScale(1.1);
-        else view.img.setTexture('fx_disc').setScale(1.0).setRotation(view.img.rotation + (f.projVx > 0 ? 0.45 : -0.45));
-        view.glow.setVisible(true).setPosition(cx, cy).setTint(color).setScale(rogue ? 1.1 : 0.9).setAlpha(0.65 + 0.2 * Math.sin(this.clock * 0.5));
-        if (this.clock % 2 === 0) this.fx.trail(cx - (f.projVx > 0 ? r.w / 2 : -r.w / 2), cy, color);
+        const spin = (view.img.rotation + dir * 0.45) % (Math.PI * 2);
+        view.img.setVisible(true).setPosition(cx, cy).setFlipX(dir < 0).setRotation(0).setAlpha(1);
+        view.extra.forEach((e) => e.setVisible(false));
+        let glowScale = 0.9;
+        if (style === 'bolt') view.img.setTexture(`fx_bolt${Math.floor(this.clock / 2) % 4}`).setScale(1.1);
+        else if (style === 'disc') view.img.setTexture('fx_disc').setScale(1).setRotation(spin);
+        else if (style === 'wave') view.img.setTexture('fx_wave').setScale(1 + 0.08 * Math.sin(this.clock * 0.6));
+        else if (style === 'crew') {
+          view.img.setTexture('fx_crew').setDisplaySize(r.w + 30, r.h + 10).setPosition(cx, cy + 5);
+          glowScale = 1.8;
+          if (this.clock % 3 === 0) this.fx.dust(cx - dir * 40, GROUND_Y, 2, 40);
+        } else {
+          // A fan of three spinning cards.
+          view.img.setTexture('fx_card').setScale(1.5).setRotation(this.clock * 0.6 * dir);
+          view.extra.forEach((e, k) => {
+            const off = (k === 0 ? -1 : 1) * 16;
+            e.setVisible(true).setPosition(cx - dir * 14, cy + off).setScale(1.3).setRotation(this.clock * 0.6 * dir + (k + 1) * 1.2);
+          });
+          glowScale = 0.7;
+        }
+        view.glow.setVisible(true).setPosition(cx, cy).setTint(color).setScale(glowScale).setAlpha(0.6 + 0.2 * Math.sin(this.clock * 0.5));
+        if (this.clock % 2 === 0) this.fx.trail(cx - dir * (r.w / 2), cy, color);
       } else {
         view.img.setVisible(false);
         view.glow.setVisible(false);
+        view.extra.forEach((e) => e.setVisible(false));
       }
+      if (superActive && s.hitstop === 0) this.superFx.active(heroInfo(HEROES[f.hero].id), f.x, GROUND_Y - f.y, f.facing, this.clock);
     });
 
     this.ambient(delta);
@@ -498,6 +522,35 @@ export class FightScene extends Phaser.Scene {
         this.rain.push(d);
         this.world.add(d);
       }
+    }
+    if (st.glow) {
+      const g = st.glow;
+      const glow = this.add.image(g.x * 2, top + g.y * 2, 'fx_glow').setTint(g.color).setBlendMode(Phaser.BlendModes.ADD).setDepth(2).setScale((g.r * 4) / 128).setAlpha(0.35);
+      this.world.add(glow);
+      this.tweens.add({ targets: glow, alpha: 0.6, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    }
+    if (st.ambient === 'smoke') {
+      this.time.addEvent({
+        delay: 380,
+        loop: true,
+        callback: () => {
+          const p = this.add.image(Math.random() * STAGE_WIDTH, top + 200 + Math.random() * 300, 'fx_dust').setAlpha(0).setScale(2.5).setDepth(3).setTint(0xd8c8b8);
+          this.world.add(p);
+          this.tweens.add({ targets: p, alpha: 0.16, duration: 1500, yoyo: true, hold: 600 });
+          this.tweens.add({ targets: p, x: p.x + 80, y: p.y - 70, scale: 5, duration: 3600, onComplete: () => p.destroy() });
+        },
+      });
+    }
+    if (st.ambient === 'embers') {
+      this.time.addEvent({
+        delay: 90,
+        loop: true,
+        callback: () => {
+          const e = this.add.image(Math.random() * STAGE_WIDTH, GROUND_Y + 20, 'fx_glow').setTint(Math.random() < 0.5 ? 0xff8a2a : 0xffd060).setBlendMode(Phaser.BlendModes.ADD).setScale(0.05 + Math.random() * 0.06).setDepth(Math.random() < 0.3 ? 70 : 3);
+          this.world.add(e);
+          this.tweens.add({ targets: e, y: e.y - 300 - Math.random() * 300, x: e.x + (Math.random() - 0.3) * 120, alpha: 0, duration: 2600 + Math.random() * 1600, onComplete: () => e.destroy() });
+        },
+      });
     }
     if (st.steam) {
       const sx = st.steam.x * 2;

@@ -167,6 +167,15 @@ export class Cpu {
       }
     }
 
+    // A counter stance is waiting: never strike into it; grab it when close.
+    if (actionable && opp.state === FS.Attack) {
+      const om = getMove(opp.hero, opp.moveId);
+      if (om.counter && opp.stateTick < om.startup + om.active) {
+        if (dist < 115 && this.chance(L.punish)) return LIGHT | HEAVY;
+        return 0;
+      }
+    }
+
     if (!actionable) return 0;
     this.wait -= 1;
     if (this.wait > 0) return me.state === FS.Walk ? this.out(me.vx * me.facing > 0 ? FWD : BACK, me) : 0;

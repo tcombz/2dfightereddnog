@@ -294,13 +294,17 @@ export class SelectScene extends Phaser.Scene {
         g.fillStyle(color, 1).fillRect(i === 0 ? t.x - TILE / 2 - pad : t.x + TILE / 2 + pad - 30, t.y - TILE / 2 - pad - 16, 30, 16);
       }
     });
-    // Stage cards.
+    // Stage cards: a carousel showing the chosen stage between its neighbours.
     if (this.phase === 'stage') {
+      const n = STAGES.length;
       this.stageCards.forEach((c, k) => {
-        const on = k === this.stage;
-        c.setAlpha(on ? 1 : 0.45);
-        g.lineStyle(on ? 4 : 2, on ? C.gold : C.panelEdge, 1).strokeRect(c.x - 117, c.y - 50, 234, 100);
-        this.stageNames[k].setColor(on ? CSS.gold : CSS.muted);
+        let off = (k - this.stage + n) % n;
+        if (off > n / 2) off -= n;
+        const show = Math.abs(off) <= 1;
+        const on = off === 0;
+        c.setVisible(show).setPosition(VIEW_W / 2 + off * 250, 300).setAlpha(on ? 1 : 0.45);
+        this.stageNames[k].setVisible(show).setPosition(c.x, 362).setColor(on ? CSS.gold : CSS.muted);
+        if (show) g.lineStyle(on ? 4 : 2, on ? C.gold : C.panelEdge, 1).strokeRect(c.x - 117, c.y - 50, 234, 100);
       });
     }
   }

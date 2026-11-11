@@ -24,6 +24,8 @@ export class BootScene extends Phaser.Scene {
     for (const art of ALL_ART) {
       this.load.atlas(art.key, art.png, art.atlas);
       this.load.image(`${art.key}_base`, art.base);
+      if (art.sheet) this.load.image(`sheet_${art.key}`, art.sheet);
+      if (art.superArt) this.load.image(`superart_${art.key}`, art.superArt);
     }
     for (const st of STAGES) this.load.image(`stage_${st.id}`, st.url);
     preloadAudio(this);
@@ -31,7 +33,18 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     makeTextures(this);
-    for (const art of ALL_ART) this.makePortrait(art.key, art.face);
+    for (const art of ALL_ART) {
+      this.makePortrait(art.key, art.face);
+      for (const key of [`sheet_${art.key}`, `superart_${art.key}`, `portrait_${art.key}`]) {
+        if (this.textures.exists(key)) this.textures.get(key).setFilter(Phaser.Textures.FilterMode.LINEAR);
+      }
+    }
+    // Options remembered between visits.
+    try {
+      this.registry.set('simple', localStorage.getItem('afterhours.simple') === '1');
+    } catch {
+      this.registry.set('simple', false);
+    }
     this.scene.start('title');
   }
 
@@ -39,7 +52,7 @@ export class BootScene extends Phaser.Scene {
   private makePortrait(id: string, face: { x: number; y: number; w: number; h: number }): void {
     const key = `portrait_${id}`;
     if (this.textures.exists(key)) return;
-    const size = 80;
+    const size = 128;
     const tex = this.textures.createCanvas(key, size, size);
     if (!tex) return;
     const ctx = tex.getContext();
@@ -49,9 +62,17 @@ export class BootScene extends Phaser.Scene {
     g.addColorStop(1, 'rgba(8,10,20,1)');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, size, size);
-    ctx.imageSmoothingEnabled = false;
-    const src = this.textures.get(`${id}_base`).getSourceImage() as HTMLImageElement;
-    ctx.drawImage(src, face.x, face.y, face.w, face.h, 0, 0, size, size);
+    if (this.textures.exists(`sheet_${id}`)) {
+      // The illustrated portrait from the character sheet, cropped to a square on the face.
+      const src = this.textures.get(`sheet_${id}`).getSourceImage() as HTMLImageElement;
+      const side = Math.min(src.width, src.height);
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(src, (src.width - side) / 2, 0, side, side, 0, 0, size, size);
+    } else {
+      ctx.imageSmoothingEnabled = false;
+      const src = this.textures.get(`${id}_base`).getSourceImage() as HTMLImageElement;
+      ctx.drawImage(src, face.x, face.y, face.w, face.h, 0, 0, size, size);
+    }
     tex.refresh();
   }
 }

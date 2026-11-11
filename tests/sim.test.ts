@@ -25,6 +25,9 @@ type InputLog = Array<[number, number]>;
 
 const ROGUE = heroIndex('rogue');
 const JET = heroIndex('jetsetter');
+const CHRIS = heroIndex('chris');
+const LEADER = heroIndex('leader');
+const ALL_HEROES = [ROGUE, JET, CHRIS, LEADER];
 const { Left: L, Right: R, Up: U, Down: D, Light, Heavy, Special, Block } = Input;
 
 /** Test-side integer LCG. The sim itself has no randomness. */
@@ -109,7 +112,7 @@ describe('determinism', () => {
     expect(h2).toBe(h1);
     expect(h3).toBe(h1);
     // Golden value: pins the result across runs, machines and refactors.
-    expect(h1).toMatchInlineSnapshot(`"e74de636"`);
+    expect(h1).toMatchInlineSnapshot(`"b6ca8687"`);
   });
 
   it('resuming from a serialized mid-run state gives the same hash', () => {
@@ -134,8 +137,9 @@ describe('determinism', () => {
       const gap = Math.abs(s.fighters[0].x - s.fighters[1].x);
       if (gap > MAX_SEPARATION) throw new Error(`fighters ${gap} apart at tick ${s.tick}`);
     }
-    // The random log should exercise the state machine (KO is covered by the scripted match below).
-    for (const st of Object.values(FS)) if (st !== FS.KO) expect(seen.has(st), String(st)).toBe(true);
+    // The random log should exercise the state machine. KO is covered by the scripted match and dashes
+    // (which need a precise double tap) by the movement tests.
+    for (const st of Object.values(FS)) if (st !== FS.KO && st !== FS.Dash) expect(seen.has(st), String(st)).toBe(true);
   });
 
   it('the hash covers every state field', () => {
@@ -281,8 +285,10 @@ describe('special moves', () => {
       ['rising', [[R, 0], [0, 0], [D, 0], [D | R | Special, 0]], 100],
       ['super', [[Heavy | Special, 0]], 150],
     ];
-    for (const hero of [ROGUE, JET]) {
+    for (const hero of ALL_HEROES) {
       for (const [name, script, gap] of cases) {
+        // A counter stance only hits when it is attacked; it has its own test.
+        if (getMove(hero, Move.Special).counter && name === 'special') continue;
         const s = fight(hero, hero === ROGUE ? JET : ROGUE, gap);
         s.fighters[0].meter = METER_MAX;
         const out = play(s, script, 100).s;
@@ -307,6 +313,129 @@ describe('combos', () => {
   it('a whiffed jab cannot be cancelled', () => {
     const { s } = play(fight(ROGUE, JET, 400), [[Light, 0], [0, 0], [0, 0], [0, 0], [0, 0], [Special, 0]]);
     expect(s.fighters[0].moveId).toBe(Move.Light);
+  });
+});
+
+describe('feel and combo depth', () => {
+  it('an attack pressed a few ticks before recovery ends comes out on the first free tick', () => {
+    let s = fight(ROGUE, JET, 500);
+    s = play(s, [[Light, 0]]).s; // whiffed jab, 14 ticks long
+    const jab = getMove(ROGUE, Move.Light);
+    const total = jab.startup + jab.active + jab.recovery;
+    for (let t = 1; t < total; t += 1) s = step(s, t === total - 3 ? Heavy : 0, 0);
+    expect(s.fighters[0].moveId).toBe(Move.Light);
+    s = step(s, 0, 0);
+    expect(s.fighters[0].moveId).toBe(Move.Heavy);
+  });
+
+  it('a rising attack launches and a super cancel juggles the opponent', () => {
+    let s = fight(ROGUE, JET, 110);
+    s.fighters[0].meter = METER_MAX;
+    s = play(s, [[R, 0], [0, 0], [D, 0], [D | R | Special, 0]]).s;
+    let maxCombo = 0;
+    let superStarted = false;
+    for (let t = 0; t < 140; t += 1) {
+      const launched = s.fighters[1].state === FS.Knockdown && s.fighters[1].combo >= 1;
+      s = step(s, launched && !superStarted ? Heavy | Special : 0, 0);
+      if (s.fighters[0].moveId === Move.Super) superStarted = true;
+      maxCombo = Math.max(maxCombo, s.fighters[1].combo);
+    }
+    expect(superStarted).toBe(true);
+    expect(maxCombo).toBeGreaterThanOrEqual(2);
+  });
+
+  it('pressing throw back breaks a throw', () => {
+    const { s, fx } = play(fight(ROGUE, JET, 90), [[Light | Heavy, Light | Heavy]], 20);
+    expect(fx).toContain(FX.Tech);
+    expect(s.fighters[1].health).toBe(HEROES[JET].stats.maxHealth);
+    expect(s.fighters[0].health).toBe(HEROES[ROGUE].stats.maxHealth);
+  });
+
+  it('simple specials: forward + special throws the projectile, down + special is the rising attack', () => {
+    const simple = (input: number): number => {
+      const s = createInitialState(ROGUE, JET, { simple: [true, false] });
+      s.phase = Phase.Fight;
+      s.fighters[0].x = 600;
+      s.fighters[1].x = 1000;
+      return play(s, [[input, 0]]).s.fighters[0].moveId;
+    };
+    expect(simple(R | Special)).toBe(Move.Projectile);
+    expect(simple(D | Special)).toBe(Move.Rising);
+    expect(simple(Special)).toBe(Move.Special);
+  });
+});
+
+/**
+ * Plays a combo route like a player confirming each hit: perform a step, wait for the hit to land,
+ * then input the next step. Returns the longest combo the defender took.
+ */
+function comboTrial(att: number, def: number, steps: InputLog[], gap = 105): number {
+  let s = fight(att, def, gap);
+  s.fighters[0].meter = METER_MAX;
+  let best = 0;
+  for (let k = 0; k < steps.length; k += 1) {
+    if (k > 0) {
+      const before = s.fighters[1].combo;
+      let waited = 0;
+      while (s.fighters[1].combo <= before && waited < 60) {
+        s = step(s, 0, 0);
+        best = Math.max(best, s.fighters[1].combo);
+        waited += 1;
+      }
+    }
+    for (const [a, b] of steps[k]) {
+      s = step(s, a, b);
+      best = Math.max(best, s.fighters[1].combo);
+    }
+  }
+  for (let t = 0; t < 90; t += 1) {
+    s = step(s, 0, 0);
+    best = Math.max(best, s.fighters[1].combo);
+  }
+  return best;
+}
+
+describe('combo routes from the How to Play page work for every fighter', () => {
+  const qcf: InputLog = [[D, 0], [D | R, 0], [R | Special, 0]];
+  const routes: Array<[string, InputLog[], number]> = [
+    ['LIGHT, LIGHT, HEAVY > projectile', [[[Light, 0]], [[Light, 0]], [[Heavy, 0]], qcf], 4],
+    ['low LIGHT, low LIGHT, sweep', [[[D | Light, 0]], [[D, 0], [D | Light, 0]], [[D, 0], [D | Heavy, 0]]], 3],
+    ['HEAVY > super', [[[Heavy, 0]], [[Heavy | Special, 0]]], 3],
+    ['rising > super juggle', [[[R, 0], [0, 0], [D, 0], [D | R | Special, 0]], [[Heavy | Special, 0]]], 2],
+  ];
+  for (const [name, steps, expected] of routes) {
+    it(name, () => {
+      for (const hero of ALL_HEROES) {
+        expect(comboTrial(hero, JET, steps), HEROES[hero].id).toBeGreaterThanOrEqual(expected);
+      }
+    });
+  }
+});
+
+describe('counter stance', () => {
+  it("Chris's Diplomacy deflects a strike and answers it", () => {
+    // Chris braces; the Rogue jabs into the stance.
+    const { s, fx } = play(fight(ROGUE, CHRIS, 110), [[0, Special], [0, 0], [0, 0], [Light, 0]], 30);
+    expect(s.fighters[1].health).toBe(HEROES[CHRIS].stats.maxHealth);
+    expect(s.fighters[0].health).toBeLessThan(HEROES[ROGUE].stats.maxHealth);
+    expect(s.fighters[0].state).toBe(FS.Knockdown);
+    expect(fx).not.toContain(FX.Hit);
+  });
+
+  it('a throw beats the counter stance', () => {
+    const { s } = play(fight(ROGUE, CHRIS, 90), [[0, Special], [0, 0], [0, 0], [Light | Heavy, 0]], 30);
+    expect(s.fighters[1].health).toBeLessThan(HEROES[CHRIS].stats.maxHealth);
+  });
+});
+
+describe('every hero', () => {
+  it('plays a deterministic match against every other hero', () => {
+    for (const a of ALL_HEROES) {
+      for (const b of ALL_HEROES) {
+        const log = makeLog(a * 31 + b, 6000);
+        expect(hashState(run(log, createInitialState(a, b)))).toBe(hashState(run(log, createInitialState(a, b))));
+      }
+    }
   });
 });
 
@@ -352,8 +481,8 @@ describe('hero data', () => {
         expect(m.hits).toBeGreaterThanOrEqual(1);
         m.frames.forEach((f, i) => {
           const active = i >= m.startup && i < m.startup + m.active;
-          // Projectile moves hit with the projectile, not the body.
-          if (m.projectile) expect(f.hitboxes.length).toBe(0);
+          // Projectile moves hit with the projectile, and counter stances with their answer.
+          if (m.projectile || m.counter) expect(f.hitboxes.length).toBe(0);
           else expect(f.hitboxes.length > 0, `${hero.id} ${key} frame ${i}`).toBe(active);
           expect(f.hurtboxes.length).toBeGreaterThan(0);
         });

@@ -15,6 +15,8 @@ const LOOPS: Record<string, { start: number; end: number }> = {
   concert: { start: 43.909, end: 128.811 },
   rooftop: { start: 48.089, end: 155.088 },
   alley: { start: 52.082, end: 152.844 },
+  embassy: { start: 55.124, end: 148.599 },
+  crown: { start: 50.55, end: 152.455 },
 };
 
 interface Settings {

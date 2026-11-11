@@ -1,8 +1,9 @@
 import alley from '../../assets/stages/alley.png';
 import concert from '../../assets/stages/concert.png';
+import embassy from '../../assets/stages/embassy.png';
 import rooftop from '../../assets/stages/rooftop.png';
 
-export type Ambient = 'storm' | 'concert' | 'rain';
+export type Ambient = 'storm' | 'concert' | 'rain' | 'smoke' | 'embers';
 
 export interface StageDef {
   id: string;
@@ -19,6 +20,8 @@ export interface StageDef {
   neon?: { x: number; y: number; w: number; h: number; color: number };
   crowd?: { y: number; h: number };
   steam?: { x: number; y: number };
+  /** A soft pulsing glow (lamps, the globe). */
+  glow?: { x: number; y: number; r: number; color: number };
 }
 
 export const STAGES: StageDef[] = [
@@ -49,10 +52,21 @@ export const STAGES: StageDef[] = [
     name: 'BACK ALLEY',
     place: 'Rain all night',
     url: alley,
-    groundSrcY: 292,
+    groundSrcY: 290,
     music: 'alley',
     ambient: 'rain',
     tint: 0xe9e2ff,
     steam: { x: 150, y: 250 },
+  },
+  {
+    id: 'embassy',
+    name: 'MAP ROOM',
+    place: 'Late-night negotiations',
+    url: embassy,
+    groundSrcY: 290,
+    music: 'embassy',
+    ambient: 'smoke',
+    tint: 0xfff0e2,
+    glow: { x: 236, y: 205, r: 60, color: 0xffc860 },
   },
 ];

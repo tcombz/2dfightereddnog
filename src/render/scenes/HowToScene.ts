@@ -4,7 +4,7 @@ import { HEROES } from '../../sim';
 import { sfx } from '../audio';
 import { C, CSS, VIEW_H, VIEW_W } from '../config';
 import { heroInfo } from '../heroInfo';
-import { BASICS, moveList } from '../moves';
+import { BASICS, COMBOS, moveList } from '../moves';
 import { backdrop, body, display, goTo, goldFill } from '../ui';
 
 const CONTROLS: Array<[string, string, string, string]> = [
@@ -30,7 +30,7 @@ export class HowToScene extends Phaser.Scene {
   }
 
   private get pages(): string[] {
-    return ['CONTROLS', 'BASICS', ...HEROES.map((h) => heroInfo(h.id).title)];
+    return ['CONTROLS', 'BASICS', 'COMBOS', ...HEROES.map((h) => heroInfo(h.id).title)];
   }
 
   create(data: { back?: string }): void {
@@ -67,14 +67,21 @@ export class HowToScene extends Phaser.Scene {
           add(this.add.text(x, y, cell, style));
         });
       });
+    } else if (this.page === 2) {
+      add(this.add.text(70, 112, 'Every fighter shares these routes. "," chains a normal into the next; ">" cancels into a special or super.', body(14, CSS.muted)).setWordWrapWidth(820));
+      COMBOS.forEach(([name, route], r) => {
+        const y = 160 + r * 52;
+        add(this.add.text(70, y, name.toUpperCase(), display(16, CSS.gold, 4)));
+        add(this.add.text(290, y, route, body(19, CSS.ink)));
+      });
     } else if (this.page === 1) {
       BASICS.forEach(([name, text], r) => {
-        const y = 120 + r * 50;
+        const y = 112 + r * 37;
         add(this.add.text(70, y, name.toUpperCase(), display(16, CSS.gold, 4)));
         add(this.add.text(290, y, text, body(16, CSS.ink)).setWordWrapWidth(590));
       });
     } else {
-      const hero = this.page - 2;
+      const hero = this.page - 3;
       const info = heroInfo(HEROES[hero].id);
       add(this.add.text(70, 108, `${info.style}  ·  "${info.tagline}"`, body(14, CSS.muted)));
       moveList(hero).forEach((m, r) => {

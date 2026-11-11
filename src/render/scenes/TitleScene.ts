@@ -50,7 +50,7 @@ export class TitleScene extends Phaser.Scene {
     this.menu = new Menu(
       this,
       VIEW_W / 2 - 190,
-      284,
+      268,
       [
         {
           label: 'VS CPU',
@@ -62,6 +62,13 @@ export class TitleScene extends Phaser.Scene {
         { label: 'VS PLAYER', onSelect: () => start('versus') },
         { label: 'TRAINING', onSelect: () => start('training') },
         { label: 'HOW TO PLAY', onSelect: () => goTo(this, 'howto', { back: 'title' }) },
+        {
+          label: 'SPECIALS',
+          value: () => `◀ ${this.registry.get('simple') ? 'SIMPLE' : 'CLASSIC'} ▶`,
+          onLeft: () => this.toggleSimple(),
+          onRight: () => this.toggleSimple(),
+          onSelect: () => this.toggleSimple(),
+        },
         { label: 'MUSIC', value: () => pct(settings.music), onLeft: () => setMusicVolume(settings.music - 0.1), onRight: () => setMusicVolume(settings.music + 0.1) },
         { label: 'SOUND FX', value: () => pct(settings.sfx), onLeft: () => setSfxVolume(settings.sfx - 0.1), onRight: () => setSfxVolume(settings.sfx + 0.1) },
         {
@@ -71,12 +78,23 @@ export class TitleScene extends Phaser.Scene {
         },
       ],
       380,
-      34,
-      21,
+      31,
+      20,
     );
     this.menu.setVisible(false);
     if (data?.skipIntro) this.open();
     controls.take();
+  }
+
+  /** Simple specials: forward + special for the projectile, down + special for the rising attack. */
+  private toggleSimple(): void {
+    const v = !this.registry.get('simple');
+    this.registry.set('simple', v);
+    try {
+      localStorage.setItem('afterhours.simple', v ? '1' : '0');
+    } catch {
+      // Not remembered; still applies this visit.
+    }
   }
 
   private open(): void {

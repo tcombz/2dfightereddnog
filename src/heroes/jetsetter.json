@@ -56,7 +56,7 @@
    "hitstun": 15,
    "blockstun": 11,
    "knockback": {
-    "x": 7,
+    "x": 3,
     "y": 0
    },
    "knockdown": false,
@@ -67,6 +67,8 @@
    "cancel": 7,
    "invuln": 0,
    "air": false,
+   "juggle": 0,
+   "counter": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -119,7 +121,7 @@
       {
        "x": 15,
        "y": 158,
-       "w": 75,
+       "w": 83,
        "h": 30
       }
      ],
@@ -133,7 +135,7 @@
       {
        "x": 15,
        "y": 158,
-       "w": 50,
+       "w": 58,
        "h": 30
       }
      ]
@@ -143,7 +145,7 @@
       {
        "x": 15,
        "y": 158,
-       "w": 75,
+       "w": 83,
        "h": 30
       }
      ],
@@ -157,7 +159,7 @@
       {
        "x": 15,
        "y": 158,
-       "w": 50,
+       "w": 58,
        "h": 30
       }
      ]
@@ -167,7 +169,7 @@
       {
        "x": 15,
        "y": 158,
-       "w": 75,
+       "w": 83,
        "h": 30
       }
      ],
@@ -181,7 +183,7 @@
       {
        "x": 15,
        "y": 158,
-       "w": 50,
+       "w": 58,
        "h": 30
       }
      ]
@@ -198,7 +200,7 @@
       {
        "x": 15,
        "y": 158,
-       "w": 50,
+       "w": 58,
        "h": 30
       }
      ]
@@ -215,7 +217,7 @@
       {
        "x": 15,
        "y": 158,
-       "w": 50,
+       "w": 58,
        "h": 30
       }
      ]
@@ -232,7 +234,7 @@
       {
        "x": 15,
        "y": 158,
-       "w": 50,
+       "w": 58,
        "h": 30
       }
      ]
@@ -249,7 +251,7 @@
       {
        "x": 15,
        "y": 158,
-       "w": 50,
+       "w": 58,
        "h": 30
       }
      ]
@@ -323,6 +325,8 @@
    "cancel": 6,
    "invuln": 0,
    "air": false,
+   "juggle": 0,
+   "counter": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -826,6 +830,8 @@
    "cancel": 6,
    "invuln": 0,
    "air": false,
+   "juggle": 0,
+   "counter": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -1301,7 +1307,7 @@
    "hitstun": 14,
    "blockstun": 10,
    "knockback": {
-    "x": 5,
+    "x": 3,
     "y": 0
    },
    "knockdown": false,
@@ -1312,6 +1318,8 @@
    "cancel": 7,
    "invuln": 0,
    "air": false,
+   "juggle": 0,
+   "counter": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -1364,7 +1372,7 @@
       {
        "x": 20,
        "y": 108,
-       "w": 82,
+       "w": 90,
        "h": 52
       }
      ],
@@ -1378,7 +1386,7 @@
       {
        "x": 20,
        "y": 108,
-       "w": 57,
+       "w": 65,
        "h": 52
       }
      ]
@@ -1388,7 +1396,7 @@
       {
        "x": 20,
        "y": 108,
-       "w": 82,
+       "w": 90,
        "h": 52
       }
      ],
@@ -1402,7 +1410,7 @@
       {
        "x": 20,
        "y": 108,
-       "w": 57,
+       "w": 65,
        "h": 52
       }
      ]
@@ -1412,7 +1420,7 @@
       {
        "x": 20,
        "y": 108,
-       "w": 82,
+       "w": 90,
        "h": 52
       }
      ],
@@ -1426,7 +1434,7 @@
       {
        "x": 20,
        "y": 108,
-       "w": 57,
+       "w": 65,
        "h": 52
       }
      ]
@@ -1443,7 +1451,7 @@
       {
        "x": 20,
        "y": 108,
-       "w": 57,
+       "w": 65,
        "h": 52
       }
      ]
@@ -1460,7 +1468,7 @@
       {
        "x": 20,
        "y": 108,
-       "w": 57,
+       "w": 65,
        "h": 52
       }
      ]
@@ -1477,7 +1485,7 @@
       {
        "x": 20,
        "y": 108,
-       "w": 57,
+       "w": 65,
        "h": 52
       }
      ]
@@ -1494,7 +1502,7 @@
       {
        "x": 20,
        "y": 108,
-       "w": 57,
+       "w": 65,
        "h": 52
       }
      ]
@@ -1579,6 +1587,8 @@
    "cancel": 4,
    "invuln": 0,
    "air": false,
+   "juggle": 0,
+   "counter": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -2160,6 +2170,8 @@
    "cancel": 0,
    "invuln": 0,
    "air": true,
+   "juggle": 0,
+   "counter": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -2646,6 +2658,8 @@
    "cancel": 0,
    "invuln": 0,
    "air": false,
+   "juggle": 0,
+   "counter": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -3018,6 +3032,8 @@
    "cancel": 4,
    "invuln": 0,
    "air": false,
+   "juggle": 0,
+   "counter": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -3680,6 +3696,8 @@
    "cancel": 0,
    "invuln": 0,
    "air": false,
+   "juggle": 0,
+   "counter": 0,
    "meterCost": 0,
    "projectile": {
     "spawnTick": 14,
@@ -4218,9 +4236,11 @@
    "advance": 0,
    "hits": 1,
    "rehit": 0,
-   "cancel": 0,
+   "cancel": 4,
    "invuln": 7,
    "air": false,
+   "juggle": 1,
+   "counter": 0,
    "meterCost": 0,
    "projectile": null,
    "frames": [
@@ -4968,6 +4988,8 @@
    "cancel": 0,
    "invuln": 16,
    "air": false,
+   "juggle": 1,
+   "counter": 0,
    "meterCost": 1000,
    "projectile": null,
    "frames": [
