@@ -1,6 +1,9 @@
 {
  "skip": [
-  "jab6"
+  "block2",
+  "jab6",
+  "jab_st",
+  "jab_st2"
  ],
  "attacks": {
   "kick": {
@@ -47,23 +50,23 @@
    ],
    "recovery": [
     7,
-    8,
-    0
+    8
    ],
    "loopActive": true
   },
   "super": {
    "anim": "special",
    "startup": [
-    4,
-    5
+    2,
+    3
    ],
    "active": [
-    6,
-    7,
-    8
+    4,
+    5,
+    6
    ],
    "recovery": [
+    7,
     8
    ],
    "loopActive": true
@@ -72,5 +75,15 @@
  "clean": [
   "grab",
   "sweep"
+ ],
+ "rename": {
+  "crouch_jab": "crouch_light",
+  "special_st": "special",
+  "block_st": "block"
+ },
+ "block": [
+  3,
+  4,
+  5
  ]
 }

@@ -1,10 +1,100 @@
 {
- "skip": ["jab6"],
- "recolor": { "light_punch": 45, "projectile": 45 },
+ "skip": [
+  "jab6",
+  "block2",
+  "special_st"
+ ],
+ "recolor": {
+  "projectile": 45
+ },
  "attacks": {
-  "kick": { "anim": "kick", "startup": [1, 2], "active": [3, 4], "recovery": [5, 6] },
-  "sweep": { "anim": "sweep", "startup": [1, 2, 3], "active": [4], "recovery": [5, 6] },
-  "special": { "anim": "special", "startup": [1, 2, 3, 4, 5], "active": [8], "recovery": [8, 7, 6] },
-  "super": { "anim": "special", "startup": [2, 3], "active": [7, 8], "recovery": [8], "loopActive": true }
- }
+  "kick": {
+   "anim": "kick",
+   "startup": [
+    1,
+    2
+   ],
+   "active": [
+    3,
+    4
+   ],
+   "recovery": [
+    5,
+    6
+   ]
+  },
+  "sweep": {
+   "anim": "sweep",
+   "startup": [
+    1,
+    2,
+    3
+   ],
+   "active": [
+    4
+   ],
+   "recovery": [
+    5,
+    6
+   ]
+  },
+  "crouchLight": {
+   "anim": "crouch_light",
+   "startup": [
+    1,
+    2
+   ],
+   "active": [
+    3,
+    4
+   ],
+   "recovery": [
+    5,
+    6
+   ]
+  },
+  "special": {
+   "anim": "special",
+   "startup": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "active": [
+    8
+   ],
+   "recovery": [
+    8,
+    7,
+    6
+   ]
+  },
+  "super": {
+   "anim": "special",
+   "startup": [
+    2,
+    3
+   ],
+   "active": [
+    7,
+    8
+   ],
+   "recovery": [
+    8
+   ],
+   "loopActive": true
+  }
+ },
+ "rename": {
+  "jab_st": "light_punch",
+  "crouch_jab": "crouch_light",
+  "block_st": "block"
+ },
+ "block": [
+  3,
+  4,
+  5
+ ]
 }
