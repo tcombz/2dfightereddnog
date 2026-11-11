@@ -1,7 +1,9 @@
 {
  "skip": [
+  "block2",
+  "hit_high",
   "jab6",
-  "block2"
+  "kick_v4"
  ],
  "rename": {
   "jab_st": "light_punch",
@@ -82,5 +84,10 @@
    ],
    "loopActive": true
   }
- }
+ },
+ "hitLow": [
+  3,
+  5,
+  6
+ ]
 }

@@ -78,7 +78,8 @@
  "rename": {
   "jab_st": "light_punch",
   "crouch_jab": "crouch_light",
-  "block_st": "block"
+  "block_st": "block",
+  "hit_v5": "hit"
  },
  "block": [
   3,
@@ -89,5 +90,11 @@
   2,
   1,
   6
+ ],
+ "hit": [
+  4,
+  5,
+  6,
+  8
  ]
 }
