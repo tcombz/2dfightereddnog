@@ -252,6 +252,44 @@ const heroes = [
       super: { name: 'Titan Smash', kind: Kind.Super, juggle: 1, meterCost: 1000, startup: 8, active: 24, recovery: 30, hits: 4, rehit: 6, advance: 7, invuln: 18, damage: 78, chip: 24, hitstun: 32, blockstun: 22, kb: [4, 24], knockdown: true, hitstop: 10, hitbox: { x: 0, y: 0, w: 180, h: 240 } },
     },
   }),
+  // Malcolm "The Captain": tactical support. A fast suppressing round, a squadmate who breaches at
+  // mid-range, and a breach kick that holds the line. Plays the space between the Rogue and the Leader.
+  hero({
+    id: 'malcolm',
+    name: 'Malcolm',
+    color: '#2f7bff',
+    stats: {
+      maxHealth: 1000, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 21, jumpSpeedX: 6, gravity: 1,
+      width: 74, height: 236, crouchHeight: 150, dashSpeed: 13, dashTicks: 14, backdashSpeed: 11, backdashTicks: 16,
+    },
+    bodies: {
+      stand: { x: -37, y: 0, w: 74, h: 236 },
+      crouch: { x: -41, y: 0, w: 82, h: 150 },
+      air: { x: -37, y: 30, w: 74, h: 186 },
+    },
+    moves: {
+      light: { name: 'Quick Strike', startup: 4, active: 3, recovery: 8, damage: 32, hitstun: 15, blockstun: 11, kb: [3, 0], hitstop: 7, cancel: ALL, hitbox: { x: 15, y: 156, w: 90, h: 32 } },
+      heavy: { name: 'Suppress', startup: 9, active: 4, recovery: 19, damage: 86, hitstun: 25, blockstun: 18, kb: [11, 0], hitstop: 12, advance: 2, cancel: SP, hitbox: { x: 15, y: 128, w: 118, h: 60 } },
+      // Breach kick: a door-kick that holds the line, safe when blocked.
+      kick: { name: 'Breach Kick', startup: 11, active: 4, recovery: 16, damage: 76, hitstun: 22, blockstun: 19, kb: [16, 0], hitstop: 11, cancel: SP, hitbox: { x: 20, y: 90, w: 124, h: 70 } },
+      crouchLight: { name: 'Low Check', guard: Guard.Low, body: 'crouch', startup: 4, active: 3, recovery: 9, damage: 26, hitstun: 14, blockstun: 10, kb: [3, 0], hitstop: 7, cancel: ALL, hitbox: { x: 20, y: 104, w: 98, h: 52 } },
+      sweep: { name: 'Sweep the Ground', guard: Guard.Low, body: 'crouch', startup: 10, active: 4, recovery: 25, damage: 78, knockdown: true, blockstun: 14, kb: [8, 6], hitstop: 11, cancel: Cancel.Super, hitbox: { x: 10, y: 0, w: 132, h: 84 } },
+      jumpAttack: { name: 'From Above', guard: Guard.High, body: 'air', air: true, startup: 5, active: 14, recovery: 4, damage: 74, hitstun: 20, blockstun: 14, kb: [6, 0], hitstop: 10, hitbox: { x: 10, y: 40, w: 122, h: 120 } },
+      throw: { name: 'Takedown', kind: Kind.Throw, guard: Guard.Throw, limb: false, startup: 4, active: 2, recovery: 24, damage: 118, knockdown: true, kb: [14, 14], hitstop: 14, hitbox: { x: 10, y: 60, w: 74, h: 124 } },
+      // Gear Up: a squadmate breaches in at mid-range and holds there for a moment.
+      special: {
+        name: 'Gear Up', kind: Kind.Special, startup: 16, active: 1, recovery: 26,
+        projectile: { x: 140, y: 0, w: 150, h: 210, speed: 0, life: 22, damage: 92, chip: 14, hitstun: 24, blockstun: 18, kb: [12, 14], knockdown: true, hitstop: 12 },
+      },
+      // Suppressing fire: the fastest, lightest projectile in the game.
+      projectile: {
+        name: 'Suppressing Fire', kind: Kind.Special, startup: 11, active: 1, recovery: 24,
+        projectile: { x: 70, y: 146, w: 60, h: 26, speed: 16, life: 70, damage: 56, chip: 9, hitstun: 18, blockstun: 13, kb: [8, 0], hitstop: 7 },
+      },
+      rising: { name: 'Get Back Up', kind: Kind.Special, juggle: 1, cancel: Cancel.Super, startup: 5, active: 9, recovery: 31, invuln: 7, damage: 124, chip: 16, hitstun: 30, blockstun: 20, kb: [6, 22], knockdown: true, hitstop: 12, hitbox: { x: 0, y: 100, w: 92, h: 180 } },
+      super: { name: 'Operation: Backup', kind: Kind.Super, juggle: 1, meterCost: 1000, startup: 7, active: 30, recovery: 28, hits: 6, rehit: 5, invuln: 18, damage: 56, chip: 20, hitstun: 32, blockstun: 20, kb: [4, 22], knockdown: true, hitstop: 8, hitbox: { x: -40, y: 0, w: 330, h: 260 } },
+    },
+  }),
 ];
 
 for (const h of heroes) {

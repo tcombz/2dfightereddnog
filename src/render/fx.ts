@@ -287,6 +287,90 @@ export function makeTextures(scene: Phaser.Scene): void {
       ctx.restore();
     }
   });
+  // Malcolm's squad: helmeted silhouettes at the ready, rimmed in electric blue.
+  canvasTexture(scene, 'fx_squad', 170, 220, (ctx) => {
+    const people = [
+      { x: 34, s: 0.84 },
+      { x: 132, s: 0.88 },
+      { x: 84, s: 1.04 },
+    ];
+    for (const p of people) {
+      const top = 216 - 190 * p.s;
+      ctx.save();
+      ctx.shadowColor = 'rgba(70,160,255,0.95)';
+      ctx.shadowBlur = 9;
+      ctx.fillStyle = '#070b14';
+      ctx.strokeStyle = '#070b14';
+      ctx.beginPath(); // helmet with a brim
+      ctx.ellipse(p.x, top + 16 * p.s, 17 * p.s, 14 * p.s, 0, Math.PI, 0);
+      ctx.fill();
+      ctx.fillRect(p.x - 19 * p.s, top + 14 * p.s, 38 * p.s, 6 * p.s);
+      ctx.beginPath(); // head
+      ctx.arc(p.x + 2 * p.s, top + 26 * p.s, 11 * p.s, 0, TAU);
+      ctx.fill();
+      ctx.beginPath(); // vest
+      ctx.moveTo(p.x - 20 * p.s, top + 38 * p.s);
+      ctx.lineTo(p.x + 22 * p.s, top + 38 * p.s);
+      ctx.lineTo(p.x + 18 * p.s, top + 112 * p.s);
+      ctx.lineTo(p.x - 16 * p.s, top + 112 * p.s);
+      ctx.closePath();
+      ctx.fill();
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 10 * p.s;
+      ctx.beginPath(); // arms forward at the ready
+      ctx.moveTo(p.x + 12 * p.s, top + 46 * p.s);
+      ctx.lineTo(p.x + 38 * p.s, top + 66 * p.s);
+      ctx.moveTo(p.x - 8 * p.s, top + 48 * p.s);
+      ctx.lineTo(p.x + 22 * p.s, top + 72 * p.s);
+      ctx.stroke();
+      ctx.lineWidth = 6 * p.s; // a shield held in front
+      ctx.fillRect(p.x + 30 * p.s, top + 40 * p.s, 10 * p.s, 64 * p.s);
+      ctx.lineWidth = 13 * p.s;
+      ctx.beginPath(); // legs braced
+      ctx.moveTo(p.x, top + 108 * p.s);
+      ctx.lineTo(p.x + 20 * p.s, top + 156 * p.s);
+      ctx.lineTo(p.x + 22 * p.s, 214);
+      ctx.moveTo(p.x, top + 108 * p.s);
+      ctx.lineTo(p.x - 18 * p.s, top + 160 * p.s);
+      ctx.lineTo(p.x - 26 * p.s, 212);
+      ctx.stroke();
+      ctx.restore();
+    }
+  });
+  // The dropship that passes over Malcolm's super: a dark hull with blue engine glow.
+  canvasTexture(scene, 'fx_dropship', 420, 130, (ctx) => {
+    ctx.save();
+    ctx.shadowColor = 'rgba(70,160,255,0.8)';
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = '#0a0f1c';
+    ctx.beginPath(); // hull
+    ctx.moveTo(10, 70);
+    ctx.lineTo(120, 44);
+    ctx.lineTo(330, 40);
+    ctx.lineTo(410, 62);
+    ctx.lineTo(330, 84);
+    ctx.lineTo(120, 88);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath(); // wings
+    ctx.moveTo(150, 60);
+    ctx.lineTo(250, 6);
+    ctx.lineTo(300, 6);
+    ctx.lineTo(260, 60);
+    ctx.moveTo(150, 74);
+    ctx.lineTo(240, 124);
+    ctx.lineTo(292, 124);
+    ctx.lineTo(262, 74);
+    ctx.fill();
+    ctx.restore();
+    for (const [x, y] of [[18, 70], [276, 10], [270, 120]]) {
+      const g = ctx.createRadialGradient(x, y, 0, x, y, 16);
+      g.addColorStop(0, 'rgba(160,220,255,1)');
+      g.addColorStop(1, 'rgba(40,120,255,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x - 16, y - 16, 32, 32);
+    }
+  });
   // A golden crown for the Leader's super.
   canvasTexture(scene, 'fx_crown', 200, 140, (ctx) => {
     const g = ctx.createLinearGradient(0, 10, 0, 130);
@@ -472,6 +556,21 @@ export class Effects {
   themed(style: HitStyle, x: number, y: number, dir: number, power: number): void {
     const s = this.scene;
     const n = power >= 10 ? 5 : 3;
+    if (style === 'tactical') {
+      // Tracer rounds: hot blue streaks spraying back from the impact, and a shield-hex flash.
+      for (let i = 0; i < n + 2; i += 1) {
+        const a = (dir > 0 ? 0 : Math.PI) + (Math.random() - 0.5) * 1.2;
+        const t = this.add(s.add.image(x, y, 'fx_glow').setBlendMode(Phaser.BlendModes.ADD).setTint(i % 2 ? 0x7fc8ff : 0xe8f6ff), 63);
+        t.setScale(0.5 + Math.random() * 0.3, 0.05).setRotation(a);
+        const len = 90 + Math.random() * 90 + power * 4;
+        s.tweens.add({ targets: t, x: x + Math.cos(a) * len, y: y + Math.sin(a) * len, alpha: 0, duration: 160 + Math.random() * 120, onComplete: () => t.destroy() });
+      }
+      if (power >= 10) {
+        const h = this.add(s.add.image(x, y, 'fx_hex').setBlendMode(Phaser.BlendModes.ADD).setTint(0x4aa8ff).setScale(0.6).setAlpha(0.8), 62);
+        s.tweens.add({ targets: h, scale: 1.3, alpha: 0, duration: 260, onComplete: () => h.destroy() });
+      }
+      return;
+    }
     if (style === 'volt') {
       for (let i = 0; i < n; i += 1) {
         const b = this.add(s.add.image(x + (Math.random() - 0.5) * 30, y, `fx_strike${i % 3}`).setBlendMode(Phaser.BlendModes.ADD), 63);
@@ -505,6 +604,17 @@ export class Effects {
       s.tweens.add({ targets: c, y: y - 90, scale: 0.22, alpha: 0, duration: 420, ease: 'Quad.easeOut', onComplete: () => c.destroy() });
     }
     if (style === 'quake') this.dust(x, y + 40, power >= 10 ? 6 : 3, 90);
+  }
+
+  /** Malcolm's Gear Up: a squad drops in at range, holds a beat, and pulls out. */
+  breach(x: number, groundY: number, facing: number): void {
+    const s = this.scene;
+    const sq = this.add(s.add.image(x, groundY + 4, 'fx_squad').setOrigin(0.5, 1).setScale(1.15).setFlipX(facing < 0).setAlpha(0), 46);
+    const flash = this.add(s.add.image(x, groundY - 100, 'fx_glow').setTint(0x4aa8ff).setBlendMode(Phaser.BlendModes.ADD).setScale(0.4, 1.6).setAlpha(0.9), 45);
+    s.tweens.add({ targets: sq, alpha: 1, duration: 90 });
+    s.tweens.add({ targets: sq, alpha: 0, x: x - facing * 30, delay: 420, duration: 260, onComplete: () => sq.destroy() });
+    s.tweens.add({ targets: flash, scaleX: 2.2, alpha: 0, duration: 320, onComplete: () => flash.destroy() });
+    this.dust(x, groundY, 5, 80);
   }
 
   /** A blocked hit: a shield flash in the defender's colour and a few sparks. */

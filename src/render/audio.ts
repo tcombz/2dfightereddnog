@@ -18,6 +18,7 @@ const LOOPS: Record<string, { start: number; end: number }> = {
   embassy: { start: 55.124, end: 148.599 },
   crown: { start: 50.55, end: 152.455 },
   fortress: { start: 46.347, end: 128.182 },
+  helipad: { start: 49.459, end: 148.69 },
 };
 
 interface Settings {

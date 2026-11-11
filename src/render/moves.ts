@@ -34,6 +34,7 @@ export function moveList(hero: number): MoveLine[] {
       if (m.teleport) text = 'Invincible blink in, strike, blink out.';
       else if (m.armor) text = `Armored charge (${m.armor} hits). Knocks down.`;
       else if (m.counter) text = 'Counter stance: catches a strike and hits back. Loses to throws.';
+      else if (m.projectile && m.projectile.speed === 0) text = 'A squadmate breaches in at mid-range. Knocks down.';
       else if (m.projectile) text = 'Sends the crew charging across the screen.';
       else if (m.advance) text = 'Dashes forward. Knocks down.';
       else text = 'Close-range blast. Knocks down.';
@@ -48,6 +49,7 @@ export function moveList(hero: number): MoveLine[] {
       text = `${parts.filter(Boolean).join(', ')}.`;
       text = text[0].toUpperCase() + text.slice(1);
     }
+    if (key === 'projectile' && m.projectile && m.projectile.speed >= 14) text = 'Fast, light projectile.';
     if (key === 'super') text = `${m.hits}-hit super. Needs a full meter.`;
     if (key === 'heavy' && m.armor) text = `Armored (${m.armor} hit). Cancels on hit.`;
     return { key, name: m.name, input, note: text, damage };

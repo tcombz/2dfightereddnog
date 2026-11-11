@@ -23,6 +23,12 @@ import leaderSheet from '../../assets/heroes/leader/sheet_portrait.jpg';
 import leaderSuper from '../../assets/heroes/leader/super_art.jpg';
 import jetsetterPng from '../../assets/heroes/jetsetter/atlas.png';
 import jetsetterBase from '../../assets/heroes/jetsetter/base/east.png';
+import malcolmArt from '../../assets/heroes/malcolm/art.json';
+import malcolmAtlas from '../../assets/heroes/malcolm/atlas.json';
+import malcolmPng from '../../assets/heroes/malcolm/atlas.png';
+import malcolmBase from '../../assets/heroes/malcolm/base/east.png';
+import malcolmSheet from '../../assets/heroes/malcolm/sheet_portrait.jpg';
+import malcolmSuper from '../../assets/heroes/malcolm/super_art.jpg';
 import rogueAtlas from '../../assets/heroes/rogue/atlas.json';
 import roguePng from '../../assets/heroes/rogue/atlas.png';
 import rogueArt from '../../assets/heroes/rogue/art.json';
@@ -43,7 +49,7 @@ interface AttackArt {
 }
 
 /** How a projectile is drawn. */
-export type ProjStyle = 'bolt' | 'disc' | 'cards' | 'wave' | 'crew';
+export type ProjStyle = 'bolt' | 'disc' | 'cards' | 'wave' | 'crew' | 'tracer' | 'squad';
 
 export interface HeroArt {
   key: string;
@@ -176,6 +182,16 @@ const ART: Record<string, HeroArt> = {
     superArt: eddnogSuper,
     projectiles: { projectile: 'wave' },
     ...fromJson(eddnogArt),
+  },
+  malcolm: {
+    key: 'malcolm',
+    png: malcolmPng,
+    atlas: malcolmAtlas,
+    base: malcolmBase,
+    sheet: malcolmSheet,
+    superArt: malcolmSuper,
+    projectiles: { special: 'squad', projectile: 'tracer' },
+    ...fromJson(malcolmArt),
   },
 };
 

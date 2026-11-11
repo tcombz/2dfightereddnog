@@ -1,10 +1,10 @@
 // Presentation-only information about each hero: titles, quotes and select-screen ratings.
 // Move names, damage and frame data live in the hero JSON (src/heroes/).
 
-export type SuperStyle = 'storm' | 'crowd' | 'world' | 'crown' | 'quake';
+export type SuperStyle = 'storm' | 'crowd' | 'world' | 'crown' | 'quake' | 'squad';
 
 /** The signature particles every hit of this fighter throws off. */
-export type HitStyle = 'volt' | 'vinyl' | 'cards' | 'crown' | 'quake';
+export type HitStyle = 'volt' | 'vinyl' | 'cards' | 'crown' | 'quake' | 'tactical';
 
 export interface HeroInfo {
   title: string;
@@ -126,6 +126,22 @@ export const HERO_INFO: Record<string, HeroInfo> = {
     color: 0xe0a526,
     accent: 0xffd34a,
     ratings: { power: 5, speed: 2, range: 4, defense: 5, technique: 3 },
+  },
+  malcolm: {
+    title: 'MALCOLM "THE CAPTAIN"',
+    short: 'THE CAPTAIN',
+    superStyle: 'squad',
+    sfx: { special: 'squad', projectile: 'tracer' },
+    hitStyle: 'tactical',
+    hitSfx: 'tracer',
+    style: 'Tactical · Support · Leader',
+    archetype: 'TACTICIAN',
+    plan: 'Pin them with Suppressing Fire, make them jump, and call the squad in where they land.',
+    tagline: 'Stay sharp.',
+    quotes: ['Stay sharp.', 'Protect the team.', 'Get back up.', 'We move together.', 'Game on.', 'For the squad.'],
+    color: 0x2f7bff,
+    accent: 0x7fc8ff,
+    ratings: { power: 4, speed: 3, range: 4, defense: 3, technique: 4 },
   },
 };
 

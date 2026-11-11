@@ -378,6 +378,8 @@ export class FightScene extends Phaser.Scene {
         sfx(this, this.signature(i, f.projMove === Move.Projectile ? 'projectile' : 'special'), 0.9);
         const r = getProjectile(f);
         if (r) this.fx.ring(r.x + r.w / 2, GROUND_Y - r.y - r.h / 2, heroInfo(HEROES[f.hero].id).accent, 0.7);
+        // A squadmate who breaches in stays on screen for a beat, even if he connects at once.
+        if (r && artFor(f.hero).projectiles[MOVE_KEYS[f.projMove]] === 'squad') this.fx.breach(r.x + r.w / 2, GROUND_Y, f.facing);
       }
       // A blink (Rogue's Rift): leave a lightning ghost where he was, and strike where he lands.
       if (f.state === FS.Attack && p.state === FS.Attack && Math.abs(f.x - p.x) > 40 && getMove(f.hero, f.moveId).teleport !== 0) {
@@ -582,7 +584,8 @@ export class FightScene extends Phaser.Scene {
       if (r) {
         const cx = r.x + r.w / 2;
         const cy = GROUND_Y - (r.y + r.h / 2);
-        const dir = f.projVx > 0 ? 1 : -1;
+        // A squadmate who holds position has no speed: face where the caller faces.
+        const dir = f.projVx !== 0 ? (f.projVx > 0 ? 1 : -1) : f.facing;
         const style = art.projectiles[MOVE_KEYS[f.projMove]] ?? 'disc';
         const color = heroInfo(HEROES[f.hero].id).accent;
         const spin = (view.img.rotation + dir * 0.45) % (Math.PI * 2);
@@ -592,7 +595,13 @@ export class FightScene extends Phaser.Scene {
         if (style === 'bolt') view.img.setTexture(`fx_bolt${Math.floor(this.clock / 2) % 4}`).setScale(1.1);
         else if (style === 'disc') view.img.setTexture('fx_disc').setScale(1).setRotation(spin);
         else if (style === 'wave') view.img.setTexture('fx_wave').setScale(1 + 0.08 * Math.sin(this.clock * 0.6));
-        else if (style === 'crew') {
+        else if (style === 'tracer') view.img.setTexture('fx_glow').setTint(0xbfe6ff).setScale(1.3, 0.12).setAlpha(0.95);
+        else if (style === 'squad') {
+          // Gear Up: the squad breaches in at range and holds the line there.
+          view.img.setTexture('fx_squad').clearTint().setDisplaySize(r.w + 20, r.h + 10).setPosition(cx, cy + 5).setFlipX(dir < 0);
+          glowScale = 1.6;
+          if (this.clock % 4 === 0) this.fx.dust(cx, GROUND_Y, 2, 50);
+        } else if (style === 'crew') {
           view.img.setTexture('fx_crew').setDisplaySize(r.w + 30, r.h + 10).setPosition(cx, cy + 5);
           glowScale = 1.8;
           if (this.clock % 3 === 0) this.fx.dust(cx - dir * 40, GROUND_Y, 2, 40);

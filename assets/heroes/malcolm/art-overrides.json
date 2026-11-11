@@ -1,0 +1,45 @@
+{
+ "skip": [
+  "kick_v4",
+  "sweep_v4"
+ ],
+ "rename": {
+  "jab_st": "light_punch",
+  "crouch_jab": "crouch_light",
+  "heavy_st": "heavy_punch",
+  "special_st": "special",
+  "block_st": "block",
+  "projectile_st": "projectile",
+  "hit_v5": "hit"
+ },
+ "hit": [
+  4,
+  3,
+  8
+ ],
+ "block": [
+  2,
+  3,
+  4
+ ],
+ "attacks": {
+  "super": {
+   "anim": "command",
+   "startup": [
+    1,
+    2
+   ],
+   "active": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "recovery": [
+    7,
+    8
+   ],
+   "loopActive": true
+  }
+ }
+}

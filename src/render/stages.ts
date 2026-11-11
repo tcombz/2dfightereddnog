@@ -3,6 +3,7 @@ import concert from '../../assets/stages/concert.png';
 import crown from '../../assets/stages/crown.png';
 import embassy from '../../assets/stages/embassy.png';
 import fortress from '../../assets/stages/fortress.png';
+import helipad from '../../assets/stages/helipad.png';
 import rooftop from '../../assets/stages/rooftop.png';
 
 export type Ambient = 'storm' | 'concert' | 'rain' | 'smoke' | 'embers';
@@ -92,5 +93,16 @@ export const STAGES: StageDef[] = [
     ambient: 'embers',
     tint: 0xf2ffe8,
     glow: { x: 104, y: 192, r: 46, color: 0xffb040 },
+  },
+  {
+    id: 'helipad',
+    name: 'THE HELIPAD',
+    place: 'Command post over the city',
+    url: helipad,
+    groundSrcY: 292,
+    music: 'helipad',
+    ambient: 'storm',
+    tint: 0xe8f0ff,
+    glow: { x: 478, y: 118, r: 40, color: 0x8fd0ff },
   },
 ];

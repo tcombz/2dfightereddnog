@@ -11,6 +11,7 @@ const TINT: Record<SuperStyle, number> = {
   world: 0x031431,
   crown: 0x2a1200,
   quake: 0x1c1404,
+  squad: 0x020c26,
 };
 
 export class SuperFx {
@@ -106,6 +107,24 @@ export class SuperFx {
       }
       const glow = this.w(s.add.image(x, footY - 120, 'fx_glow').setTint(0xffb020).setBlendMode(Phaser.BlendModes.ADD).setScale(0.6).setAlpha(0.8), 10);
       s.tweens.add({ targets: glow, scale: 5, alpha: 0, duration: 1000, onComplete: () => glow.destroy() });
+    } else if (style === 'squad') {
+      // Operation: Backup. A dropship roars over, searchlights sweep, and the squad lines up on both sides.
+      const ship = this.w(s.add.image(x - facing * 700, footY - 430, 'fx_dropship').setScale(1.6).setFlipX(facing < 0), 10);
+      s.tweens.add({ targets: ship, x: x + facing * 700, duration: 1400, ease: 'Sine.easeInOut' });
+      this.fadeOut([ship], 1200, 300);
+      for (const [bx, a] of [[x - 260, -20], [x + 260, 20]] as Array<[number, number]>) {
+        const beam = this.w(s.add.image(bx, footY - 560, 'fx_beam').setOrigin(0.5, 0).setTint(0x4aa8ff).setAlpha(0).setAngle(a).setBlendMode(Phaser.BlendModes.ADD).setScale(1.3, 1.1), 11);
+        s.tweens.add({ targets: beam, alpha: 0.55, angle: -a, duration: 650, yoyo: true });
+        this.fadeOut([beam], 1300, 200);
+      }
+      for (const side of [-1, 1]) {
+        for (let k = 0; k < 2; k += 1) {
+          const sq = this.w(s.add.image(x + side * (420 + k * 90), footY + 4, 'fx_squad').setOrigin(0.5, 1).setScale(1.2 - k * 0.15).setFlipX(side > 0).setAlpha(0), 11 - k);
+          s.tweens.add({ targets: sq, alpha: 0.95, x: x + side * (170 + k * 110), duration: 420, delay: 120 + k * 120, ease: 'Cubic.easeOut' });
+          this.fadeOut([sq], 1150, 350);
+        }
+      }
+      s.time.delayedCall(500, () => this.scene.cameras.main.shake(200, 0.006));
     } else {
       // The crown drops in over his head as the cut-in clears, and stays through the rush.
       const crown = this.w(s.add.image(x, footY - 470, 'fx_crown').setScale(0.3).setAlpha(0), 33);
@@ -135,6 +154,12 @@ export class SuperFx {
     else if (style === 'crown') {
       if (clock % 2 === 0) this.embers(x + facing * 60, footY, 3);
       for (const o of this.crown) if (o.active) o.x += (x - o.x) * 0.35;
+    } else if (style === 'squad' && clock % 3 === 0) {
+      // The squad lays down cover: tracer streaks flying past him at the target.
+      const s = this.scene;
+      const y = footY - 90 - Math.random() * 120;
+      const t = this.w(s.add.image(x - facing * 200, y, 'fx_glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0x9fd4ff).setScale(0.9, 0.05), 34);
+      s.tweens.add({ targets: t, x: x + facing * 420, alpha: 0, duration: 220, onComplete: () => t.destroy() });
     } else if (style === 'quake' && clock % 6 === 0) {
       // Every slam kicks up rocks and dust in front of him.
       const s = this.scene;
