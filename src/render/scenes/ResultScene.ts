@@ -7,6 +7,7 @@ import type { MatchSetup } from '../config';
 import { artFor, feetOrigin, frameName, menuScale } from '../heroArt';
 import { heroInfo } from '../heroInfo';
 import { arcadeSetup } from '../arcade';
+import { afterMatch, leaderboard } from '../party';
 import { STAGES } from '../stages';
 import { Menu, body, display, goTo, goldFill, stripes } from '../ui';
 
@@ -60,6 +61,7 @@ export class ResultScene extends Phaser.Scene {
         .setOrigin(...feetOrigin(art))
         .setScale(menuScale(art, 3));
       let who = setup.mode === 'cpu' && winner === 1 ? 'CPU' : `PLAYER ${winner + 1}`;
+      if (setup.party) who = setup.party.names[setup.party.sides[winner]];
       if (run && won) who = champion ? 'ARCADE CLEAR' : `FIGHT ${run.fight + 1} OF ${run.order.length} WON`;
       this.add.text(470, 70, who, display(18, winner === 0 ? CSS.p1 : CSS.p2, 4));
       const t = this.add.text(470, 92, champion ? `${info.title}: CHAMPION` : `${info.title} WINS`, display(42, '#ffffff', 8));
@@ -80,6 +82,34 @@ export class ResultScene extends Phaser.Scene {
 
     const mainMenu = { label: 'MAIN MENU', onSelect: () => goTo(this, 'title', { skipIntro: true }) };
     let items;
+    const party = setup.party;
+    if (party) {
+      const next = afterMatch(party, winner === 0 || winner === 1 ? winner : -1);
+      if ((winner === 0 || winner === 1) && next.streak > 1) {
+        this.add.text(470 + 200, 248, `${next.streak} IN A ROW!`, display(22, CSS.gold, 4));
+      }
+      const up = `NEXT:  ${next.names[next.sides[0]]}  vs  ${next.names[next.sides[1]]}`;
+      this.add.text(470, 284, up, display(15, CSS.ink, 4));
+      // The champion keeps their fighter and their controls; the challenger picks fresh.
+      const keep = (side: number): boolean => next.sides[side] === party.sides[side];
+      const simple = (this.registry.get('simple') as boolean | undefined) ?? false;
+      const carry = {
+        mode: 'versus' as const,
+        cpuLevel: setup.cpuLevel,
+        party: next,
+        p1: keep(0) ? setup.p1 : undefined,
+        p2: keep(1) ? setup.p2 : undefined,
+        simple: [keep(0) ? (setup.simple?.[0] ?? simple) : simple, keep(1) ? (setup.simple?.[1] ?? simple) : simple] as [boolean, boolean],
+      };
+      items = [
+        { label: 'NEXT MATCH', onSelect: () => goTo(this, 'select', carry) },
+        { label: 'END PARTY', onSelect: () => goTo(this, 'party') },
+      ];
+      this.standings(next);
+      this.menu = new Menu(this, 470, 326, items);
+      controls.take();
+      return;
+    }
     if (run && champion) {
       items = [{ label: 'PLAY ARCADE AGAIN', onSelect: () => goTo(this, 'select', { mode: 'cpu', cpuLevel: run.base, arcadeStart: true }) }, mainMenu];
     } else if (run && won) {
@@ -89,12 +119,28 @@ export class ResultScene extends Phaser.Scene {
     } else {
       items = [
         { label: 'REMATCH', onSelect: () => goTo(this, 'versus', setup) },
-        { label: 'CHARACTER SELECT', onSelect: () => goTo(this, 'select', { mode: setup.mode, cpuLevel: setup.cpuLevel }) },
+        { label: 'CHARACTER SELECT', onSelect: () => goTo(this, 'select', { mode: setup.mode, cpuLevel: setup.cpuLevel, simple: setup.simple }) },
         mainMenu,
       ];
     }
     this.menu = new Menu(this, 470, 310, items);
     controls.take();
+  }
+
+  /** Party standings for the night: wins and best streak, top six. */
+  private standings(p: ReturnType<typeof afterMatch>): void {
+    const rows = leaderboard(p).slice(0, 6);
+    const x = 470;
+    const y = 418;
+    const g = this.add.graphics();
+    g.fillStyle(C.panel, 0.88).fillRoundedRect(x, y - 8, 440, 26 + rows.length * 17, 10);
+    this.add.text(x + 14, y - 2, 'TONIGHT', display(12, CSS.gold, 3));
+    this.add.text(x + 426, y - 2, 'WINS  ·  BEST RUN', body(12, CSS.muted)).setOrigin(1, 0);
+    rows.forEach((r, k) => {
+      const lead = k === 0 && r.wins > 0;
+      this.add.text(x + 14, y + 16 + k * 17, `${k + 1}. ${r.name}${lead ? '  ★' : ''}`, body(14, lead ? CSS.gold : CSS.ink));
+      this.add.text(x + 426, y + 16 + k * 17, `${r.wins}  ·  ${r.best}`, body(14, CSS.ink)).setOrigin(1, 0);
+    });
   }
 
   /** Arcade cleared: confetti in the champion's colours. */

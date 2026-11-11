@@ -49,6 +49,26 @@ export interface MatchSetup {
   cpuLevel: number;
   /** Set when this match is part of an arcade run. */
   arcade?: ArcadeRun;
+  /** Set in party mode: who is playing, and the winner-stays-on queue. */
+  party?: PartyState;
+  /** Per-player simple specials (one direction + special), chosen at character select. */
+  simple?: [boolean, boolean];
+}
+
+/** Party mode: winner stays on, the loser hands the controller to the next name in the queue. */
+export interface PartyState {
+  names: string[];
+  /** Which name is on each side right now. */
+  sides: [number, number];
+  /** Names waiting their turn, next first. */
+  queue: number[];
+  wins: number[];
+  /** Longest winning streak per name, and the current champion's streak. */
+  best: number[];
+  streak: number;
+  matches: number;
+  /** Who won the last match, for streaks. */
+  lastWinner?: number;
 }
 
 /** An arcade run: the opponents in order, which fight is next, continues used, and the difficulty. */

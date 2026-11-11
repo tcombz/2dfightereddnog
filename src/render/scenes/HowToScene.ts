@@ -77,9 +77,9 @@ export class HowToScene extends Phaser.Scene {
       });
     } else if (this.page === 1) {
       BASICS.forEach(([name, text], r) => {
-        const y = 108 + r * 34;
+        const y = 106 + r * 31;
         add(this.add.text(70, y, name.toUpperCase(), display(16, CSS.gold, 4)));
-        add(this.add.text(290, y, text, body(16, CSS.ink)).setWordWrapWidth(590));
+        add(this.add.text(290, y, text, body(15, CSS.ink)).setWordWrapWidth(620));
       });
     } else {
       const hero = this.page - 3;

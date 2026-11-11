@@ -20,6 +20,7 @@ import {
   getHurtboxes,
   getMove,
   getProjectile,
+  rallying,
   step,
 } from '../../sim';
 import type { GameState } from '../../sim';
@@ -61,6 +62,8 @@ export class FightScene extends Phaser.Scene {
   private world!: Phaser.GameObjects.Layer;
   private ui!: Phaser.GameObjects.Layer;
   private sprites: Phaser.GameObjects.Image[] = [];
+  /** Rally: a hot glow behind a fighter who is low on health and building meter fast. */
+  private rallyGlow: Phaser.GameObjects.Image[] = [];
   private shadows: Phaser.GameObjects.Image[] = [];
   private projViews: ProjectileView[] = [];
   private darken!: Phaser.GameObjects.Rectangle;
@@ -112,7 +115,7 @@ export class FightScene extends Phaser.Scene {
     const simple = (this.registry.get('simple') as boolean | undefined) ?? false;
     this.state = createInitialState(setup.p1, setup.p2, {
       training: setup.mode === 'training',
-      simple: [simple, simple && setup.mode === 'versus'],
+      simple: setup.simple ? [setup.simple[0], setup.simple[1] && setup.mode === 'versus'] : [simple, simple && setup.mode === 'versus'],
     });
     this.acc = 0;
     this.clock = 0;
@@ -151,8 +154,10 @@ export class FightScene extends Phaser.Scene {
 
     this.sprites = [];
     this.shadows = [];
+    this.rallyGlow = [];
     this.state.fighters.forEach((f, i) => {
       const art = artFor(f.hero);
+      this.rallyGlow.push(this.add.image(f.x, GROUND_Y, 'fx_glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xff5a1e).setDepth(29).setVisible(false));
       this.shadows.push(this.add.image(f.x, GROUND_Y + 2, 'fx_shadow').setDepth(12).setAlpha(0.8));
       this.sprites.push(this.add.image(f.x, GROUND_Y, art.key).setScale(art.scale).setDepth(30 + i));
       this.projViews.push({
@@ -161,7 +166,7 @@ export class FightScene extends Phaser.Scene {
         extra: [0, 1].map(() => this.add.image(0, 0, 'fx_card').setVisible(false).setDepth(45)),
       });
     });
-    this.world.add([...this.shadows, ...this.sprites, ...this.projViews.flatMap((p) => [p.glow, p.img, ...p.extra])]);
+    this.world.add([...this.rallyGlow, ...this.shadows, ...this.sprites, ...this.projViews.flatMap((p) => [p.glow, p.img, ...p.extra])]);
     this.debugG = this.add.graphics().setDepth(90);
     this.world.add(this.debugG);
     this.fx = new Effects(this, this.world);
@@ -285,6 +290,16 @@ export class FightScene extends Phaser.Scene {
       const x = f.fxX;
       const y = GROUND_Y - f.fxY;
       const dir = f.x >= att.x ? 1 : -1;
+
+      // Rally: dropping to a third of your health lights you up and doubles your meter gain.
+      if (!next.training && next.phase === Phase.Fight && rallying(f) && !rallying(p) && p.health > 0) {
+        const info = heroInfo(HEROES[f.hero].id);
+        this.time.delayedCall(220, () => {
+          this.fx.popText(f.x, GROUND_Y - f.y - 290, 'RALLY!', '#ff8a3a');
+          this.fx.ring(f.x, GROUND_Y - f.y - 110, info.accent, 1.3);
+          sfx(this, 'super', 0.35, 300);
+        });
+      }
 
       if (f.fx === FX.Hit || f.fx === FX.Counter || f.fx === FX.Punish || f.fx === FX.Throw) {
         const projectileHit = att.state !== FS.Attack || att.moveHits === 0;
@@ -511,6 +526,13 @@ export class FightScene extends Phaser.Scene {
       // Hit shake: whoever was just hit (or blocked) jitters for the length of the impact freeze.
       const shaken = s.hitstop > 0 && s.freezeSlot < 0 && (f.state === FS.Hitstun || f.state === FS.Knockdown || f.state === FS.KO || (f.state === FS.Block && f.stunTimer > 0));
       const jitter = shaken ? ((this.clock & 1) === 0 ? 1 : -1) * Math.min(7, 2 + (s.hitstop >> 1)) : 0;
+      const glow = this.rallyGlow[i];
+      const rally = !s.training && rallying(f) && (s.phase === Phase.Fight || s.phase === Phase.Intro);
+      glow.setVisible(rally);
+      if (rally) {
+        const pulse = 0.8 + 0.2 * Math.sin(this.clock * 0.01 + i);
+        glow.setPosition(f.x, GROUND_Y - f.y - 100).setScale(2.2 * pulse, 3.2).setAlpha(pulse);
+      }
       sprite
         .setFrame(pose.frame)
         .setOrigin(...feetOrigin(art, f.facing !== 1))
@@ -780,7 +802,7 @@ export class FightScene extends Phaser.Scene {
   private buildTrial(): void {
     this.clearTrialUi();
     const t = TRIALS[this.trialIndex];
-    const simple = (this.registry.get('simple') as boolean | undefined) ?? false;
+    const simple = this.setup.simple?.[0] ?? (this.registry.get('simple') as boolean | undefined) ?? false;
     const y = 108;
     const done = this.trialCleared[this.trialIndex] ? '  ✓' : '';
     const title = this.add.text(VIEW_W / 2, y, `TRIAL ${this.trialIndex + 1}/${TRIALS.length}  ·  ${t.name.toUpperCase()}${done}`, display(18, '#ffffff', 5)).setOrigin(0.5, 0);
@@ -826,7 +848,11 @@ export class FightScene extends Phaser.Scene {
     }
     items.push(
       { label: 'RESTART', onSelect: () => goTo(this, 'fight', this.setup) },
-      { label: 'CHARACTER SELECT', onSelect: () => goTo(this, 'select', { mode: this.setup.mode, cpuLevel: this.setup.cpuLevel }) },
+      {
+        label: 'CHARACTER SELECT',
+        onSelect: () =>
+          goTo(this, 'select', { mode: this.setup.mode, cpuLevel: this.setup.cpuLevel, party: this.setup.party, simple: this.setup.simple }),
+      },
       { label: 'MAIN MENU', onSelect: () => goTo(this, 'title', { skipIntro: true }) },
     );
     this.pauseMenu = new Menu(this, VIEW_W / 2 - 170, items.length > 5 ? 186 : 200, items, 340, items.length > 5 ? 42 : 46);

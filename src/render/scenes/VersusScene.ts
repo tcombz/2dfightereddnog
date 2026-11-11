@@ -56,7 +56,26 @@ export class VersusScene extends Phaser.Scene {
         .text(i === 0 ? 32 : VIEW_W - 32, i === 0 ? 92 : VIEW_H - 40, `"${info.tagline}"`, body(17, i === 0 ? '#bcd6ff' : '#ffd8bc'))
         .setOrigin(i === 0 ? 0 : 1, 0)
         .setAlpha(0);
-      this.tweens.add({ targets: [name, tag], alpha: 1, duration: 300, delay: 300 + i * 120 });
+      // Pre-fight banter: one line each, the second a beat later, like a callout before the bell.
+      const line = info.quotes[Math.floor(Math.random() * info.quotes.length)];
+      const banter = this.add
+        .text(i === 0 ? 32 : VIEW_W - 32, i === 0 ? 124 : VIEW_H - 160, `"${line}"`, body(19, '#111428'))
+        .setOrigin(i === 0 ? 0 : 1, 0)
+        .setBackgroundColor('#ffffffee')
+        .setPadding(12, 6, 12, 6)
+        .setAlpha(0)
+        .setScale(0.6);
+      this.tweens.add({ targets: banter, alpha: 1, scale: 1, duration: 220, delay: 900 + i * 650, ease: 'Back.easeOut' });
+      const tweenTargets: Phaser.GameObjects.Text[] = [name, tag];
+      const party = setup.party;
+      if (party) {
+        const who = this.add
+          .text(i === 0 ? 32 : VIEW_W - 32, i === 0 ? 16 : VIEW_H - 120, party.names[party.sides[i]], display(18, i === 0 ? '#9cc3ff' : '#ffb98a', 5))
+          .setOrigin(i === 0 ? 0 : 1, 0)
+          .setAlpha(0);
+        tweenTargets.push(who);
+      }
+      this.tweens.add({ targets: tweenTargets, alpha: 1, duration: 300, delay: 300 + i * 120 });
     });
 
     const vs = this.add.text(VIEW_W / 2, VIEW_H / 2, 'VS', display(120, '#ffffff', 12)).setOrigin(0.5).setScale(3).setAlpha(0);

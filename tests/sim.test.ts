@@ -17,6 +17,7 @@ import {
   getMove,
   hashState,
   heroIndex,
+  rallying,
   step,
 } from '../src/sim';
 import type { GameState } from '../src/sim';
@@ -116,7 +117,7 @@ describe('determinism', () => {
     expect(h2).toBe(h1);
     expect(h3).toBe(h1);
     // Golden value: pins the result across runs, machines and refactors.
-    expect(h1).toMatchInlineSnapshot(`"7b5a89ca"`);
+    expect(h1).toMatchInlineSnapshot(`"449edcc5"`);
   });
 
   it('resuming from a serialized mid-run state gives the same hash', () => {
@@ -596,6 +597,30 @@ describe('punish counters and chip KOs', () => {
     s.fighters[1].health = 5;
     s = play(s, [[Heavy | Special, L]], 120, [0, L]).s;
     expect(s.fighters[1].health).toBe(0);
+  });
+});
+
+describe('rally', () => {
+  /** Meter both fighters gain from one Rogue jab, at full health or on a third. */
+  function meterFromJab(low: boolean): { def: number; att: number } {
+    let s = fight(ROGUE, JET, 80);
+    for (const f of s.fighters) {
+      const max = HEROES[f.hero].stats.maxHealth;
+      f.health = low ? (max / 3) | 0 : max;
+    }
+    for (let t = 0; t < 12; t += 1) s = step(s, t === 0 ? Light : 0, 0);
+    expect(s.fighters[1].comboDamage).toBeGreaterThan(0);
+    return { def: s.fighters[1].meter, att: s.fighters[0].meter };
+  }
+
+  it('on a third of your health or less, meter builds twice as fast', () => {
+    const max = HEROES[JET].stats.maxHealth;
+    const full = meterFromJab(false);
+    const low = meterFromJab(true);
+    expect(full.def).toBeGreaterThan(0);
+    expect(low.def).toBe(full.def * 2);
+    expect(low.att).toBe(full.att * 2);
+    expect(rallying({ ...createInitialState(ROGUE, JET).fighters[1], health: max })).toBe(false);
   });
 });
 

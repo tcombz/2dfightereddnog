@@ -35,6 +35,7 @@
     `stages.ts` stage art and ambience; `hud.ts`; `fx.ts` procedural effects; `audio.ts` music and
     sound; `ui.ts` menu widgets; `moves.ts` move list text; `trials.ts` combo trials and the combo tracker
     (training mode, F4); `arcade.ts` the arcade ladder (opponent order, home stages, CPU levels);
+    `party.ts` party mode (winner stays on, queue, streaks, leaderboard; lobby in `scenes/PartyScene.ts`);
     `superFx.ts` super cinematics; `config.ts` sizes, colours, game title
 - `src/input/controls.ts` keyboard (two players on one keyboard) and gamepads, plus menu events
 - `src/ai/cpu.ts` computer opponent (easy, normal, hard) and the training dummy's auto-guard

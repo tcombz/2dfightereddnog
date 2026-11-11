@@ -50,8 +50,9 @@ export class TitleScene extends Phaser.Scene {
     this.menu = new Menu(
       this,
       VIEW_W / 2 - 190,
-      244,
+      250,
       [
+        { label: 'PARTY MODE', onSelect: () => goTo(this, 'party') },
         {
           label: 'ARCADE',
           value: () => `◀ ${CPU_LEVELS[cpuLevel()]} ▶`,
@@ -86,8 +87,8 @@ export class TitleScene extends Phaser.Scene {
         },
       ],
       380,
-      27,
-      18,
+      24,
+      17,
     );
     this.menu.setVisible(false);
     if (data?.skipIntro) this.open();

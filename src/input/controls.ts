@@ -210,6 +210,8 @@ export class Controls {
       // Defaults apply.
     }
     window.addEventListener('keydown', (e) => {
+      // Typing in a text box (party names) is not game input.
+      if (e.target instanceof HTMLInputElement) return;
       const p1 = P1[e.code];
       const p2 = P2[e.code];
       if (p1 !== undefined || p2 !== undefined || e.code === 'Enter' || e.code === 'Escape' || e.code === 'Backspace') {

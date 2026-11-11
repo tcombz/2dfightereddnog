@@ -52,6 +52,19 @@ decisions, while the full scheme keeps its depth.
 | Community | Two players on one keyboard, gamepads, shareable web link. The sim is a pure, deterministic `step()`, which is exactly what rollback netcode needs, so online versus is a realistic next step. |
 | On-ramps | Training mode with a guarding dummy, move lists, How to Play pages, CPU difficulty levels. |
 
+## Second pass: what this research changed (version 15)
+
+Each change answers one of the reasons above.
+
+| Reason it thrived | Change |
+| --- | --- |
+| Local competition, the arcade cabinet line | **Party mode** (title menu, first item). Type everyone's names in a lobby (or add players from a pad). Winner stays on with the same fighter and controls; the loser goes to the back of the line and the next name steps up. Names show on the select, VS and results screens, streaks get a star and a "3 IN A ROW!" callout, and a "Tonight" leaderboard ranks wins and best run. Names are remembered in the browser. |
+| Spectacle that rewards comebacks | **Rally.** On a third of your health or less you build super meter twice as fast (from hitting, blocking and being hit). A "RALLY!" callout and a warm glow behind the fighter mark it, and the meter reads "SUPER · RALLY x2". It is a pure function of health, so the losing player always has a way back without a random swing. |
+| Accessible on-ramps (Modern controls) | **Per-player controls.** Each player picks CLASSIC (motion inputs) or SIMPLE (→/↓ + SPECIAL) with Up / Down on the select screen, so a veteran and a first-timer can play each other on their own terms. The pick carries into rematches and party matches. |
+| Characters you can read and remember | **Pre-fight banter.** Each fighter calls out one of their own lines on the VS screen, the second a beat after the first. |
+
+The How to Play basics page explains Rally and the per-player controls.
+
 ## Sources
 
 - [How Street Fighter 2 Accidentally Invented Combos (GG Recon)](https://www.ggrecon.com/articles/how-street-fighter-2-accidentally-invented-combos/)

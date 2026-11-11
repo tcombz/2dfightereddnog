@@ -28,6 +28,8 @@ interface Side {
   style: Phaser.GameObjects.Text;
   tagline: Phaser.GameObjects.Text;
   ready: Phaser.GameObjects.Text;
+  /** Classic or simple specials, picked per player with up and down. */
+  controls: Phaser.GameObjects.Text;
   lockedAt: number;
 }
 
@@ -62,7 +64,17 @@ export class SelectScene extends Phaser.Scene {
     (this as unknown as { leaving: boolean }).leaving = false;
     this.arcade = data.arcadeStart === true;
     this.arcadeTimer = null;
-    this.setup = { mode: data.mode ?? 'cpu', p1: 0, p2: 1, stage: 0, cpuLevel: data.cpuLevel ?? 1 };
+    const mode = data.mode ?? 'cpu';
+    const simple = (this.registry.get('simple') as boolean | undefined) ?? false;
+    this.setup = {
+      mode,
+      p1: 0,
+      p2: 1,
+      stage: 0,
+      cpuLevel: data.cpuLevel ?? 1,
+      party: data.party,
+      simple: data.simple ? [...data.simple] : [simple, simple && mode === 'versus'],
+    };
     this.phase = 'heroes';
     this.stage = Math.floor(Math.random() * STAGES.length);
     this.cameras.main.fadeIn(250, 5, 6, 12);
@@ -77,9 +89,28 @@ export class SelectScene extends Phaser.Scene {
 
     this.header = this.add.text(VIEW_W / 2, 34, 'CHOOSE YOUR FIGHTER', display(32, '#ffffff', 7)).setOrigin(0.5);
     goldFill(this.header);
-    const vsLabel = this.arcade ? 'ARCADE' : this.setup.mode === 'versus' ? 'PLAYER 2' : this.setup.mode === 'training' ? 'DUMMY' : 'CPU';
-    this.add.text(30, 70, 'PLAYER 1', display(16, CSS.p1, 4));
-    this.add.text(VIEW_W - 30, 70, vsLabel, display(16, CSS.p2, 4)).setOrigin(1, 0);
+    const party = this.setup.party;
+    const vsLabel = party
+      ? party.names[party.sides[1]]
+      : this.arcade
+        ? 'ARCADE'
+        : this.setup.mode === 'versus'
+          ? 'PLAYER 2'
+          : this.setup.mode === 'training'
+            ? 'DUMMY'
+            : 'CPU';
+    const p1Label = this.add.text(30, 70, party ? party.names[party.sides[0]] : 'PLAYER 1', display(16, CSS.p1, 4));
+    const p2Label = this.add.text(VIEW_W - 30, 70, vsLabel, display(16, CSS.p2, 4)).setOrigin(1, 0);
+    if (party) {
+      this.add.text(VIEW_W / 2, 64, `PARTY  ·  MATCH ${party.matches + 1}`, display(13, CSS.gold, 3)).setOrigin(0.5, 0);
+      if (party.streak > 1 && party.lastWinner !== undefined) {
+        const champSide = party.sides.indexOf(party.lastWinner);
+        if (champSide >= 0) {
+          const label = champSide === 0 ? p1Label : p2Label;
+          label.setText(`${label.text}  ★${party.streak}`);
+        }
+      }
+    }
 
     // Roster tiles: every hero, then random.
     const total = this.slots * (TILE + 14) - 14;
@@ -114,6 +145,7 @@ export class SelectScene extends Phaser.Scene {
         style: this.add.text(tx, 130, '', body(14, CSS.muted)).setOrigin(align, 0),
         tagline: this.add.text(tx, 150, '', body(15, CSS.gold)).setOrigin(align, 0),
         ready: this.add.text(x, 112, 'READY', display(30, '#ffffff', 7)).setOrigin(0.5).setVisible(false),
+        controls: this.add.text(i === 0 ? 32 : VIEW_W - 32, 290, '', body(13, CSS.ink)).setOrigin(align, 0),
         lockedAt: 0,
       };
     });
@@ -136,6 +168,9 @@ export class SelectScene extends Phaser.Scene {
     );
 
     this.hint = this.add.text(VIEW_W / 2, VIEW_H - 14, '', body(13, CSS.muted)).setOrigin(0.5, 1);
+    // Winner stays on with the same fighter (they can still change).
+    if (data.p1 !== undefined) this.sides[0].cursor = data.p1;
+    if (data.p2 !== undefined) this.sides[1].cursor = data.p2;
     this.refresh();
     controls.take();
   }
@@ -146,9 +181,31 @@ export class SelectScene extends Phaser.Scene {
     return this.sides[0].locked && !this.arcade ? 1 : 0;
   }
 
+  /** Sides a person plays (the CPU and the dummy have no controls to pick). */
+  private human(i: number): boolean {
+    return i === 0 || this.setup.mode === 'versus';
+  }
+
+  private toggleControls(i: number): void {
+    const s = this.setup.simple ?? [false, false];
+    s[i] = !s[i];
+    this.setup.simple = s;
+    sfx(this, 'ui_move', 0.8);
+    this.refresh();
+  }
+
   private refresh(): void {
     for (let i = 0; i < 2; i += 1) {
       const side = this.sides[i];
+      const simple = this.setup.simple?.[i] ?? false;
+      side.controls
+        .setVisible(this.human(i) && this.phase === 'heroes')
+        .setText(
+          simple
+            ? `▲▼ CONTROLS: SIMPLE  ·  specials on one button`
+            : `▲▼ CONTROLS: CLASSIC  ·  motion inputs`,
+        )
+        .setColor(simple ? CSS.gold : CSS.ink);
       const hero = side.cursor < HEROES.length ? side.cursor : -1;
       if (i === 1 && this.arcade) {
         side.preview.setVisible(false);
@@ -174,7 +231,7 @@ export class SelectScene extends Phaser.Scene {
     this.hint.setText(
       this.phase === 'stage'
         ? 'Choose a stage  ·  Left / Right  ·  Confirm: Enter, F or A  ·  Back: Esc, G or B'
-        : `${who}  ·  Confirm: Enter, F or A  ·  Back: Esc, G or B`,
+        : `${who}  ·  Up / Down: controls  ·  Confirm: Enter, F or A  ·  Back: Esc, G or B`,
     );
   }
 
@@ -237,7 +294,7 @@ export class SelectScene extends Phaser.Scene {
       this.sides[0].locked = false;
       this.sides[0].ready.setVisible(false);
     } else {
-      goTo(this, 'title', { skipIntro: true });
+      goTo(this, this.setup.party ? 'party' : 'title', { skipIntro: true });
       return;
     }
     this.refresh();
@@ -270,7 +327,8 @@ export class SelectScene extends Phaser.Scene {
         side.cursor = (side.cursor + (e.action === 'left' ? -1 : 1) + this.slots) % this.slots;
         sfx(this, 'ui_move', 0.8);
         this.refresh();
-      } else if (e.action === 'confirm') this.lock(i);
+      } else if ((e.action === 'up' || e.action === 'down') && this.human(i)) this.toggleControls(i);
+      else if (e.action === 'confirm') this.lock(i);
     }
 
     // Previews: idle, or the win pose once locked.

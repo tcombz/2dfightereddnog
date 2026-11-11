@@ -46,16 +46,17 @@ export function moveList(hero: number): MoveLine[] {
 
 export const BASICS: Array<[string, string]> = [
   ['Block', 'Hold away from your opponent. Hold down-away to block low.'],
-  ['Highs and lows', 'Sweeps and low jabs must be blocked crouching. Jump attacks must be blocked standing.'],
+  ['Highs and lows', 'Block sweeps and low jabs crouching, and jump attacks standing.'],
   ['Throw', 'LIGHT + HEAVY next to a blocking opponent.'],
-  ['Combos', 'A light that hits can chain into another normal or a special. Heavies cancel into specials.'],
+  ['Combos', 'Lights chain into other normals or specials. Heavies cancel into specials.'],
   ['Super meter', 'Fills as you attack and take hits. Full meter: HEAVY + SPECIAL.'],
   ['Dash', 'Tap forward twice. Tap back twice to back-dash.'],
   ['Counter hit', 'Hit someone as they start an attack for extra damage.'],
   ['Throw break', 'Press LIGHT + HEAVY as you are grabbed to break the throw.'],
   ['Buffer', 'Press your next attack a moment early: it comes out on the first free frame.'],
-  ['Simple specials', 'Options menu: → + SPECIAL for the projectile, ↓ + SPECIAL for the rising attack.'],
-  ['Armor', 'Some big moves soak hits and keep coming. Throw them, or hit them with a super.'],
+  ['Simple specials', 'Pick at character select (Up / Down): → + SPECIAL shoots, ↓ + SPECIAL rises.'],
+  ['Armor', 'Big moves that soak hits and keep coming. Beat them with a throw or a super.'],
+  ['Rally', 'On a third of your health or less, you glow and build meter twice as fast.'],
 ];
 
 /** Routes that work for every fighter (the combo trials). ">" is a cancel, "," a chain. */

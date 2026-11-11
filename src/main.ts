@@ -7,6 +7,7 @@ import { BootScene } from './render/scenes/BootScene';
 import { ControllerScene } from './render/scenes/ControllerScene';
 import { FightScene } from './render/scenes/FightScene';
 import { HowToScene } from './render/scenes/HowToScene';
+import { PartyScene } from './render/scenes/PartyScene';
 import { ResultScene } from './render/scenes/ResultScene';
 import { SelectScene } from './render/scenes/SelectScene';
 import { TitleScene } from './render/scenes/TitleScene';
@@ -28,7 +29,7 @@ async function start(): Promise<void> {
     pixelArt: true,
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     input: { gamepad: false },
-    scene: [BootScene, TitleScene, SelectScene, VersusScene, FightScene, ResultScene, HowToScene, ControllerScene],
+    scene: [BootScene, TitleScene, SelectScene, VersusScene, FightScene, ResultScene, HowToScene, ControllerScene, PartyScene],
   });
   // Exposed for automated play-testing.
   (window as unknown as { __game: Phaser.Game }).__game = game;

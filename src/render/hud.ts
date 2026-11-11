@@ -1,6 +1,6 @@
 // The fight HUD. Reads sim state; draws on its own camera so screen shake and zoom leave it alone.
 import Phaser from 'phaser';
-import { HEROES, METER_MAX, Phase, ROUNDS_TO_WIN, TICK_RATE } from '../sim';
+import { HEROES, METER_MAX, Phase, ROUNDS_TO_WIN, TICK_RATE, rallying } from '../sim';
 import type { GameState } from '../sim';
 import { C, CSS, VIEW_H, VIEW_W } from './config';
 import { heroInfo } from './heroInfo';
@@ -145,7 +145,11 @@ export class Hud {
       const flash = full ? 0.6 + 0.4 * Math.abs(Math.sin(s.tick * 0.12)) : 1;
       g.fillStyle(full ? C.meterFull : C.meter, flash).fillRect(i === 0 ? mx : mx + mw - mwFill, my, mwFill, 12);
       g.lineStyle(2, full ? 0xffffff : 0x4aa8e0, 1).strokeRect(mx, my, mw, 12);
-      this.meterLabels[i].setText(full ? 'SUPER  READY' : 'SUPER').setColor(full ? '#9ff6ff' : CSS.muted);
+      const rally = !s.training && rallying(f);
+      if (rally && !full) g.lineStyle(2, 0xff7a2e, 0.5 + 0.5 * Math.abs(Math.sin(s.tick * 0.15))).strokeRect(mx - 2, my - 2, mw + 4, 16);
+      this.meterLabels[i]
+        .setText(full ? 'SUPER  READY' : rally ? 'SUPER  ·  RALLY x2' : 'SUPER')
+        .setColor(full ? '#9ff6ff' : rally ? '#ff9a4a' : CSS.muted);
 
       // Combo counter for the attacker's side: shows hits taken by the other fighter.
       const def = s.fighters[1 - i];

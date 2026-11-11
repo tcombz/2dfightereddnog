@@ -190,6 +190,15 @@ export function isActiveTick(m: MoveData, tick: number): boolean {
 
 // ---------- small helpers ----------
 
+/** Rally: on a third of your health or less, meter builds twice as fast (a way back into the round). */
+export function rallying(f: FighterState): boolean {
+  return f.health > 0 && f.health * 3 <= HEROES[f.hero].stats.maxHealth;
+}
+
+function addMeter(f: FighterState, n: number): void {
+  f.meter = Math.min(METER_MAX, f.meter + (rallying(f) ? n << 1 : n));
+}
+
 function setState(f: FighterState, state: number): void {
   f.state = state;
   f.stateTick = 0;
@@ -722,7 +731,7 @@ function applyHit(s: GameState, att: FighterState, def: FighterState, c: Contact
     if (def.armorHits < dm.armor && def.stateTick < dm.startup + dm.active) {
       def.armorHits += 1;
       def.health = Math.max(1, def.health - Math.max(1, d.damage >> 1));
-      att.meter = Math.min(METER_MAX, att.meter + (d.damage >> 2));
+      addMeter(att, d.damage >> 2);
       s.hitstop = Math.max(s.hitstop, d.hitstop);
       setFx(def, FX.Armor, c.x, c.y, d.hitstop);
       return;
@@ -739,8 +748,8 @@ function applyHit(s: GameState, att: FighterState, def: FighterState, c: Contact
     def.vx = 0;
     def.push = dir * d.knockback.x;
     if (!c.projectile) cornerPush(att, def, dir, d.knockback.x);
-    if (c.kind !== Kind.Super) att.meter = Math.min(METER_MAX, att.meter + (d.damage >> 2));
-    def.meter = Math.min(METER_MAX, def.meter + (d.damage >> 3));
+    if (c.kind !== Kind.Super) addMeter(att, d.damage >> 2);
+    addMeter(def, d.damage >> 3);
     s.hitstop = Math.max(s.hitstop, d.hitstop - 2);
     setFx(def, FX.Block, c.x, c.y, d.hitstop);
     return;
@@ -786,8 +795,8 @@ function applyHit(s: GameState, att: FighterState, def: FighterState, c: Contact
     if (!c.projectile) cornerPush(att, def, dir, d.knockback.x);
   }
 
-  if (c.kind !== Kind.Super) att.meter = Math.min(METER_MAX, att.meter + d.damage);
-  def.meter = Math.min(METER_MAX, def.meter + (dmg >> 1));
+  if (c.kind !== Kind.Super) addMeter(att, d.damage);
+  addMeter(def, dmg >> 1);
   s.hitstop = Math.max(s.hitstop, ko ? KO_FREEZE : d.hitstop);
   setFx(def, c.kind === Kind.Throw ? FX.Throw : counter ? FX.Counter : punish ? FX.Punish : FX.Hit, c.x, c.y, d.hitstop);
 }
