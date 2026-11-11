@@ -69,6 +69,9 @@ export interface HeroArt {
   win: number[];
   /** Frames played during the super freeze, before the super's own startup (empty: none). */
   powerUp: number[];
+  /** Forward dash run cycle and back-dash hop (empty: fall back to walk and jump frames). */
+  dash: number[];
+  backdash: number[];
   attacks: Record<MoveKey, AttackArt>;
 }
 
@@ -91,6 +94,8 @@ interface ArtJson {
   getup: number[];
   win: number[];
   powerUp: number[];
+  dash?: number[];
+  backdash?: number[];
   attacks: Record<string, AttackArt>;
 }
 
@@ -100,6 +105,8 @@ function fromJson(j: ArtJson): ArtFields {
   const { scale, cellW, cellH, feetX, feetY, face, idle, walk, jump, crouch, block, hit, fall, lying, getup, win, powerUp } = j;
   return {
     scale, cellW, cellH, feetX, feetY, face, idle, walk, jump, crouch, block, hit, fall, lying, getup, win, powerUp,
+    dash: j.dash ?? [],
+    backdash: j.backdash ?? [],
     attacks: j.attacks as Record<MoveKey, AttackArt>,
   };
 }
@@ -199,7 +206,8 @@ export function poseFor(art: HeroArt, f: FighterState, clock: number, celebratin
       return pose('walk', loop(art.walk, t, 6));
     }
     case FS.Dash:
-      return f.vx * f.facing > 0 ? pose('walk', loop(art.walk, f.stateTick, 3)) : pose('jump', 2);
+      if (f.vx * f.facing > 0) return art.dash.length ? pose('dash', loop(art.dash, f.stateTick, 3)) : pose('walk', loop(art.walk, f.stateTick, 3));
+      return art.backdash.length ? pose('backdash', spread(art.backdash, f.stateTick, st.backdashTicks)) : pose('jump', 2);
     case FS.Jump: {
       const airtime = Math.floor((2 * st.jumpVelocity) / st.gravity);
       return pose('jump', spread(art.jump, f.stateTick, airtime));

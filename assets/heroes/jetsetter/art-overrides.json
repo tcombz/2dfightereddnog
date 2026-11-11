@@ -52,7 +52,7 @@
    "loopActive": true
   }
  },
- "block": [
-  3
- ]
+ "rename": {
+  "block2": "block"
+ }
 }

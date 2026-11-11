@@ -4,7 +4,9 @@ sprite and art.json (draw scale, cell, feet anchor, face box and which frames pl
 
 Usage: python3 -I scripts/import-hero.py <unzipped character dir> <heroId> <world height>
 
-Optional assets/heroes/<heroId>/art-overrides.json: "skip" lists animations to leave out, "recolor"
+Optional assets/heroes/<heroId>/art-overrides.json: "skip" lists animations to leave out, "rename"
+maps a downloaded animation onto another name (a re-roll replacing the original), "clean" lists
+animations whose specks (tiny clusters apart from the body) are erased, "recolor"
 maps an animation to a hue in degrees (warm fire baked into a template becomes that colour), and any
 other key replaces the measured value in art.json ("attacks" entries are replaced one by one).
 
@@ -49,6 +51,35 @@ def recolor(im, hue):
     return im
 
 
+def clean(im, min_size=220):
+    """Erase translucent haze and small clusters of pixels not connected to anything bigger (generation specks)."""
+    px = im.load()
+    w, h = im.size
+    for y in range(h):
+        for x in range(w):
+            if 0 < px[x, y][3] < 100:
+                px[x, y] = (0, 0, 0, 0)
+    seen = bytearray(w * h)
+    for sy in range(h):
+        for sx in range(w):
+            if seen[sy * w + sx] or px[sx, sy][3] == 0:
+                continue
+            stack, comp = [(sx, sy)], []
+            seen[sy * w + sx] = 1
+            while stack:
+                x, y = stack.pop()
+                comp.append((x, y))
+                for nx in range(x - 1, x + 2):
+                    for ny in range(y - 1, y + 2):
+                        if 0 <= nx < w and 0 <= ny < h and not seen[ny * w + nx] and px[nx, ny][3] > 0:
+                            seen[ny * w + nx] = 1
+                            stack.append((nx, ny))
+            if len(comp) < min_size:
+                for x, y in comp:
+                    px[x, y] = (0, 0, 0, 0)
+    return im
+
+
 def anchor(im):
     pts = opaque_points(im)
     bottom = max(y for _, y in pts)
@@ -64,9 +95,14 @@ def main() -> None:
     overrides = json.loads(over_path.read_text()) if over_path.exists() else {}
     skip = set(overrides.pop('skip', ['jab6']))
     recolors = overrides.pop('recolor', {})
+    renames = overrides.pop('rename', {})
+    cleans = set(overrides.pop('clean', []))
     state = next(p for p in src.iterdir() if p.is_dir() and (p / 'animations').exists())
     anim_dir = state / 'animations'
     anims = {d.name: sorted((d / 'east').glob('*.png')) for d in anim_dir.iterdir() if (d / 'east').exists() and d.name not in skip}
+    for old, new in renames.items():
+        if old in anims:
+            anims[new] = anims.pop(old)
 
     # Feet anchor for each canvas size, from a standing frame of that size.
     anchors = {}
@@ -87,6 +123,8 @@ def main() -> None:
             im = Image.open(f).convert('RGBA')
             if name in recolors:
                 im = recolor(im, recolors[name])
+            if name in cleans:
+                im = clean(im)
             ax, ay = anchors[im.size]
             canvas = Image.new('RGBA', (big, big), (0, 0, 0, 0))
             canvas.paste(im, (fx - ax, fy - ay), im)
@@ -163,6 +201,8 @@ def main() -> None:
         'getup': list(range(count('getup'))),
         'win': list(range(1, count('win'))),
         'powerUp': list(range(1, count('power_up') - 1)) if 'power_up' in anims else [],
+        'dash': list(range(count('dash'))),
+        'backdash': list(range(1, count('backdash'))),
         'attacks': {
             'light': split(light, 'reach'),
             'heavy': heavy,
@@ -170,8 +210,9 @@ def main() -> None:
             'crouchLight': split('crouch_light', 'reach'),
             'sweep': split('sweep', 'low'),
             'jumpAttack': split('jump_attack', 'reach'),
-            'throw': {'anim': 'heavy_punch', 'startup': heavy['startup'][-1:], 'active': heavy['active'][:1],
-                      'recovery': list(range(heavy['active'][0] - 1, -1, -1)) or [0]},
+            'throw': split('grab', 'reach') if 'grab' in anims else {
+                'anim': 'heavy_punch', 'startup': heavy['startup'][-1:], 'active': heavy['active'][:1],
+                'recovery': list(range(heavy['active'][0] - 1, -1, -1)) or [0]},
             'special': split('special', 'reach'),
             'projectile': split('projectile', 'reach'),
             'rising': split('uppercut', 'top'),
