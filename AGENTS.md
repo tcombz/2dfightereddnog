@@ -40,6 +40,14 @@
     (training mode, F4); `arcade.ts` the arcade ladder (opponent order, home stages, CPU levels);
     `party.ts` party mode (winner stays on, queue, streaks, leaderboard; lobby in `scenes/PartyScene.ts`);
     `superFx.ts` super cinematics; `config.ts` sizes, colours, game title
+- `src/net/` online play: `rollback.ts` (rollback netcode over `step`: input delay, prediction,
+  rewind, time sync, desync hash check), `link.ts` (the claude.ai page's room when hosted there,
+  WebRTC through PeerJS elsewhere, `?net=local` for two tabs), `session.ts` (lobby state across
+  scenes; lobby UI in `scenes/OnlineScene.ts`)
+- `src/render/replays.ts` replays (run-length encoded inputs, last 10 saved in the browser; list in
+  `scenes/ReplaysScene.ts`); FightScene plays the finishing blow again before the results and runs
+  `mode: 'replay'`. `rivals.ts` per-matchup intro and win lines; `audio.ts` `announce()` is the
+  announcer (browser speech, toggle on the title screen)
 - `src/input/controls.ts` keyboard (two players on one keyboard) and gamepads, plus menu events
 - `src/ai/cpu.ts` computer opponent (easy, normal, hard) and the training dummy's auto-guard
 - `assets/heroes/<id>/` sprite frames, `atlas.png`, `atlas.json`, `art.json` and
@@ -52,6 +60,7 @@
   draw scale keeps each hero's world height matched to his hurtbox; the fight camera zooms to
   1.28x when the fighters are close.
 - `assets/stages/` stage art (768x320, drawn at 2x); `assets/audio/` sound effects and music loops
+- `tests/net.test.ts` rollback under lag and dropped messages, replay encoding
 - `tests/sim.test.ts` determinism, match flow, guarding, specials, combos (every trial route for every
   pair of fighters), movement, training and data tests
 

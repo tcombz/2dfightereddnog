@@ -24,16 +24,18 @@ const LOOPS: Record<string, { start: number; end: number }> = {
 interface Settings {
   music: number;
   sfx: number;
+  /** The announcer's voice (the browser's speech voice). */
+  voice: boolean;
 }
 
 function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem('afterhours.audio');
-    if (raw) return { music: 0.55, sfx: 0.8, ...JSON.parse(raw) };
+    if (raw) return { music: 0.55, sfx: 0.8, voice: true, ...JSON.parse(raw) };
   } catch {
     // Storage blocked: use defaults.
   }
-  return { music: 0.55, sfx: 0.8 };
+  return { music: 0.55, sfx: 0.8, voice: true };
 }
 
 export const settings: Settings = loadSettings();
@@ -115,4 +117,44 @@ export function sfx(scene: Phaser.Scene, name: string, volume = 1, detune = 0): 
   const key = `sfx_${name}`;
   if (settings.sfx <= 0 || !scene.cache.audio.exists(key)) return;
   scene.sound.play(key, { volume: settings.sfx * volume, detune });
+}
+
+export function setVoice(on: boolean): void {
+  settings.voice = on;
+  saveSettings();
+  if (!on) window.speechSynthesis?.cancel();
+}
+
+// ---------- the announcer ----------
+
+let voice: SpeechSynthesisVoice | null | undefined;
+
+/** A deep, clear English voice if the browser has one. */
+function pickVoice(): SpeechSynthesisVoice | null {
+  const all = window.speechSynthesis?.getVoices() ?? [];
+  const en = all.filter((v) => v.lang.toLowerCase().startsWith('en'));
+  const prefer = ['Google UK English Male', 'Daniel', 'Microsoft Guy', 'Microsoft David', 'Alex', 'Fred', 'Male'];
+  for (const name of prefer) {
+    const v = en.find((x) => x.name.includes(name));
+    if (v) return v;
+  }
+  return en[0] ?? null;
+}
+
+/** The announcer calls something out (cutting off whatever it was saying). */
+export function announce(text: string, urgent = true): void {
+  const synth = window.speechSynthesis;
+  if (!settings.voice || !synth || !text || settings.sfx <= 0) return;
+  try {
+    if (voice === undefined || voice === null) voice = pickVoice();
+    if (urgent) synth.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    if (voice) u.voice = voice;
+    u.rate = 1.0;
+    u.pitch = 0.5;
+    u.volume = Math.min(1, settings.sfx * 1.15);
+    synth.speak(u);
+  } catch {
+    // No speech in this browser: the banners still show.
+  }
 }

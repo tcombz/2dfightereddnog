@@ -1,12 +1,13 @@
 import Phaser from 'phaser';
 import { HEROES } from '../../sim';
-import { ensureMusic, sfx, stopMusic } from '../audio';
+import { announce, ensureMusic, sfx, stopMusic } from '../audio';
 import { CSS, VIEW_H, VIEW_W } from '../config';
 import type { MatchSetup } from '../config';
 import { artFor, feetOrigin, frameName, menuScale } from '../heroArt';
 import { heroInfo } from '../heroInfo';
 import { STAGES } from '../stages';
 import { body, display, goTo, goldFill, stripes } from '../ui';
+import { introLine } from '../rivals';
 
 /** The split-screen VS splash shown while the stage music loads. */
 export class VersusScene extends Phaser.Scene {
@@ -28,6 +29,8 @@ export class VersusScene extends Phaser.Scene {
     stripes(g, 0, 0, VIEW_W, VIEW_H, 0xffffff, 0.035);
     g.lineStyle(6, 0xffffff, 0.9).lineBetween(VIEW_W / 2 + 70, 0, VIEW_W / 2 - 70, VIEW_H);
 
+    const said = (h: number): string => heroInfo(HEROES[h].id).title.replace(/"[^"]*"/g, '').trim().toLowerCase();
+    announce(`${said(setup.p1)}. Versus. ${said(setup.p2)}!`);
     [setup.p1, setup.p2].forEach((hero, i) => {
       const art = artFor(hero);
       const info = heroInfo(HEROES[hero].id);
@@ -57,7 +60,7 @@ export class VersusScene extends Phaser.Scene {
         .setOrigin(i === 0 ? 0 : 1, 0)
         .setAlpha(0);
       // Pre-fight banter: one line each, the second a beat later, like a callout before the bell.
-      const line = info.quotes[Math.floor(Math.random() * info.quotes.length)];
+      const line = introLine(hero, i === 0 ? setup.p2 : setup.p1);
       const banter = this.add
         .text(i === 0 ? 32 : VIEW_W - 32, i === 0 ? 124 : VIEW_H - 160, `"${line}"`, body(19, '#111428'))
         .setOrigin(i === 0 ? 0 : 1, 0)

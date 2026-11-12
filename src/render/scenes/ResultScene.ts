@@ -10,6 +10,7 @@ import { arcadeSetup } from '../arcade';
 import { afterMatch, leaderboard } from '../party';
 import { STAGES } from '../stages';
 import { Menu, body, display, goTo, goldFill, stripes } from '../ui';
+import { winLine } from '../rivals';
 
 interface ResultData {
   setup: MatchSetup;
@@ -72,7 +73,7 @@ export class ResultScene extends Phaser.Scene {
       const room = VIEW_W - 470 - 24;
       if (t.width > room) t.setScale(room / t.width);
       goldFill(t);
-      const quote = info.quotes[Math.floor(Math.random() * info.quotes.length)];
+      const quote = winLine(this.hero, winner === 0 ? setup.p2 : setup.p1);
       const bubble = this.add.graphics();
       bubble.fillStyle(0xffffff, 0.95).fillRoundedRect(470, 160, 440, 70, 14);
       bubble.fillTriangle(470, 196, 448, 214, 486, 214);

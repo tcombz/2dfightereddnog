@@ -1,5 +1,6 @@
 // The fight HUD. Reads sim state; draws on its own camera so screen shake and zoom leave it alone.
 import Phaser from 'phaser';
+import { announce } from './audio';
 import { HEAT_TICKS, HEROES, METER_MAX, Phase, ROUNDS_TO_WIN, TICK_RATE, rallying } from '../sim';
 import type { GameState } from '../sim';
 import { C, CSS, VIEW_H, VIEW_W } from './config';
@@ -74,6 +75,7 @@ export class Hud {
 
   /** Big centre text: ROUND 1, FIGHT!, K.O. ... */
   shout(text: string, sub = '', hold = 900, gold = true): void {
+    announce(spoken(text, sub));
     const t = this.announce;
     this.scene.tweens.killTweensOf([t, this.announceSub]);
     t.setText(text).setAlpha(1).setScale(2.2);
@@ -189,4 +191,17 @@ export class Hud {
       }
     }
   }
+}
+
+const NUMBERS = ['zero', 'one', 'two', 'three', 'four', 'five'];
+
+/** What the announcer says for a banner. */
+function spoken(text: string, sub: string): string {
+  const t = text.replace(/K\.O\./g, 'Knockout').replace(/"[^"]*"/g, '').replace(/\s+/g, ' ').trim();
+  const round = /^ROUND (\d)$/.exec(t);
+  let line = round ? `Round ${NUMBERS[+round[1]] ?? round[1]}` : t;
+  if (sub === 'WINS THE MATCH') line = `${line} wins!`;
+  else if (sub && sub !== 'DRAW' && !sub.includes('.')) line = `${line}. ${sub.replace(/·/g, '. ')}`;
+  else if (sub === 'DRAW') line = `${line}. Draw.`;
+  return line.toLowerCase().replace(/(^|[.!] )([a-z])/g, (_m, a: string, b: string) => a + b.toUpperCase());
 }

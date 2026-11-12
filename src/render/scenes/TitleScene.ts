@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { controls } from '../../input/controls';
-import { playMusic, setMusicVolume, setSfxVolume, settings, sfx } from '../audio';
+import { playMusic, setMusicVolume, setSfxVolume, setVoice, settings, sfx } from '../audio';
 import { CPU_LEVELS, CSS, GAME_SUBTITLE, GAME_TITLE, VIEW_H, VIEW_W } from '../config';
 import type { MatchSetup, Mode } from '../config';
 import { ALL_ART, feetOrigin, frameName, menuScale } from '../heroArt';
@@ -36,10 +36,10 @@ export class TitleScene extends Phaser.Scene {
         .setTint(i === 0 ? 0xc8d8ff : 0xffe2c8),
     );
 
-    const title = this.add.text(VIEW_W / 2, 150, GAME_TITLE, display(92, '#ffffff', 12)).setOrigin(0.5);
+    const title = this.add.text(VIEW_W / 2, 108, GAME_TITLE, display(92, '#ffffff', 12)).setOrigin(0.5);
     goldFill(title);
     title.setShadow(0, 6, '#000000', 0, true, true);
-    this.add.text(VIEW_W / 2, 214, GAME_SUBTITLE, display(18, CSS.ink, 5)).setOrigin(0.5);
+    this.add.text(VIEW_W / 2, 168, GAME_SUBTITLE, display(18, CSS.ink, 5)).setOrigin(0.5);
     this.pressStart = this.add.text(VIEW_W / 2, 400, 'PRESS ENTER OR START', display(24, CSS.ink, 6)).setOrigin(0.5);
     this.tweens.add({ targets: this.pressStart, alpha: 0.25, duration: 600, yoyo: true, repeat: -1 });
     this.footer = this.add.text(VIEW_W / 2, VIEW_H - 18, '', body(13, CSS.muted)).setOrigin(0.5);
@@ -54,7 +54,7 @@ export class TitleScene extends Phaser.Scene {
     this.menu = new Menu(
       this,
       VIEW_W / 2 - 190,
-      232,
+      206,
       [
         { label: 'PARTY MODE', onSelect: () => goTo(this, 'party') },
         {
@@ -86,6 +86,13 @@ export class TitleScene extends Phaser.Scene {
         },
         { label: 'MUSIC', value: () => pct(settings.music), onLeft: () => setMusicVolume(settings.music - 0.1), onRight: () => setMusicVolume(settings.music + 0.1) },
         { label: 'SOUND FX', value: () => pct(settings.sfx), onLeft: () => setSfxVolume(settings.sfx - 0.1), onRight: () => setSfxVolume(settings.sfx + 0.1) },
+        {
+          label: 'ANNOUNCER',
+          value: () => `◀ ${settings.voice ? 'ON' : 'OFF'} ▶`,
+          onSelect: () => setVoice(!settings.voice),
+          onLeft: () => setVoice(!settings.voice),
+          onRight: () => setVoice(!settings.voice),
+        },
         {
           label: 'FULLSCREEN',
           value: () => (this.scale.isFullscreen ? 'ON' : 'OFF'),
