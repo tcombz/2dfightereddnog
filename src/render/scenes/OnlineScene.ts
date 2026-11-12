@@ -167,7 +167,7 @@ export class OnlineScene extends Phaser.Scene {
     });
     this.stageText = this.add.text(VIEW_W / 2, 214, '', body(15, CSS.ink)).setOrigin(0.5);
     const help = this.add
-      .text(VIEW_W / 2, 330, '◀ ▶  fighter\n▲ ▼  stage (host)\nCONFIRM  ready\nBACK  leave', body(14, CSS.muted))
+      .text(VIEW_W / 2, 340, '◀ ▶  fighter\n▲ ▼  stage (host)\nCONFIRM  ready\nBACK  leave\n\nKeyboard or controller:\nyour keys from Settings', body(14, CSS.muted))
       .setOrigin(0.5)
       .setAlign('center')
       .setLineSpacing(6);

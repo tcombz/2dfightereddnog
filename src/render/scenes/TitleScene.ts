@@ -3,7 +3,7 @@
 import Phaser from 'phaser';
 import { controls } from '../../input/controls';
 import { HEROES } from '../../sim';
-import { playMusic, setMusicVolume, setSfxVolume, setVoice, settings, sfx } from '../audio';
+import { playMusic, sfx } from '../audio';
 import { C, CPU_LEVELS, CSS, GAME_SUBTITLE, GAME_TITLE, VIEW_H, VIEW_W } from '../config';
 import type { MatchSetup, Mode } from '../config';
 import { artFor, feetOrigin, frameName, menuScale } from '../heroArt';
@@ -120,7 +120,6 @@ export class TitleScene extends Phaser.Scene {
     const harder = (): void => void this.registry.set('cpuLevel', (cpuLevel() + 1) % 3);
     const easier = (): void => void this.registry.set('cpuLevel', (cpuLevel() + 2) % 3);
     const level = (): string => `◀ ${CPU_LEVELS[cpuLevel()]} ▶`;
-    const pct = (v: number): string => `◀ ${Math.round(v * 100)}% ▶`;
     const start = (mode: Mode): void => {
       const setup: Partial<MatchSetup> = { mode, cpuLevel: cpuLevel() };
       goTo(this, 'select', setup);
@@ -142,35 +141,9 @@ export class TitleScene extends Phaser.Scene {
         sub: [
           { label: 'REPLAYS', onSelect: () => goTo(this, 'replays') },
           { label: 'HOW TO PLAY', onSelect: () => goTo(this, 'howto', { back: 'title' }) },
-          { label: 'CONTROLLERS', onSelect: () => goTo(this, 'pads') },
         ],
       },
-      {
-        label: 'SETTINGS',
-        sub: [
-          {
-            label: 'SPECIALS',
-            value: () => `◀ ${this.registry.get('simple') ? 'SIMPLE' : 'CLASSIC'} ▶`,
-            onLeft: () => this.toggleSimple(),
-            onRight: () => this.toggleSimple(),
-            onSelect: () => this.toggleSimple(),
-          },
-          { label: 'MUSIC', value: () => pct(settings.music), onLeft: () => setMusicVolume(settings.music - 0.1), onRight: () => setMusicVolume(settings.music + 0.1) },
-          { label: 'SOUND FX', value: () => pct(settings.sfx), onLeft: () => setSfxVolume(settings.sfx - 0.1), onRight: () => setSfxVolume(settings.sfx + 0.1) },
-          {
-            label: 'ANNOUNCER',
-            value: () => `◀ ${settings.voice ? 'ON' : 'OFF'} ▶`,
-            onSelect: () => setVoice(!settings.voice),
-            onLeft: () => setVoice(!settings.voice),
-            onRight: () => setVoice(!settings.voice),
-          },
-          {
-            label: 'FULLSCREEN',
-            value: () => (this.scale.isFullscreen ? 'ON' : 'OFF'),
-            onSelect: () => (this.scale.isFullscreen ? this.scale.stopFullscreen() : this.scale.startFullscreen()),
-          },
-        ],
-      },
+      { label: 'SETTINGS', onSelect: () => goTo(this, 'settings') },
     ];
     this.path = [{ items: this.root, index: 0, label: '' }];
     this.menuG = this.add.graphics().setDepth(8);
@@ -324,17 +297,6 @@ export class TitleScene extends Phaser.Scene {
     if (!first) {
       this.hero.setAlpha(0).setX(600);
       this.tweens.add({ targets: this.hero, alpha: 1, x: 560, duration: 300, ease: 'Cubic.easeOut' });
-    }
-  }
-
-  /** Simple specials: forward + special for the projectile, down + special for the rising attack. */
-  private toggleSimple(): void {
-    const v = !this.registry.get('simple');
-    this.registry.set('simple', v);
-    try {
-      localStorage.setItem('afterhours.simple', v ? '1' : '0');
-    } catch {
-      // Not remembered; still applies this visit.
     }
   }
 

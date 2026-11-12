@@ -14,6 +14,7 @@ import { TitleScene } from './render/scenes/TitleScene';
 import { VersusScene } from './render/scenes/VersusScene';
 import { OnlineScene } from './render/scenes/OnlineScene';
 import { ReplaysScene } from './render/scenes/ReplaysScene';
+import { SettingsScene } from './render/scenes/SettingsScene';
 
 async function start(): Promise<void> {
   // Text is drawn to canvases, so the web fonts must be ready before the first scene draws any.
@@ -31,7 +32,7 @@ async function start(): Promise<void> {
     pixelArt: true,
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     input: { gamepad: false },
-    scene: [BootScene, TitleScene, SelectScene, VersusScene, FightScene, ResultScene, HowToScene, ControllerScene, PartyScene, OnlineScene, ReplaysScene],
+    scene: [BootScene, TitleScene, SelectScene, VersusScene, FightScene, ResultScene, HowToScene, ControllerScene, PartyScene, OnlineScene, ReplaysScene, SettingsScene],
   });
   // Exposed for automated play-testing.
   (window as unknown as { __game: Phaser.Game }).__game = game;

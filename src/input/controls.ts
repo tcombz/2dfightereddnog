@@ -18,37 +18,138 @@ export interface MenuEvent {
 
 type Binding = Record<string, number>;
 
-/** Player 1: WASD with F G H R, or J K L and Space, so one player can sit on the right-hand keys too. */
-const P1: Binding = {
-  KeyA: Input.Left,
-  KeyD: Input.Right,
-  KeyW: Input.Up,
-  KeyS: Input.Down,
-  KeyF: Input.Light,
-  KeyG: Input.Heavy,
-  KeyH: Input.Special,
-  KeyR: Input.Block,
-  KeyJ: Input.Light,
-  KeyK: Input.Heavy,
-  KeyL: Input.Special,
-  Space: Input.Block,
+/** What a keyboard key can be bound to: the eight sim buttons, plus one-key throw, super and Heat. */
+export type KeyAction = 'up' | 'down' | 'left' | 'right' | 'light' | 'heavy' | 'special' | 'block' | 'throw' | 'super' | 'heat';
+export type KeyMap = Record<KeyAction, string[]>;
+
+/** The actions the key settings list, in order, with their labels. */
+export const KEY_ACTIONS: Array<[KeyAction, string]> = [
+  ['up', 'UP / JUMP'],
+  ['down', 'DOWN / CROUCH'],
+  ['left', 'LEFT'],
+  ['right', 'RIGHT'],
+  ['light', 'LIGHT'],
+  ['heavy', 'HEAVY'],
+  ['special', 'SPECIAL'],
+  ['block', 'BLOCK'],
+  ['throw', 'THROW (LIGHT + HEAVY)'],
+  ['super', 'SUPER (HEAVY + SPECIAL)'],
+  ['heat', 'HEAT (LIGHT + SPECIAL)'],
+];
+
+const KEY_BIT: Record<KeyAction, number> = {
+  up: Input.Up,
+  down: Input.Down,
+  left: Input.Left,
+  right: Input.Right,
+  light: Input.Light,
+  heavy: Input.Heavy,
+  special: Input.Special,
+  block: Input.Block,
+  throw: Input.Light | Input.Heavy,
+  super: Input.Heavy | Input.Special,
+  heat: Input.Light | Input.Special,
 };
 
-/** Player 2: arrow keys with U I O P, or the number pad. */
-const P2: Binding = {
-  ArrowLeft: Input.Left,
-  ArrowRight: Input.Right,
-  ArrowUp: Input.Up,
-  ArrowDown: Input.Down,
-  KeyU: Input.Light,
-  KeyI: Input.Heavy,
-  KeyO: Input.Special,
-  KeyP: Input.Block,
-  Numpad1: Input.Light,
-  Numpad2: Input.Heavy,
-  Numpad3: Input.Special,
-  Numpad0: Input.Block,
-};
+/** Keys the menus own: never bindable. */
+const RESERVED = new Set(['Enter', 'NumpadEnter', 'Escape', 'Backspace', 'Tab', 'F1', 'F2', 'F3', 'F4', 'F5', 'F11', 'F12', 'MetaLeft', 'MetaRight']);
+
+/** Player 1: WASD with F G H R, or J K L and Space. Player 2: arrows with U I O P, or the number pad. */
+export const DEFAULT_KEYS: [KeyMap, KeyMap] = [
+  {
+    up: ['KeyW'],
+    down: ['KeyS'],
+    left: ['KeyA'],
+    right: ['KeyD'],
+    light: ['KeyF', 'KeyJ'],
+    heavy: ['KeyG', 'KeyK'],
+    special: ['KeyH', 'KeyL'],
+    block: ['KeyR', 'Space'],
+    throw: [],
+    super: [],
+    heat: [],
+  },
+  {
+    up: ['ArrowUp'],
+    down: ['ArrowDown'],
+    left: ['ArrowLeft'],
+    right: ['ArrowRight'],
+    light: ['KeyU', 'Numpad1'],
+    heavy: ['KeyI', 'Numpad2'],
+    special: ['KeyO', 'Numpad3'],
+    block: ['KeyP', 'Numpad0'],
+    throw: [],
+    super: [],
+    heat: [],
+  },
+];
+
+const KEYS_STORE = 'afterhours.keys';
+
+function copyKeys(k: KeyMap): KeyMap {
+  const out = {} as KeyMap;
+  for (const [a] of KEY_ACTIONS) out[a] = [...(k[a] ?? [])];
+  return out;
+}
+
+function loadKeys(): [KeyMap, KeyMap] {
+  const maps: [KeyMap, KeyMap] = [copyKeys(DEFAULT_KEYS[0]), copyKeys(DEFAULT_KEYS[1])];
+  try {
+    const raw = localStorage.getItem(KEYS_STORE);
+    const saved = raw ? (JSON.parse(raw) as Array<Partial<KeyMap>>) : null;
+    if (Array.isArray(saved)) {
+      saved.slice(0, 2).forEach((m, i) => {
+        for (const [a] of KEY_ACTIONS) {
+          const v = m?.[a];
+          if (Array.isArray(v) && v.every((c) => typeof c === 'string')) maps[i][a] = v.filter((c) => !RESERVED.has(c));
+        }
+      });
+    }
+  } catch {
+    // Defaults apply.
+  }
+  return maps;
+}
+
+function lookupFor(m: KeyMap): Binding {
+  const b: Binding = {};
+  for (const [a] of KEY_ACTIONS) for (const code of m[a]) b[code] = (b[code] ?? 0) | KEY_BIT[a];
+  return b;
+}
+
+/** A short label for a key code: KeyF -> F, ArrowLeft -> ←, Numpad1 -> NUM 1. */
+export function keyLabel(code: string | undefined): string {
+  if (!code) return '—';
+  if (code.startsWith('Key')) return code.slice(3);
+  if (code.startsWith('Digit')) return code.slice(5);
+  if (code.startsWith('Numpad')) return `NUM ${code.slice(6)}`;
+  const named: Record<string, string> = {
+    ArrowLeft: '←',
+    ArrowRight: '→',
+    ArrowUp: '↑',
+    ArrowDown: '↓',
+    Space: 'SPACE',
+    ShiftLeft: 'L-SHIFT',
+    ShiftRight: 'R-SHIFT',
+    ControlLeft: 'L-CTRL',
+    ControlRight: 'R-CTRL',
+    AltLeft: 'L-ALT',
+    AltRight: 'R-ALT',
+    Semicolon: ';',
+    Quote: "'",
+    Comma: ',',
+    Period: '.',
+    Slash: '/',
+    BracketLeft: '[',
+    BracketRight: ']',
+    Backslash: '\\',
+    Minus: '-',
+    Equal: '=',
+    Backquote: '`',
+    CapsLock: 'CAPS',
+  };
+  return named[code] ?? code.toUpperCase();
+}
 
 const MENU_FROM_BITS: Array<[number, MenuAction]> = [
   [Input.Up, 'up'],
@@ -225,6 +326,11 @@ export class Controls {
   lastPlayer = 0;
   /** Goes up whenever the above change, so scenes know to redraw their prompts. */
   deviceStamp = 0;
+  /** Keyboard bindings per player, and the key-code lookups built from them. */
+  private keyMaps: [KeyMap, KeyMap] = loadKeys();
+  private lookup: [Binding, Binding] = [lookupFor(this.keyMaps[0]), lookupFor(this.keyMaps[1])];
+  /** While set, the next key press goes here (the key settings are listening) instead of the game. */
+  private keyCapture: ((code: string | null) => void) | null = null;
 
   constructor() {
     try {
@@ -235,8 +341,16 @@ export class Controls {
     window.addEventListener('keydown', (e) => {
       // Typing in a text box (party names) is not game input.
       if (e.target instanceof HTMLInputElement) return;
-      const p1 = P1[e.code];
-      const p2 = P2[e.code];
+      if (this.keyCapture) {
+        e.preventDefault();
+        if (e.repeat) return;
+        const done = this.keyCapture;
+        this.keyCapture = null;
+        done(e.code === 'Escape' ? null : RESERVED.has(e.code) ? '' : e.code);
+        return;
+      }
+      const p1 = this.lookup[0][e.code];
+      const p2 = this.lookup[1][e.code];
       if (p1 !== undefined || p2 !== undefined || e.code === 'Enter' || e.code === 'Escape' || e.code === 'Backspace') {
         e.preventDefault();
       }
@@ -407,10 +521,55 @@ export class Controls {
 
   /** The sim input bitmask for a player right now. */
   bits(player: number): number {
-    const map = player === 0 ? P1 : P2;
+    const map = this.lookup[player === 0 ? 0 : 1];
     let b = this.padBitsNow[player];
     for (const code of this.held) b |= map[code] ?? 0;
     return b;
+  }
+
+  // ---------- keyboard bindings ----------
+
+  /** The keys bound to an action for a player (first one is the main key). */
+  keysFor(player: number, action: KeyAction): string[] {
+    return this.keyMaps[player === 1 ? 1 : 0][action];
+  }
+
+  /** Listen for the next key press (null: cancelled with Escape, '': a key the menus own). */
+  captureKey(done: (code: string | null) => void): void {
+    this.keyCapture = done;
+    this.held.clear();
+  }
+
+  cancelCapture(): void {
+    this.keyCapture = null;
+  }
+
+  /** Bind a key to an action for a player. The key leaves whatever it did before, for both players. */
+  bindKey(player: number, action: KeyAction, code: string): void {
+    for (const m of this.keyMaps) for (const [a] of KEY_ACTIONS) m[a] = m[a].filter((c) => c !== code);
+    const m = this.keyMaps[player === 1 ? 1 : 0];
+    m[action] = [code];
+    this.saveKeys();
+  }
+
+  resetKeys(player: number): void {
+    const i = player === 1 ? 1 : 0;
+    const fresh = copyKeys(DEFAULT_KEYS[i]);
+    // Keys the other player took over stay with them.
+    const other = this.keyMaps[1 - i];
+    for (const [a] of KEY_ACTIONS) fresh[a] = fresh[a].filter((c) => !KEY_ACTIONS.some(([b]) => other[b].includes(c)));
+    this.keyMaps[i] = fresh;
+    this.saveKeys();
+  }
+
+  private saveKeys(): void {
+    this.lookup = [lookupFor(this.keyMaps[0]), lookupFor(this.keyMaps[1])];
+    this.deviceStamp += 1;
+    try {
+      localStorage.setItem(KEYS_STORE, JSON.stringify(this.keyMaps));
+    } catch {
+      // Applies for this visit.
+    }
   }
 
   padsConnected(): number {

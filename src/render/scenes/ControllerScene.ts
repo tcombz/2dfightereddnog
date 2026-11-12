@@ -48,8 +48,12 @@ export class ControllerScene extends Phaser.Scene {
     super('pads');
   }
 
-  create(): void {
+  /** Where Back goes: the title screen or the settings. */
+  private back = 'title';
+
+  create(data: { back?: string } = {}): void {
     (this as unknown as { leaving: boolean }).leaving = false;
+    this.back = data?.back ?? 'title';
     this.capture = null;
     this.cameras.main.fadeIn(200, 5, 6, 12);
     backdrop(this, 'stage_concert', 0.8);
@@ -89,7 +93,7 @@ export class ControllerScene extends Phaser.Scene {
           onRight: () => this.toggleRumble(),
         },
         { label: 'RESET PAD SETUPS', onSelect: () => this.reset() },
-        { label: 'BACK', onSelect: () => goTo(this, 'title', { skipIntro: true }) },
+        { label: 'BACK', onSelect: () => goTo(this, this.back, { skipIntro: true, cat: 5 }) },
       ],
       380,
       36,
@@ -234,7 +238,7 @@ export class ControllerScene extends Phaser.Scene {
     }
     for (const e of controls.take()) {
       if (e.action === 'back' || e.action === 'pause') {
-        goTo(this, 'title', { skipIntro: true });
+        goTo(this, this.back, { skipIntro: true, cat: 5 });
         return;
       }
       this.menu.handle(e.action);

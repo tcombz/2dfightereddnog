@@ -1,6 +1,6 @@
 // On-screen prompts that match what each player holds: controller buttons (Xbox, PlayStation,
 // Switch or numbered, read through the player's own mapping, so remaps show up) or keyboard keys.
-import { controls, padFamily } from '../input/controls';
+import { controls, keyLabel, padFamily } from '../input/controls';
 import type { PadAction, PadFamily } from '../input/controls';
 
 /** Labels for the browser's standard button indices, per family. */
@@ -51,10 +51,6 @@ export function padButton(action: PadAction, player: number): string {
   return out[0] ?? action.toUpperCase();
 }
 
-const KEYS = [
-  { light: 'F', heavy: 'G', special: 'H', block: 'R' },
-  { light: 'U', heavy: 'I', special: 'O', block: 'P' },
-];
 
 /**
  * Move-list and trial text for this player: on a controller, attack words become that pad's
@@ -76,14 +72,14 @@ export function inputText(text: string, player: number): string {
 /** "Confirm: A · Back: B" on a pad, "Confirm: Enter · Back: Esc" on the keyboard. */
 export function menuHint(): string {
   if (onPad(-1)) return `Confirm: ${padButton('light', -1)}  ·  Back: ${padButton('special', -1)}`;
-  return 'Confirm: Enter or F  ·  Back: Esc or G';
+  return `Confirm: Enter or ${keyFor('light', 0)}  ·  Back: Esc or ${keyFor('heavy', 0)}`;
 }
 
 export function backHint(): string {
-  return onPad(-1) ? `Back: ${padButton('special', -1)}` : 'Back: Esc or G';
+  return onPad(-1) ? `Back: ${padButton('special', -1)}` : `Back: Esc or ${keyFor('heavy', 0)}`;
 }
 
 /** A player's keyboard key for an attack, for the controls page. */
 export function keyFor(action: 'light' | 'heavy' | 'special' | 'block', player: number): string {
-  return KEYS[player][action];
+  return keyLabel(controls.keysFor(player, action)[0]);
 }

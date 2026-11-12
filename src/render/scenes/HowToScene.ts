@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { controls } from '../../input/controls';
+import { controls, keyLabel, type KeyAction } from '../../input/controls';
 import { HEROES } from '../../sim';
 import { sfx } from '../audio';
 import { C, CSS, VIEW_H, VIEW_W } from '../config';
@@ -8,18 +8,24 @@ import { BASICS, COMBOS, moveList } from '../moves';
 import { backHint, familyName, inputText, padButton } from '../prompts';
 import { backdrop, body, display, goTo, goldFill } from '../ui';
 
-const CONTROLS: Array<[string, string, string, string]> = [
-  ['', 'PLAYER 1', 'PLAYER 2', 'GAMEPAD (XBOX / PS)'],
-  ['Move', 'W A S D', 'Arrow keys', 'Stick or d-pad'],
-  ['Light', 'F or J', 'U or Numpad 1', 'A / ✕  or  X / □'],
-  ['Heavy', 'G or K', 'I or Numpad 2', 'Y / △'],
-  ['Special', 'H or L', 'O or Numpad 3', 'B / ○'],
-  ['Block', 'Hold back (or R, Space)', 'Hold back (or P)', 'Hold back, LB / L1'],
-  ['Throw', 'Light + Heavy', 'Light + Heavy', 'RB / R1'],
-  ['Super', 'Heavy + Special', 'Heavy + Special', 'RT / R2'],
-  ['Heat', 'Light + Special', 'Light + Special', 'LT / L2'],
-  ['Pause', 'Esc', 'Esc', 'Start / Options'],
-];
+/** The controls table, read from each player's current key bindings. */
+function controlsTable(): Array<[string, string, string, string]> {
+  const k = (p: number, a: KeyAction): string => controls.keysFor(p, a).map(keyLabel).join(' or ') || '—';
+  const move = (p: number): string => (['up', 'left', 'down', 'right'] as KeyAction[]).map((a) => keyLabel(controls.keysFor(p, a)[0])).join(' ');
+  const combo = (p: number, a: KeyAction, words: string): string => (controls.keysFor(p, a).length ? `${words} (or ${k(p, a)})` : words);
+  return [
+    ['', 'PLAYER 1', 'PLAYER 2', 'GAMEPAD (XBOX / PS)'],
+    ['Move', move(0), move(1), 'Stick or d-pad'],
+    ['Light', k(0, 'light'), k(1, 'light'), 'A / ✕  or  X / □'],
+    ['Heavy', k(0, 'heavy'), k(1, 'heavy'), 'Y / △'],
+    ['Special', k(0, 'special'), k(1, 'special'), 'B / ○'],
+    ['Block', `Hold back (or ${k(0, 'block')})`, `Hold back (or ${k(1, 'block')})`, 'Hold back, LB / L1'],
+    ['Throw', combo(0, 'throw', 'Light + Heavy'), combo(1, 'throw', 'Light + Heavy'), 'RB / R1'],
+    ['Super', combo(0, 'super', 'Heavy + Special'), combo(1, 'super', 'Heavy + Special'), 'RT / R2'],
+    ['Heat', combo(0, 'heat', 'Light + Special'), combo(1, 'heat', 'Light + Special'), 'LT / L2'],
+    ['Pause', 'Esc', 'Esc', 'Start / Options'],
+  ];
+}
 
 /** Controls, basics and both heroes' move lists, one page at a time. */
 export class HowToScene extends Phaser.Scene {
@@ -51,9 +57,9 @@ export class HowToScene extends Phaser.Scene {
 
   /** The gamepad column: the connected pad's own buttons, else the usual Xbox / PlayStation pairs. */
   private controlsTable(): Array<[string, string, string, string]> {
-    if (controls.padsConnected() === 0) return CONTROLS;
+    if (controls.padsConnected() === 0) return controlsTable();
     const pad = (a: Parameters<typeof padButton>[0]): string => padButton(a, controls.pad(0) ? 0 : 1);
-    const rows = CONTROLS.map((r) => [...r] as [string, string, string, string]);
+    const rows = controlsTable().map((r) => [...r] as [string, string, string, string]);
     rows[0][3] = `YOUR ${familyName(controls.pad(0) ? 0 : 1).toUpperCase()} PAD`;
     rows[2][3] = pad('light');
     rows[3][3] = pad('heavy');
