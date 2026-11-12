@@ -10,6 +10,8 @@ export interface HeroInfo {
   title: string;
   /** Shorter name for the fight HUD. */
   short: string;
+  /** First name, for the announcer and the big banners. */
+  name: string;
   /** How the super looks: the effects are themed on each character sheet's super art. */
   superStyle: SuperStyle;
   /** Sound effects for starting the special and throwing the projectile. */
@@ -33,8 +35,9 @@ export interface HeroInfo {
 
 export const HERO_INFO: Record<string, HeroInfo> = {
   rogue: {
-    title: 'THE ROGUE',
-    short: 'THE ROGUE',
+    title: 'BRENT "THE ROGUE"',
+    short: 'BRENT',
+    name: 'BRENT',
     superStyle: 'storm',
     sfx: { special: 'zap', projectile: 'zap' },
     hitStyle: 'volt',
@@ -57,8 +60,9 @@ export const HERO_INFO: Record<string, HeroInfo> = {
     ratings: { power: 4, speed: 5, range: 3, defense: 3, technique: 4 },
   },
   jetsetter: {
-    title: 'THE JETSETTER',
-    short: 'THE JETSETTER',
+    title: 'LUIS "THE JETSETTER"',
+    short: 'LUIS',
+    name: 'LUIS',
     superStyle: 'crowd',
     sfx: { special: 'scratch', projectile: 'scratch' },
     hitStyle: 'vinyl',
@@ -74,7 +78,8 @@ export const HERO_INFO: Record<string, HeroInfo> = {
   },
   chris: {
     title: 'CHRIS "THE DIPLOMAT"',
-    short: 'THE DIPLOMAT',
+    short: 'CHRIS',
+    name: 'CHRIS',
     superStyle: 'world',
     sfx: { special: 'cards', projectile: 'cards' },
     hitStyle: 'cards',
@@ -96,8 +101,9 @@ export const HERO_INFO: Record<string, HeroInfo> = {
     ratings: { power: 3, speed: 4, range: 3, defense: 3, technique: 5 },
   },
   leader: {
-    title: 'THE LEADER',
-    short: 'THE LEADER',
+    title: 'TYLER "THE LEADER"',
+    short: 'TYLER',
+    name: 'TYLER',
     superStyle: 'crown',
     sfx: { special: 'crowd', projectile: 'whoosh_heavy' },
     hitStyle: 'crown',
@@ -113,7 +119,8 @@ export const HERO_INFO: Record<string, HeroInfo> = {
   },
   eddnog: {
     title: 'EDDNOG "THE TANK"',
-    short: 'THE TANK',
+    short: 'EDDNOG',
+    name: 'EDDNOG',
     superStyle: 'quake',
     sfx: { special: 'slam', projectile: 'slam' },
     hitStyle: 'quake',
@@ -129,7 +136,8 @@ export const HERO_INFO: Record<string, HeroInfo> = {
   },
   malcolm: {
     title: 'MALCOLM "THE CAPTAIN"',
-    short: 'THE CAPTAIN',
+    short: 'MALCOLM',
+    name: 'MALCOLM',
     superStyle: 'squad',
     sfx: { special: 'squad', projectile: 'tracer' },
     hitStyle: 'tactical',

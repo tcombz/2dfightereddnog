@@ -120,6 +120,13 @@ export class Menu {
   }
 }
 
+/** Shrink a text object (keeping its origin) so it is no wider than `max` pixels. */
+export function fitText<T extends Phaser.GameObjects.Text>(t: T, max: number): T {
+  t.setScale(1);
+  if (t.width > max) t.setScale(max / t.width);
+  return t;
+}
+
 /** Fade the camera out, then start another scene. */
 export function goTo(scene: Phaser.Scene, key: string, data?: object, ms = 220): void {
   if ((scene as unknown as { leaving?: boolean }).leaving) return;

@@ -78,10 +78,13 @@ export class Hud {
     announce(spoken(text, sub));
     const t = this.announce;
     this.scene.tweens.killTweensOf([t, this.announceSub]);
-    t.setText(text).setAlpha(1).setScale(2.2);
+    t.setText(text).setScale(1);
+    // Long banners shrink to fit the screen.
+    const k = Math.min(1, (VIEW_W - 80) / Math.max(1, t.width));
+    t.setAlpha(1).setScale(2.2 * k);
     if (gold) goldFill(t);
     else t.setFill('#ffffff');
-    this.scene.tweens.add({ targets: t, scale: 1, duration: 220, ease: 'Back.easeOut' });
+    this.scene.tweens.add({ targets: t, scale: k, duration: 220, ease: 'Back.easeOut' });
     this.scene.tweens.add({ targets: t, alpha: 0, delay: hold, duration: 260 });
     this.announceSub.setText(sub).setAlpha(sub ? 1 : 0);
     if (sub) this.scene.tweens.add({ targets: this.announceSub, alpha: 0, delay: hold, duration: 260 });

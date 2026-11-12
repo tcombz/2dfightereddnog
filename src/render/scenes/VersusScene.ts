@@ -6,7 +6,7 @@ import type { MatchSetup } from '../config';
 import { artFor, feetOrigin, frameName, menuScale } from '../heroArt';
 import { heroInfo } from '../heroInfo';
 import { STAGES } from '../stages';
-import { body, display, goTo, goldFill, stripes } from '../ui';
+import { body, display, fitText, goTo, goldFill, stripes } from '../ui';
 import { introLine } from '../rivals';
 
 /** The split-screen VS splash shown while the stage music loads. */
@@ -29,7 +29,7 @@ export class VersusScene extends Phaser.Scene {
     stripes(g, 0, 0, VIEW_W, VIEW_H, 0xffffff, 0.035);
     g.lineStyle(6, 0xffffff, 0.9).lineBetween(VIEW_W / 2 + 70, 0, VIEW_W / 2 - 70, VIEW_H);
 
-    const said = (h: number): string => heroInfo(HEROES[h].id).title.replace(/"[^"]*"/g, '').trim().toLowerCase();
+    const said = (h: number): string => heroInfo(HEROES[h].id).name.toLowerCase();
     announce(`${said(setup.p1)}. Versus. ${said(setup.p2)}!`);
     [setup.p1, setup.p2].forEach((hero, i) => {
       const art = artFor(hero);
@@ -54,6 +54,7 @@ export class VersusScene extends Phaser.Scene {
         .text(i === 0 ? 30 : VIEW_W - 30, i === 0 ? 40 : VIEW_H - 92, info.title, display(info.title.length > 14 ? 30 : 40, '#ffffff', 8))
         .setOrigin(i === 0 ? 0 : 1, 0)
         .setAlpha(0);
+      fitText(name, VIEW_W * 0.56);
       goldFill(name);
       const tag = this.add
         .text(i === 0 ? 32 : VIEW_W - 32, i === 0 ? 92 : VIEW_H - 40, `"${info.tagline}"`, body(17, i === 0 ? '#bcd6ff' : '#ffd8bc'))

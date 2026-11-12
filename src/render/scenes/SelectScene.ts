@@ -10,9 +10,12 @@ import { artFor, feetOrigin, frameName, menuScale } from '../heroArt';
 import { heroInfo } from '../heroInfo';
 import { STAGES } from '../stages';
 import { menuHint } from '../prompts';
-import { body, display, goTo, goldFill, stripes } from '../ui';
+import { body, display, fitText, goTo, goldFill, stripes } from '../ui';
 
-const TILE = 92;
+const TILE_W = 118;
+const TILE_H = 62;
+/** How far each tile's top edge leans over its bottom edge. */
+const SKEW = 12;
 const RATING_NAMES: Array<[keyof ReturnType<typeof heroInfo>['ratings'], string]> = [
   ['power', 'POWER'],
   ['speed', 'SPEED'],
@@ -31,6 +34,8 @@ interface Side {
   ready: Phaser.GameObjects.Text;
   /** Classic or simple specials, picked per player with up and down. */
   controls: Phaser.GameObjects.Text;
+  /** The fighter's nickname above the big first name. */
+  title: Phaser.GameObjects.Text;
   lockedAt: number;
 }
 
@@ -48,6 +53,12 @@ export class SelectScene extends Phaser.Scene {
   private stageCards: Phaser.GameObjects.Image[] = [];
   private stageNames: Phaser.GameObjects.Text[] = [];
   private header!: Phaser.GameObjects.Text;
+  private vs!: Phaser.GameObjects.Text;
+  private washG!: Phaser.GameObjects.Graphics;
+  private sheets: Phaser.GameObjects.Image[] = [];
+  private tileMasks: Phaser.GameObjects.Graphics[] = [];
+  private stageShade!: Phaser.GameObjects.Rectangle;
+  private stageTitle!: Phaser.GameObjects.Text;
   private hint!: Phaser.GameObjects.Text;
   private ratingLabels: Phaser.GameObjects.Text[] = [];
   private clock = 0;
@@ -82,15 +93,37 @@ export class SelectScene extends Phaser.Scene {
     this.cameras.main.fadeIn(250, 5, 6, 12);
     playMusic(this, 'menu');
 
-    this.stageBg = this.add.image(0, 0, `stage_${STAGES[this.stage].id}`).setOrigin(0, 0).setScale(VIEW_H / 320).setAlpha(0.5);
-    this.add.rectangle(0, 0, VIEW_W, VIEW_H, C.night, 0.55).setOrigin(0, 0);
+    // Each half washes in its fighter's colour, the character sheet art faded behind the sprite.
+    this.stageBg = this.add.image(0, 0, `stage_${STAGES[this.stage].id}`).setOrigin(0, 0).setScale(VIEW_H / 320).setAlpha(0.18);
+    this.add.rectangle(0, 0, VIEW_W, VIEW_H, C.night, 0.6).setOrigin(0, 0);
+    this.washG = this.add.graphics();
+    this.sheets = [0, 1].map((i) =>
+      this.add
+        .image(i === 0 ? 0 : VIEW_W, VIEW_H, `sheet_${HEROES[0].id}`)
+        .setOrigin(i === 0 ? 0 : 1, 1)
+        .setAlpha(0.22)
+        .setFlipX(i === 1),
+    );
     const deco = this.add.graphics();
-    stripes(deco, 0, 0, VIEW_W / 2 - 60, VIEW_H, C.p1, 0.07);
-    stripes(deco, VIEW_W / 2 + 60, 0, VIEW_W / 2 - 60, VIEW_H, C.p2, 0.07);
-    this.g = this.add.graphics();
+    stripes(deco, 0, 0, VIEW_W / 2, VIEW_H, 0xffffff, 0.025);
+    stripes(deco, VIEW_W / 2, 0, VIEW_W / 2, VIEW_H, 0xffffff, 0.025);
+    this.g = this.add.graphics().setDepth(5);
 
-    this.header = this.add.text(VIEW_W / 2, 34, 'CHOOSE YOUR FIGHTER', display(32, '#ffffff', 7)).setOrigin(0.5);
-    goldFill(this.header);
+    // Centre: the emblem, the screen name and VS between the two portrait columns.
+    const emblem = this.add.graphics().setDepth(6);
+    emblem.fillStyle(0x05060c, 1).fillPoints([{ x: VIEW_W / 2, y: 26 }, { x: VIEW_W / 2 + 44, y: 70 }, { x: VIEW_W / 2, y: 114 }, { x: VIEW_W / 2 - 44, y: 70 }], true);
+    emblem.lineStyle(3, C.gold, 1).strokePoints([{ x: VIEW_W / 2, y: 26 }, { x: VIEW_W / 2 + 44, y: 70 }, { x: VIEW_W / 2, y: 114 }, { x: VIEW_W / 2 - 44, y: 70 }], true);
+    goldFill(this.add.text(VIEW_W / 2, 70, 'AH', display(30, '#ffffff', 5)).setOrigin(0.5).setDepth(7));
+    this.header = this.add
+      .text(VIEW_W / 2, 150, 'CHARACTER\nSELECT', body(22, CSS.ink))
+      .setOrigin(0.5)
+      .setAlign('center')
+      .setLineSpacing(2)
+      .setDepth(6);
+    this.add.rectangle(VIEW_W / 2, 196, 18, 2, C.gold).setDepth(6);
+    this.vs = this.add.text(VIEW_W / 2, 262, 'VS', display(44, '#ffffff', 7)).setOrigin(0.5).setDepth(6);
+    goldFill(this.vs);
+
     const party = this.setup.party;
     const vsLabel = party
       ? party.names[party.sides[1]]
@@ -101,53 +134,67 @@ export class SelectScene extends Phaser.Scene {
           : this.setup.mode === 'training'
             ? 'DUMMY'
             : 'CPU';
-    const p1Label = this.add.text(30, 70, party ? party.names[party.sides[0]] : 'PLAYER 1', display(16, CSS.p1, 4));
-    const p2Label = this.add.text(VIEW_W - 30, 70, vsLabel, display(16, CSS.p2, 4)).setOrigin(1, 0);
+    let p1Name = party ? party.names[party.sides[0]] : 'PLAYER 1';
+    let p2Name = vsLabel;
     if (party) {
-      this.add.text(VIEW_W / 2, 64, `PARTY  ·  MATCH ${party.matches + 1}`, display(13, CSS.gold, 3)).setOrigin(0.5, 0);
+      this.add.text(VIEW_W / 2, 214, `PARTY · MATCH ${party.matches + 1}`, display(12, CSS.gold, 3)).setOrigin(0.5, 0).setDepth(6);
       if (party.streak > 1 && party.lastWinner !== undefined) {
         const champSide = party.sides.indexOf(party.lastWinner);
-        if (champSide >= 0) {
-          const label = champSide === 0 ? p1Label : p2Label;
-          label.setText(`${label.text}  ★${party.streak}`);
-        }
+        if (champSide === 0) p1Name += `  ★${party.streak}`;
+        if (champSide === 1) p2Name += `  ★${party.streak}`;
       }
     }
 
-    // Roster tiles: every hero, then random.
-    const total = this.slots * (TILE + 14) - 14;
-    const x0 = VIEW_W / 2 - total / 2 + TILE / 2;
+    // Two slanted columns of portraits, one per player, meeting in a V at the bottom.
     this.tiles = [];
-    for (let i = 0; i < this.slots; i += 1) {
-      const x = x0 + i * (TILE + 14);
-      if (i < HEROES.length) {
-        this.tiles.push(this.add.image(x, 446, `portrait_${HEROES[i].id}`).setDisplaySize(TILE, TILE));
-      } else {
-        this.tiles.push(this.add.image(x, 446, 'fx_glow').setDisplaySize(TILE, TILE).setAlpha(0));
-        this.add.text(x, 446, '?', display(48, CSS.gold, 6)).setOrigin(0.5);
+    this.tileMasks = [];
+    for (let col = 0; col < 2; col += 1) {
+      for (let k = 0; k < this.slots; k += 1) {
+        const { x, y } = this.tilePos(col, k);
+        const shape = this.make.graphics({}, false);
+        shape.fillStyle(0xffffff).fillPoints(this.tilePoly(x, y, 0), true);
+        const mask = shape.createGeometryMask();
+        let img: Phaser.GameObjects.Image;
+        if (k < HEROES.length) {
+          img = this.add.image(x, y, `portrait_${HEROES[k].id}`).setDisplaySize(TILE_W + 10, TILE_W + 10).setDepth(6);
+          // Faces sit in the top of the portrait: show the eyes, not the chest.
+          img.setY(y + TILE_W * 0.07);
+        } else {
+          img = this.add.image(x, y, 'fx_glow').setDisplaySize(TILE_W, TILE_H).setAlpha(0.15).setTint(C.gold).setDepth(6);
+          this.add.text(x, y, '?', display(34, CSS.gold, 6)).setOrigin(0.5).setDepth(7);
+        }
+        img.setMask(mask);
+        this.tiles.push(img);
+        this.tileMasks.push(shape);
       }
     }
 
     this.ratingLabels = [];
     this.sides = [0, 1].map((i) => {
-      const x = i === 0 ? 340 : VIEW_W - 340;
+      const x = i === 0 ? 170 : VIEW_W - 170;
       const art = artFor(i);
       const preview = this.add
-        .image(x, 392, art.key, frameName('idle', 0))
+        .image(x, 452, art.key, frameName('idle', 0))
         .setOrigin(...feetOrigin(art, i === 1))
-        .setScale(menuScale(art, 2.3))
-        .setFlipX(i === 1);
+        .setScale(menuScale(art, 2.9))
+        .setFlipX(i === 1)
+        .setDepth(3);
       const align = i === 0 ? 0 : 1;
-      const tx = i === 0 ? 32 : VIEW_W - 32;
+      const tx = i === 0 ? 26 : VIEW_W - 26;
+      const color = i === 0 ? CSS.p1 : CSS.p2;
+      // The bottom band: player tag under a rule, the big first name above, the title above that.
+      this.add.rectangle(i === 0 ? 0 : VIEW_W, 506, 300, 2, 0xffffff, 0.5).setOrigin(align, 0.5).setDepth(8);
+      this.add.text(tx, 514, i === 0 ? p1Name : p2Name, display(13, color, 3)).setOrigin(align, 0).setDepth(8);
       return {
         cursor: i === 0 ? 0 : Math.min(1, HEROES.length - 1),
         locked: false,
         preview,
-        name: this.add.text(tx, 98, '', display(26, CSS.ink, 6)).setOrigin(align, 0),
-        style: this.add.text(tx, 130, '', body(14, CSS.muted)).setOrigin(align, 0),
-        tagline: this.add.text(tx, 150, '', body(15, CSS.gold)).setOrigin(align, 0),
-        ready: this.add.text(x, 112, 'READY', display(30, '#ffffff', 7)).setOrigin(0.5).setVisible(false),
-        controls: this.add.text(i === 0 ? 32 : VIEW_W - 32, 290, '', body(13, CSS.ink)).setOrigin(align, 0),
+        name: this.add.text(tx, 500, '', display(54, '#ffffff', 9)).setOrigin(align, 1).setDepth(8),
+        style: this.add.text(tx, 16, '', display(16, color, 4)).setOrigin(align, 0).setDepth(8),
+        tagline: this.add.text(tx, 38, '', body(14, CSS.ink)).setOrigin(align, 0).setDepth(8),
+        ready: this.add.text(x, 300, 'READY', display(40, '#ffffff', 9)).setOrigin(0.5).setVisible(false).setDepth(9),
+        controls: this.add.text(tx, 160, '', body(12, CSS.ink)).setOrigin(align, 0).setDepth(8),
+        title: this.add.text(tx, 440, '', display(15, CSS.gold, 4)).setOrigin(align, 1).setDepth(8),
         lockedAt: 0,
       };
     });
@@ -155,7 +202,7 @@ export class SelectScene extends Phaser.Scene {
     // Rating labels beside the bars.
     for (let i = 0; i < 2; i += 1) {
       RATING_NAMES.forEach(([, label], row) => {
-        const t = this.add.text(i === 0 ? 32 : VIEW_W - 32, 182 + row * 18, label, body(12, CSS.muted)).setOrigin(i === 0 ? 0 : 1, 0);
+        const t = this.add.text(i === 0 ? 26 : VIEW_W - 26, 62 + row * 18, label, body(11, CSS.muted)).setOrigin(i === 0 ? 0 : 1, 0).setDepth(8);
         if (i === 1 && this.arcade) t.setVisible(false);
         else this.ratingLabels.push(t);
       });
@@ -163,13 +210,16 @@ export class SelectScene extends Phaser.Scene {
 
     // Stage select row (hidden until both fighters are locked in).
     this.stageCards = STAGES.map((st, i) =>
-      this.add.image(VIEW_W / 2 + (i - 1) * 250, 300, `stage_${st.id}`).setDisplaySize(230, 96).setVisible(false),
+      this.add.image(VIEW_W / 2 + (i - 1) * 250, 300, `stage_${st.id}`).setDisplaySize(230, 96).setVisible(false).setDepth(21),
     );
     this.stageNames = STAGES.map((st, i) =>
-      this.add.text(VIEW_W / 2 + (i - 1) * 250, 362, st.name, display(16, CSS.ink, 4)).setOrigin(0.5).setVisible(false),
+      this.add.text(VIEW_W / 2 + (i - 1) * 250, 362, st.name, display(16, CSS.ink, 4)).setOrigin(0.5).setVisible(false).setDepth(21),
     );
 
-    this.hint = this.add.text(VIEW_W / 2, VIEW_H - 14, '', body(13, CSS.muted)).setOrigin(0.5, 1);
+    this.stageShade = this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0x05060c, 0.8).setOrigin(0, 0).setDepth(20).setVisible(false);
+    this.stageTitle = this.add.text(VIEW_W / 2, 200, 'CHOOSE A STAGE', display(32, '#ffffff', 7)).setOrigin(0.5).setDepth(21).setVisible(false);
+    goldFill(this.stageTitle);
+    this.hint = this.add.text(VIEW_W / 2, VIEW_H - 8, '', body(12, CSS.muted)).setOrigin(0.5, 1).setDepth(22);
     // Winner stays on with the same fighter (they can still change).
     if (data.p1 !== undefined) this.sides[0].cursor = data.p1;
     if (data.p2 !== undefined) this.sides[1].cursor = data.p2;
@@ -217,16 +267,29 @@ export class SelectScene extends Phaser.Scene {
       } else if (hero >= 0) {
         const info = heroInfo(HEROES[hero].id);
         const art = artFor(hero);
-        side.preview.setTexture(art.key, frameName('idle', 0)).setVisible(true).setOrigin(...feetOrigin(art, i === 1)).setScale(menuScale(art, 2.3));
-        side.name.setText(info.title);
-        side.style.setText(`${info.archetype}  ·  ${info.style}`);
+        side.preview.setTexture(art.key, frameName('idle', 0)).setVisible(true).setOrigin(...feetOrigin(art, i === 1)).setScale(menuScale(art, 2.9));
+        side.name.setText(info.name);
+        side.title.setText(info.title.replace(/^[^"]*"|"$/g, '').replace(info.name, '').trim() || info.title);
+        side.style.setText(info.archetype);
         side.tagline.setText(`"${info.tagline}"`);
+        this.sheets[i].setTexture(`sheet_${HEROES[hero].id}`).setVisible(true);
+        this.sheets[i].setScale(VIEW_H / this.sheets[i].height);
       } else {
         side.preview.setVisible(false);
         side.name.setText('RANDOM');
+        side.title.setText('');
         side.style.setText('Let fate pick.');
         side.tagline.setText('');
+        this.sheets[i].setVisible(false);
       }
+      if (i === 1 && this.arcade) {
+        side.title.setText('');
+        this.sheets[i].setVisible(false);
+      }
+      fitText(side.name, 330);
+      fitText(side.style, 250);
+      fitText(side.tagline, 250);
+      fitText(side.controls, 250);
     }
     const who =
       this.setup.mode === 'versus' ? 'Each player: move and confirm' : this.sides[0].locked && !this.arcade ? 'Now pick the opponent' : 'Pick your fighter';
@@ -257,8 +320,8 @@ export class SelectScene extends Phaser.Scene {
 
   private openStages(): void {
     this.phase = 'stage';
-    this.header.setText('CHOOSE A STAGE');
-    goldFill(this.header);
+    this.stageShade.setVisible(true);
+    this.stageTitle.setVisible(true);
     this.stageCards.forEach((c) => c.setVisible(true));
     this.stageNames.forEach((t) => t.setVisible(true));
     this.setFighterInfoVisible(false);
@@ -268,7 +331,7 @@ export class SelectScene extends Phaser.Scene {
   private setFighterInfoVisible(v: boolean): void {
     for (const side of this.sides) {
       side.preview.setAlpha(v ? 1 : 0.3);
-      for (const t of [side.name, side.style, side.tagline, side.ready]) t.setAlpha(v ? 1 : 0);
+      for (const t of [side.name, side.style, side.tagline, side.ready, side.title]) t.setAlpha(v ? 1 : 0);
     }
     for (const t of this.ratingLabels) t.setVisible(v);
   }
@@ -276,8 +339,8 @@ export class SelectScene extends Phaser.Scene {
   private back(i: number): void {
     if (this.phase === 'stage') {
       this.phase = 'heroes';
-      this.header.setText('CHOOSE YOUR FIGHTER');
-      goldFill(this.header);
+      this.stageShade.setVisible(false);
+      this.stageTitle.setVisible(false);
       this.stageCards.forEach((c) => c.setVisible(false));
       this.stageNames.forEach((t) => t.setVisible(false));
       this.setFighterInfoVisible(true);
@@ -349,38 +412,74 @@ export class SelectScene extends Phaser.Scene {
     this.draw(tick);
   }
 
+  /** Centre of portrait tile `k` in a player's column: the columns lean in towards a V. */
+  private tilePos(col: number, k: number): { x: number; y: number } {
+    const step = TILE_H + 8;
+    const top = (VIEW_H - (this.slots * step - 8)) / 2 + TILE_H / 2 - 6;
+    const x = 318 + k * 15;
+    return { x: col === 0 ? x : VIEW_W - x, y: top + k * step };
+  }
+
+  private tilePoly(x: number, y: number, pad: number): Phaser.Types.Math.Vector2Like[] {
+    const w = TILE_W / 2 + pad;
+    const h = TILE_H / 2 + pad;
+    return [
+      { x: x - w + SKEW, y: y - h },
+      { x: x + w + SKEW, y: y - h },
+      { x: x + w - SKEW, y: y + h },
+      { x: x - w - SKEW, y: y + h },
+    ];
+  }
+
   private draw(tick: number): void {
     const g = this.g;
     g.clear();
+    // Colour washes behind each fighter.
+    const w = this.washG;
+    w.clear();
+    for (let i = 0; i < 2; i += 1) {
+      const side = this.sides[i];
+      const hero = side.cursor < HEROES.length && !(i === 1 && this.arcade) ? side.cursor : -1;
+      const col = hero >= 0 ? heroInfo(HEROES[hero].id).color : i === 0 ? C.p1 : C.p2;
+      const x0 = i === 0 ? 0 : VIEW_W;
+      const d = i === 0 ? 1 : -1;
+      w.fillStyle(col, 0.28).fillPoints([{ x: x0, y: 0 }, { x: x0 + d * 400, y: 0 }, { x: x0 + d * 470, y: VIEW_H }, { x: x0, y: VIEW_H }], true);
+      w.fillStyle(col, 0.18).fillPoints([{ x: x0, y: 0 }, { x: x0 + d * 250, y: 0 }, { x: x0 + d * 330, y: VIEW_H }, { x: x0, y: VIEW_H }], true);
+    }
     // Ratings.
     for (let i = 0; i < 2; i += 1) {
       const side = this.sides[i];
       if (side.cursor >= HEROES.length || this.phase === 'stage' || (i === 1 && this.arcade)) continue;
       const r = heroInfo(HEROES[side.cursor].id).ratings;
       RATING_NAMES.forEach(([k], row) => {
-        const y = 186 + row * 18;
-        for (let s = 0; s < 5; s += 1) {
-          const x = i === 0 ? 112 + s * 22 : VIEW_W - 112 - (s + 1) * 22 + 4;
-          g.fillStyle(s < r[k] ? (i === 0 ? C.p1 : C.p2) : 0x232845, 1).fillRect(x, y, 18, 9);
+        const y = 66 + row * 18;
+        for (let n = 0; n < 5; n += 1) {
+          const x = i === 0 ? 104 + n * 20 : VIEW_W - 104 - (n + 1) * 20 + 4;
+          g.fillStyle(n < r[k] ? (i === 0 ? C.p1 : C.p2) : 0x232845, 1).fillRect(x, y, 16, 8);
         }
       });
     }
-    // Tiles and cursors.
-    this.tiles.forEach((t, k) => {
-      g.fillStyle(C.panel, 0.95).fillRect(t.x - TILE / 2 - 4, t.y - TILE / 2 - 4, TILE + 8, TILE + 8);
-      g.lineStyle(2, C.panelEdge, 1).strokeRect(t.x - TILE / 2 - 4, t.y - TILE / 2 - 4, TILE + 8, TILE + 8);
-      for (let i = 0; i < 2; i += 1) {
-        const side = this.sides[i];
-        if (side.cursor !== k || this.phase === 'stage' || (i === 1 && this.arcade)) continue;
-        const color = i === 0 ? C.p1 : C.p2;
+    // Portrait frames and the cursors.
+    for (let col = 0; col < 2; col += 1) {
+      const side = this.sides[col];
+      const dim = col === 1 && this.arcade;
+      for (let k = 0; k < this.slots; k += 1) {
+        const { x, y } = this.tilePos(col, k);
+        const tile = this.tiles[col * this.slots + k];
+        const on = side.cursor === k && this.phase === 'heroes' && !dim;
+        tile.setAlpha(dim ? 0.25 : k < HEROES.length ? (on ? 1 : 0.62) : tile.alpha);
+        g.lineStyle(2, 0xffffff, dim ? 0.15 : 0.45).strokePoints(this.tilePoly(x, y, 0), true);
+        if (!on) continue;
+        const color = col === 0 ? C.p1 : C.p2;
         const blink = side.locked ? 1 : 0.65 + 0.35 * Math.sin(tick * 0.2);
-        const pad = 8 + i * 6;
-        g.lineStyle(4, color, blink).strokeRect(t.x - TILE / 2 - pad, t.y - TILE / 2 - pad, TILE + pad * 2, TILE + pad * 2);
-        g.fillStyle(color, 1).fillRect(i === 0 ? t.x - TILE / 2 - pad : t.x + TILE / 2 + pad - 30, t.y - TILE / 2 - pad - 16, 30, 16);
+        g.lineStyle(5, color, blink).strokePoints(this.tilePoly(x, y, 3), true);
+        const tagX = col === 0 ? x - TILE_W / 2 - SKEW + 2 : x + TILE_W / 2 - SKEW - 28;
+        g.fillStyle(color, 1).fillRect(tagX, y - TILE_H / 2 - 3, 30, 15);
       }
-    });
+    }
     // Stage cards: a carousel showing the chosen stage between its neighbours.
     if (this.phase === 'stage') {
+      g.setDepth(21);
       const n = STAGES.length;
       this.stageCards.forEach((c, k) => {
         let off = (k - this.stage + n) % n;
@@ -391,6 +490,6 @@ export class SelectScene extends Phaser.Scene {
         this.stageNames[k].setVisible(show).setPosition(c.x, 362).setColor(on ? CSS.gold : CSS.muted);
         if (show) g.lineStyle(on ? 4 : 2, on ? C.gold : C.panelEdge, 1).strokeRect(c.x - 117, c.y - 50, 234, 100);
       });
-    }
+    } else g.setDepth(5);
   }
 }

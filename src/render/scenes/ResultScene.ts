@@ -68,7 +68,7 @@ export class ResultScene extends Phaser.Scene {
       if (setup.party) who = setup.party.names[setup.party.sides[winner]];
       if (run && won) who = champion ? 'ARCADE CLEAR' : `FIGHT ${run.fight + 1} OF ${run.order.length} WON`;
       this.add.text(470, 70, who, display(18, winner === 0 ? CSS.p1 : CSS.p2, 4));
-      const t = this.add.text(470, 92, champion ? `${info.title}: CHAMPION` : `${info.title} WINS`, display(42, '#ffffff', 8));
+      const t = this.add.text(470, 92, champion ? `${info.name}: CHAMPION` : `${info.name} WINS`, display(42, '#ffffff', 8));
       // Long names shrink to fit beside the fighter.
       const room = VIEW_W - 470 - 24;
       if (t.width > room) t.setScale(room / t.width);

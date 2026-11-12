@@ -102,7 +102,7 @@ export class FightScene extends Phaser.Scene {
   private dummy = 3;
   private trainingText: Phaser.GameObjects.Text | null = null;
   /** The state the match started from, every input played, and how many sim frames have run. */
-  private init!: GameState;
+  private initState!: GameState;
   private log: Array<[number, number]> = [];
   private frames = 0;
   private simpleFlags: [boolean, boolean] = [false, false];
@@ -116,10 +116,12 @@ export class FightScene extends Phaser.Scene {
   private replaySpeed = 1;
   /** The match is decided: the frame it ended, the frame the last round's fight began, the final state. */
   private koFrame = -1;
+  private decidedAt = -1;
+  private lastPhase: number = Phase.Intro;
   private roundStart = 0;
   private finalState: GameState | null = null;
   /** The finishing-blow replay shown before the results: next frame to play, the last one, done. */
-  private finale: { f: number; to: number; done: boolean; objs: Phaser.GameObjects.GameObject[] } | null = null;
+  private finale: { f: number; to: number; done: boolean; objs: Phaser.GameObjects.GameObject[]; at: number } | null = null;
   /** Combo trials (training): the current trial, which are cleared, and what the current combo holds. */
   private trialOn = false;
   private trialIndex = 0;
@@ -145,10 +147,12 @@ export class FightScene extends Phaser.Scene {
     const twoHumans = setup.mode === 'versus' || setup.mode === 'online' || setup.mode === 'replay';
     this.simpleFlags = setup.simple ? [setup.simple[0], setup.simple[1] && twoHumans] : [simple, simple && setup.mode === 'versus'];
     this.state = createInitialState(setup.p1, setup.p2, { training: setup.mode === 'training', simple: this.simpleFlags });
-    this.init = this.state;
+    this.initState = this.state;
     this.log = [];
     this.frames = 0;
     this.koFrame = -1;
+    this.decidedAt = -1;
+    this.lastPhase = Phase.Intro;
     this.roundStart = 0;
     this.finalState = null;
     this.finale = null;
@@ -293,7 +297,10 @@ export class FightScene extends Phaser.Scene {
       if (this.trialOn) this.buildTrial();
     }
     for (const e of controls.take()) {
-      if (this.finale && !this.finale.done && (e.action === 'confirm' || e.action === 'pause' || e.action === 'back')) this.finale.done = true;
+      if (this.finale) {
+        // Buttons still mashed from the knockout don't skip it: only a press after it has started.
+        if (!this.finale.done && this.time.now - this.finale.at > 700 && (e.action === 'confirm' || e.action === 'pause' || e.action === 'back')) this.finale.done = true;
+      }
       else if (this.replayInputs) this.replayControl(e.action);
       else if (this.rb) this.onlineControl(e.action);
       else if (this.paused) this.pauseInput(e.action);
@@ -368,6 +375,7 @@ export class FightScene extends Phaser.Scene {
     this.frames = rb.frame;
     this.clock += 1;
     this.simEvents(prev, next);
+    this.watchEnd();
     send();
   }
 
@@ -406,6 +414,9 @@ export class FightScene extends Phaser.Scene {
   private watchEnd(): void {
     const s = this.state;
     if (s.phase === Phase.Fight && s.timer === ROUND_TICKS - 1) this.roundStart = this.frames - 1;
+    // The frame a round was decided (the knockout itself, long before the match-end screen).
+    if (s.phase === Phase.RoundEnd && this.lastPhase === Phase.Fight) this.decidedAt = this.frames;
+    this.lastPhase = s.phase;
     if (s.phase === Phase.MatchEnd && this.koFrame < 0) {
       this.koFrame = this.frames;
       this.finalState = s;
@@ -419,8 +430,9 @@ export class FightScene extends Phaser.Scene {
       this.koFrame = this.frames;
       this.finalState = this.state;
     }
-    const from = Math.max(this.roundStart, this.koFrame - 170);
-    let s = this.init;
+    const hit = this.decidedAt > 0 ? this.decidedAt : this.koFrame;
+    const from = Math.max(this.roundStart, hit - 150);
+    let s = this.initState;
     for (let f = 0; f < from; f += 1) s = step(s, log[f]?.[0] ?? 0, log[f]?.[1] ?? 0);
     this.state = s;
     this.celebrate = [0, 0];
@@ -431,7 +443,7 @@ export class FightScene extends Phaser.Scene {
     const skip = this.add.text(VIEW_W - 28, VIEW_H - 27, 'CONFIRM: skip', body(14, CSS.muted)).setOrigin(1, 0.5);
     this.ui.add([...bars, tag, skip]);
     this.tweens.add({ targets: tag, alpha: 0.3, duration: 500, yoyo: true, repeat: -1 });
-    this.finale = { f: from, to: this.koFrame + 40, done: false, objs: [...bars, tag, skip] };
+    this.finale = { f: from, to: Math.min(this.koFrame, hit + 110), done: false, objs: [...bars, tag, skip], at: this.time.now };
   }
 
   private finaleTick(): void {
@@ -648,7 +660,7 @@ export class FightScene extends Phaser.Scene {
       } else if (next.phase === Phase.MatchEnd) {
         const w = next.matchResult;
         if (w === Result.Draw) this.hud.shout('DRAW GAME', '', 2400);
-        else this.hud.shout(`${heroInfo(HEROES[next.fighters[w].hero].id).title}`, 'WINS THE MATCH', 2400);
+        else this.hud.shout(heroInfo(HEROES[next.fighters[w].hero].id).name, 'WINS THE MATCH', 2400);
         if (this.stage.ambient === 'concert') sfx(this, 'crowd', 0.8);
       }
     }
