@@ -119,7 +119,7 @@ describe('determinism', () => {
     expect(h2).toBe(h1);
     expect(h3).toBe(h1);
     // Golden value: pins the result across runs, machines and refactors.
-    expect(h1).toMatchInlineSnapshot(`"d3e4fa60"`);
+    expect(h1).toMatchInlineSnapshot(`"aed3869d"`);
   });
 
   it('resuming from a serialized mid-run state gives the same hash', () => {
@@ -599,6 +599,18 @@ describe('punish counters and chip KOs', () => {
     s.fighters[1].health = 5;
     s = play(s, [[Heavy | Special, L]], 120, [0, L]).s;
     expect(s.fighters[1].health).toBe(0);
+  });
+});
+
+describe('hitboxes match the art', () => {
+  it('every standing jab hits every crouching fighter up close', () => {
+    for (const a of ALL_HEROES) {
+      for (const d of ALL_HEROES) {
+        let s = fight(a, d, 90);
+        for (let t = 0; t < 14; t += 1) s = step(s, t === 0 ? Light : 0, D);
+        expect(s.fighters[1].comboDamage + (s.fighters[1].fx === FX.Block ? 1 : 0), `${HEROES[a].id} jab on crouching ${HEROES[d].id}`).toBeGreaterThan(0);
+      }
+    }
   });
 });
 

@@ -1,12 +1,18 @@
 // Generates the hero JSON files in src/heroes/ from the compact specs below.
 // The JSON files are what the game loads; edit the specs here and rerun `npm run gen:heroes`
 // (rerunning overwrites hand edits to the JSON).
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const outDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'heroes');
+const here = dirname(fileURLToPath(import.meta.url));
+const outDir = join(here, '..', 'src', 'heroes');
 mkdirSync(outDir, { recursive: true });
+
+// Hurtbox heights and hitbox reach measured from each hero's art (scripts/fit-hitboxes.py).
+const fitPath = join(here, 'hitbox-fit.json');
+// HITBOX_FIT=off writes the hand-made boxes only (the fit script measures against those).
+const FIT = process.env.HITBOX_FIT !== 'off' && existsSync(fitPath) ? JSON.parse(readFileSync(fitPath, 'utf8')) : {};
 
 const Guard = { Mid: 0, Low: 1, High: 2, Throw: 3 };
 const Kind = { Normal: 0, Special: 1, Super: 2, Throw: 3 };
@@ -77,6 +83,15 @@ function move(bodies, spec) {
 }
 
 function hero({ id, name, color, stats, bodies, moves }) {
+  const fit = FIT[id];
+  if (fit) {
+    // The body matches the sprite: standing and crouching heights from the art.
+    stats = { ...stats, height: fit.height, crouchHeight: fit.crouchHeight };
+    bodies = { ...bodies, stand: { ...bodies.stand, h: fit.height }, crouch: { ...bodies.crouch, h: fit.crouchHeight } };
+    moves = Object.fromEntries(
+      Object.entries(moves).map(([key, spec]) => [key, fit.moves[key] && spec.hitbox ? { ...spec, hitbox: { ...spec.hitbox, ...fit.moves[key] } } : spec]),
+    );
+  }
   const out = { id, name, color, stats, hurtboxes: { stand: [bodies.stand], crouch: [bodies.crouch], air: [bodies.air] }, moves: {} };
   for (const [key, spec] of Object.entries(moves)) out.moves[key] = move(bodies, spec);
   return out;
@@ -90,7 +105,7 @@ const heroes = [
     name: 'The Rogue',
     color: '#2f7bff',
     stats: {
-      maxHealth: 980, walkSpeed: 6, backWalkSpeed: 5, jumpVelocity: 22, jumpSpeedX: 7, gravity: 1,
+      maxHealth: 940, walkSpeed: 6, backWalkSpeed: 5, jumpVelocity: 22, jumpSpeedX: 7, gravity: 1,
       width: 70, height: 228, crouchHeight: 150, dashSpeed: 14, dashTicks: 14, backdashSpeed: 12, backdashTicks: 16,
     },
     bodies: {
@@ -108,7 +123,7 @@ const heroes = [
       jumpAttack: { name: 'Strike From Above', guard: Guard.High, body: 'air', air: true, startup: 5, active: 14, recovery: 4, damage: 68, hitstun: 20, blockstun: 14, kb: [6, 0], hitstop: 10, hitbox: { x: 10, y: 50, w: 125, h: 120 } },
       throw: { name: 'Throw', kind: Kind.Throw, guard: Guard.Throw, limb: false, startup: 4, active: 2, recovery: 24, damage: 110, knockdown: true, kb: [14, 14], hitstop: 14, hitbox: { x: 10, y: 60, w: 70, h: 120 } },
       // Rogue's Rift: blinks in (invulnerable while he vanishes), strikes, and blinks back out on a hit.
-      special: { name: "Rogue's Rift", kind: Kind.Special, startup: 12, active: 5, recovery: 22, invuln: 11, teleport: 220, damage: 105, chip: 16, hitstun: 24, blockstun: 18, kb: [12, 16], knockdown: true, hitstop: 14, cancel: Cancel.Super, hitbox: { x: 10, y: 60, w: 125, h: 150 } },
+      special: { name: "Rogue's Rift", kind: Kind.Special, startup: 12, active: 5, recovery: 25, invuln: 11, teleport: 220, damage: 96, chip: 16, hitstun: 24, blockstun: 18, kb: [12, 16], knockdown: true, hitstop: 14, cancel: Cancel.Super, hitbox: { x: 10, y: 60, w: 125, h: 150 } },
       projectile: {
         name: 'Arc Bolt', kind: Kind.Special, startup: 12, active: 1, recovery: 28,
         projectile: { x: 70, y: 150, w: 70, h: 44, speed: 10, life: 110, damage: 70, chip: 12, hitstun: 20, blockstun: 16, kb: [10, 0], hitstop: 8 },
@@ -122,7 +137,7 @@ const heroes = [
     name: 'The Jetsetter',
     color: '#e0b030',
     stats: {
-      maxHealth: 1050, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 21, jumpSpeedX: 7, gravity: 1,
+      maxHealth: 1100, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 21, jumpSpeedX: 7, gravity: 1,
       width: 72, height: 232, crouchHeight: 150, dashSpeed: 15, dashTicks: 13, backdashSpeed: 12, backdashTicks: 15,
     },
     bodies: {
@@ -131,10 +146,10 @@ const heroes = [
       air: { x: -36, y: 30, w: 72, h: 180 },
     },
     moves: {
-      light: { name: 'Smooth Jab', startup: 4, active: 3, recovery: 8, damage: 34, hitstun: 15, blockstun: 11, kb: [3, 0], hitstop: 7, cancel: ALL, hitbox: { x: 15, y: 158, w: 83, h: 30 } },
+      light: { name: 'Smooth Jab', startup: 4, active: 3, recovery: 7, damage: 36, hitstun: 15, blockstun: 11, kb: [3, 0], hitstop: 7, cancel: ALL, hitbox: { x: 15, y: 158, w: 83, h: 30 } },
       heavy: { name: 'Power Strike', startup: 9, active: 4, recovery: 20, damage: 88, hitstun: 24, blockstun: 17, kb: [11, 0], hitstop: 12, cancel: SP, hitbox: { x: 15, y: 130, w: 125, h: 60 } },
       // Skipping roundhouse: steps in as it swings.
-      kick: { name: 'Step Kick', startup: 11, active: 4, recovery: 17, advance: 9, damage: 78, hitstun: 22, blockstun: 15, kb: [12, 0], hitstop: 11, cancel: SP, hitbox: { x: 20, y: 110, w: 110, h: 80 } },
+      kick: { name: 'Step Kick', startup: 10, active: 4, recovery: 17, advance: 9, damage: 80, hitstun: 22, blockstun: 15, kb: [12, 0], hitstop: 11, cancel: SP, hitbox: { x: 20, y: 110, w: 110, h: 80 } },
       crouchLight: { name: 'Low Jab', guard: Guard.Low, body: 'crouch', startup: 4, active: 3, recovery: 9, damage: 26, hitstun: 14, blockstun: 10, kb: [3, 0], hitstop: 7, cancel: ALL, hitbox: { x: 20, y: 108, w: 90, h: 52 } },
       // Breakdance spin: two sweeping hits, the second knocks down.
       sweep: { name: 'Floor Sweep', guard: Guard.Low, body: 'crouch', startup: 10, active: 9, recovery: 22, damage: 44, hits: 2, rehit: 5, knockdown: true, blockstun: 15, kb: [7, 6], hitstop: 11, cancel: Cancel.Super, hitbox: { x: 10, y: 0, w: 115, h: 96 } },
@@ -155,7 +170,7 @@ const heroes = [
     color: '#b8323f',
     // Short in stature: a smaller body, so some high attacks sail over him.
     stats: {
-      maxHealth: 1000, walkSpeed: 6, backWalkSpeed: 5, jumpVelocity: 21, jumpSpeedX: 6, gravity: 1,
+      maxHealth: 1040, walkSpeed: 6, backWalkSpeed: 5, jumpVelocity: 21, jumpSpeedX: 6, gravity: 1,
       width: 64, height: 208, crouchHeight: 138, dashSpeed: 13, dashTicks: 15, backdashSpeed: 11, backdashTicks: 16,
     },
     bodies: {
@@ -225,7 +240,7 @@ const heroes = [
     name: 'Eddnog',
     color: '#e0a526',
     stats: {
-      maxHealth: 1150, walkSpeed: 4, backWalkSpeed: 3, jumpVelocity: 20, jumpSpeedX: 5, gravity: 1,
+      maxHealth: 1070, walkSpeed: 4, backWalkSpeed: 3, jumpVelocity: 20, jumpSpeedX: 5, gravity: 1,
       width: 86, height: 246, crouchHeight: 160, dashSpeed: 11, dashTicks: 15, backdashSpeed: 9, backdashTicks: 17,
     },
     bodies: {
@@ -234,11 +249,11 @@ const heroes = [
       air: { x: -43, y: 30, w: 86, h: 196 },
     },
     moves: {
-      light: { name: 'Keep the Pressure', startup: 5, active: 3, recovery: 9, damage: 40, hitstun: 15, blockstun: 11, kb: [3, 0], hitstop: 8, cancel: ALL, hitbox: { x: 15, y: 160, w: 92, h: 34 } },
+      light: { name: 'Keep the Pressure', startup: 6, active: 3, recovery: 11, damage: 38, hitstun: 15, blockstun: 11, kb: [3, 0], hitstop: 8, cancel: ALL, hitbox: { x: 15, y: 160, w: 92, h: 34 } },
       heavy: { name: 'Bring the Hammer Down', startup: 12, active: 4, recovery: 22, armor: 1, damage: 104, hitstun: 26, blockstun: 19, kb: [13, 0], hitstop: 14, advance: 3, cancel: SP, hitbox: { x: 15, y: 120, w: 124, h: 70 } },
       // Shoulder tackle: steps in behind the pauldron and soaks one hit.
       kick: { name: 'Shoulder Check', startup: 13, active: 4, recovery: 19, advance: 8, armor: 1, damage: 86, hitstun: 22, blockstun: 15, kb: [15, 0], hitstop: 12, cancel: SP, hitbox: { x: 20, y: 110, w: 110, h: 100 } },
-      crouchLight: { name: 'Low Jab', guard: Guard.Low, body: 'crouch', startup: 5, active: 3, recovery: 10, damage: 32, hitstun: 14, blockstun: 10, kb: [3, 0], hitstop: 8, cancel: ALL, hitbox: { x: 20, y: 110, w: 100, h: 54 } },
+      crouchLight: { name: 'Low Jab', guard: Guard.Low, body: 'crouch', startup: 6, active: 3, recovery: 11, damage: 30, hitstun: 14, blockstun: 10, kb: [3, 0], hitstop: 8, cancel: ALL, hitbox: { x: 20, y: 110, w: 100, h: 54 } },
       sweep: { name: 'Sweep the Leg', guard: Guard.Low, body: 'crouch', startup: 11, active: 4, recovery: 27, damage: 92, knockdown: true, blockstun: 15, kb: [8, 6], hitstop: 12, cancel: Cancel.Super, hitbox: { x: 10, y: 0, w: 122, h: 90 } },
       jumpAttack: { name: 'Crush From Above', guard: Guard.High, body: 'air', air: true, startup: 6, active: 14, recovery: 4, damage: 90, hitstun: 21, blockstun: 15, kb: [7, 0], hitstop: 13, hitbox: { x: 0, y: 20, w: 130, h: 130 } },
       throw: { name: 'Bear Hug', kind: Kind.Throw, guard: Guard.Throw, limb: false, startup: 5, active: 3, recovery: 26, damage: 150, knockdown: true, kb: [16, 14], hitstop: 16, hitbox: { x: 10, y: 60, w: 104, h: 140 } },
@@ -259,7 +274,7 @@ const heroes = [
     name: 'Malcolm',
     color: '#2f7bff',
     stats: {
-      maxHealth: 1000, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 21, jumpSpeedX: 6, gravity: 1,
+      maxHealth: 1030, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 21, jumpSpeedX: 6, gravity: 1,
       width: 74, height: 236, crouchHeight: 150, dashSpeed: 13, dashTicks: 14, backdashSpeed: 11, backdashTicks: 16,
     },
     bodies: {
@@ -278,12 +293,12 @@ const heroes = [
       throw: { name: 'Takedown', kind: Kind.Throw, guard: Guard.Throw, limb: false, startup: 4, active: 2, recovery: 24, damage: 118, knockdown: true, kb: [14, 14], hitstop: 14, hitbox: { x: 10, y: 60, w: 74, h: 124 } },
       // Gear Up: a squadmate breaches in at mid-range and holds there for a moment.
       special: {
-        name: 'Gear Up', kind: Kind.Special, startup: 19, active: 1, recovery: 32,
+        name: 'Gear Up', kind: Kind.Special, startup: 18, active: 1, recovery: 29,
         projectile: { x: 140, y: 0, w: 150, h: 160, speed: 0, life: 16, damage: 84, chip: 10, hitstun: 24, blockstun: 14, kb: [12, 14], knockdown: true, hitstop: 12 },
       },
       // Suppressing fire: a quick, light round, paid for with a long recovery so it cannot be spammed.
       projectile: {
-        name: 'Suppressing Fire', kind: Kind.Special, startup: 13, active: 1, recovery: 32,
+        name: 'Suppressing Fire', kind: Kind.Special, startup: 13, active: 1, recovery: 30,
         projectile: { x: 70, y: 146, w: 60, h: 26, speed: 13, life: 80, damage: 50, chip: 8, hitstun: 18, blockstun: 12, kb: [7, 0], hitstop: 7 },
       },
       rising: { name: 'Get Back Up', kind: Kind.Special, juggle: 1, cancel: Cancel.Super, startup: 5, active: 9, recovery: 31, invuln: 7, damage: 124, chip: 16, hitstun: 30, blockstun: 20, kb: [6, 22], knockdown: true, hitstop: 12, hitbox: { x: 0, y: 100, w: 92, h: 180 } },

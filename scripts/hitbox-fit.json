@@ -1,0 +1,134 @@
+{
+ "rogue": {
+  "height": 212,
+  "crouchHeight": 152,
+  "moves": {
+   "light": {
+    "w": 106,
+    "y": 125,
+    "h": 101
+   },
+   "heavy": {
+    "w": 115
+   },
+   "kick": {
+    "w": 112
+   },
+   "crouchLight": {
+    "w": 106
+   }
+  }
+ },
+ "jetsetter": {
+  "height": 216,
+  "crouchHeight": 162,
+  "moves": {
+   "light": {
+    "w": 103,
+    "y": 125,
+    "h": 59
+   },
+   "heavy": {
+    "w": 110
+   },
+   "kick": {
+    "w": 96
+   },
+   "crouchLight": {
+    "w": 70
+   },
+   "sweep": {
+    "w": 115
+   }
+  }
+ },
+ "chris": {
+  "height": 209,
+  "crouchHeight": 156,
+  "moves": {
+   "light": {
+    "w": 102,
+    "y": 121,
+    "h": 56
+   },
+   "heavy": {
+    "w": 114
+   },
+   "crouchLight": {
+    "w": 101
+   },
+   "sweep": {
+    "w": 112
+   }
+  }
+ },
+ "leader": {
+  "height": 236,
+  "crouchHeight": 184,
+  "moves": {
+   "light": {
+    "w": 108,
+    "y": 115,
+    "h": 86
+   },
+   "heavy": {
+    "w": 142
+   },
+   "kick": {
+    "w": 119
+   },
+   "crouchLight": {
+    "w": 101
+   },
+   "sweep": {
+    "w": 138
+   }
+  }
+ },
+ "eddnog": {
+  "height": 237,
+  "crouchHeight": 193,
+  "moves": {
+   "light": {
+    "w": 112,
+    "y": 104,
+    "h": 120
+   },
+   "heavy": {
+    "w": 144
+   },
+   "kick": {
+    "w": 122
+   },
+   "crouchLight": {
+    "w": 120
+   },
+   "sweep": {
+    "w": 122
+   }
+  }
+ },
+ "malcolm": {
+  "height": 235,
+  "crouchHeight": 176,
+  "moves": {
+   "light": {
+    "w": 110,
+    "y": 125,
+    "h": 77
+   },
+   "heavy": {
+    "w": 121
+   },
+   "kick": {
+    "w": 104
+   },
+   "crouchLight": {
+    "w": 80
+   },
+   "sweep": {
+    "w": 132
+   }
+  }
+ }
+}
