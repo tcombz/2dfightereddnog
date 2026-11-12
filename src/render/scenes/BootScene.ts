@@ -4,6 +4,7 @@ import { C, CSS, GAME_TITLE, VIEW_H, VIEW_W } from '../config';
 import { makeTextures } from '../fx';
 import { ALL_ART } from '../heroArt';
 import { heroInfo } from '../heroInfo';
+import { makePxAnims, preloadPx } from '../pxArt';
 import { STAGES } from '../stages';
 import { display } from '../ui';
 
@@ -28,11 +29,13 @@ export class BootScene extends Phaser.Scene {
       if (art.superArt) this.load.image(`superart_${art.key}`, art.superArt);
     }
     for (const st of STAGES) this.load.image(`stage_${st.id}`, st.url);
+    preloadPx(this);
     preloadAudio(this);
   }
 
   create(): void {
     makeTextures(this);
+    makePxAnims(this);
     for (const art of ALL_ART) {
       this.makePortrait(art.key, art.face);
       for (const key of [`sheet_${art.key}`, `superart_${art.key}`, `portrait_${art.key}`]) {

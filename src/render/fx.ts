@@ -174,169 +174,6 @@ export function makeTextures(scene: Phaser.Scene): void {
     ctx.fillStyle = g;
     ctx.fillRect(0, 2, 512, 2);
   });
-  // The Rogue's lightning bolt projectile, four flickering frames.
-  for (let f = 0; f < 4; f += 1) {
-    canvasTexture(scene, `fx_bolt${f}`, 112, 72, (ctx) => {
-      const rnd = seeded(91 + f * 17);
-      radial(ctx, 70, 36, 36, [
-        [0, 'rgba(230,250,255,1)'],
-        [0.35, 'rgba(90,180,255,0.85)'],
-        [1, 'rgba(40,90,255,0)'],
-      ]);
-      ctx.lineCap = 'round';
-      for (const [w, col] of [
-        [6, 'rgba(60,150,255,0.6)'],
-        [2.5, 'rgba(225,248,255,1)'],
-      ] as Array<[number, string]>) {
-        ctx.lineWidth = w;
-        ctx.strokeStyle = col;
-        const r2 = seeded(7 + f * 31);
-        for (let k = 0; k < 5; k += 1) {
-          const a = (k / 5) * TAU + f;
-          bolt(ctx, 70, 36, 70 + Math.cos(a) * 34, 36 + Math.sin(a) * 30, 12, r2);
-        }
-        bolt(ctx, 70, 36, 4, 36 + (rnd() - 0.5) * 20, 16, r2);
-      }
-    });
-  }
-  // Chris's playing card.
-  canvasTexture(scene, 'fx_card', 28, 38, (ctx) => {
-    ctx.fillStyle = '#fdfaf2';
-    ctx.strokeStyle = '#1b1b24';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(1, 1, 26, 36, 4);
-    ctx.fill();
-    ctx.stroke();
-    ctx.strokeStyle = '#b8323f';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(5, 5, 18, 28);
-    ctx.fillStyle = '#c62a3a';
-    ctx.beginPath();
-    ctx.moveTo(14, 11);
-    ctx.lineTo(20, 19);
-    ctx.lineTo(14, 27);
-    ctx.lineTo(8, 19);
-    ctx.closePath();
-    ctx.fill();
-  });
-  // The Leader's golden wave.
-  canvasTexture(scene, 'fx_wave', 110, 90, (ctx) => {
-    radial(ctx, 70, 45, 45, [
-      [0, 'rgba(255,240,180,0.95)'],
-      [0.4, 'rgba(255,190,60,0.7)'],
-      [1, 'rgba(255,120,0,0)'],
-    ]);
-    ctx.strokeStyle = 'rgba(255,236,150,1)';
-    ctx.lineWidth = 6;
-    ctx.beginPath();
-    ctx.arc(40, 45, 42, -1.1, 1.1);
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,170,40,0.8)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(26, 45, 40, -1.0, 1.0);
-    ctx.stroke();
-  });
-  // The Leader's crew charging in: a row of silhouettes rimmed in gold.
-  canvasTexture(scene, 'fx_crew', 160, 220, (ctx) => {
-    const rnd = seeded(2024);
-    const people = [
-      { x: 30, s: 0.82 },
-      { x: 128, s: 0.86 },
-      { x: 58, s: 0.95 },
-      { x: 104, s: 0.98 },
-      { x: 80, s: 1.05 },
-    ];
-    for (const p of people) {
-      const h = 190 * p.s;
-      const top = 216 - h;
-      ctx.save();
-      ctx.shadowColor = 'rgba(255,190,60,0.9)';
-      ctx.shadowBlur = 8;
-      ctx.fillStyle = '#16100a';
-      ctx.beginPath();
-      ctx.arc(p.x, top + 16 * p.s, 15 * p.s, 0, TAU); // head
-      ctx.fill();
-      ctx.beginPath(); // body leaning forward
-      ctx.moveTo(p.x - 18 * p.s, top + 34 * p.s);
-      ctx.lineTo(p.x + 20 * p.s, top + 34 * p.s);
-      ctx.lineTo(p.x + 16 * p.s, top + 110 * p.s);
-      ctx.lineTo(p.x - 14 * p.s, top + 110 * p.s);
-      ctx.closePath();
-      ctx.fill();
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = '#16100a';
-      ctx.lineWidth = 11 * p.s;
-      const up = rnd() < 0.5;
-      ctx.beginPath(); // arms: one raised, one forward
-      ctx.moveTo(p.x + 10 * p.s, top + 42 * p.s);
-      ctx.lineTo(p.x + (up ? 24 : 40) * p.s, top + (up ? 0 : 50) * p.s);
-      ctx.moveTo(p.x - 10 * p.s, top + 42 * p.s);
-      ctx.lineTo(p.x - 30 * p.s, top + 76 * p.s);
-      ctx.stroke();
-      ctx.lineWidth = 13 * p.s;
-      ctx.beginPath(); // legs mid-stride
-      ctx.moveTo(p.x, top + 106 * p.s);
-      ctx.lineTo(p.x + 26 * p.s, top + 150 * p.s);
-      ctx.lineTo(p.x + 22 * p.s, 214);
-      ctx.moveTo(p.x, top + 106 * p.s);
-      ctx.lineTo(p.x - 22 * p.s, top + 160 * p.s);
-      ctx.lineTo(p.x - 34 * p.s, 210);
-      ctx.stroke();
-      ctx.restore();
-    }
-  });
-  // Malcolm's squad: helmeted silhouettes at the ready, rimmed in electric blue.
-  canvasTexture(scene, 'fx_squad', 170, 220, (ctx) => {
-    const people = [
-      { x: 34, s: 0.84 },
-      { x: 132, s: 0.88 },
-      { x: 84, s: 1.04 },
-    ];
-    for (const p of people) {
-      const top = 216 - 190 * p.s;
-      ctx.save();
-      ctx.shadowColor = 'rgba(70,160,255,0.95)';
-      ctx.shadowBlur = 9;
-      ctx.fillStyle = '#070b14';
-      ctx.strokeStyle = '#070b14';
-      ctx.beginPath(); // helmet with a brim
-      ctx.ellipse(p.x, top + 16 * p.s, 17 * p.s, 14 * p.s, 0, Math.PI, 0);
-      ctx.fill();
-      ctx.fillRect(p.x - 19 * p.s, top + 14 * p.s, 38 * p.s, 6 * p.s);
-      ctx.beginPath(); // head
-      ctx.arc(p.x + 2 * p.s, top + 26 * p.s, 11 * p.s, 0, TAU);
-      ctx.fill();
-      ctx.beginPath(); // vest
-      ctx.moveTo(p.x - 20 * p.s, top + 38 * p.s);
-      ctx.lineTo(p.x + 22 * p.s, top + 38 * p.s);
-      ctx.lineTo(p.x + 18 * p.s, top + 112 * p.s);
-      ctx.lineTo(p.x - 16 * p.s, top + 112 * p.s);
-      ctx.closePath();
-      ctx.fill();
-      ctx.lineCap = 'round';
-      ctx.lineWidth = 10 * p.s;
-      ctx.beginPath(); // arms forward at the ready
-      ctx.moveTo(p.x + 12 * p.s, top + 46 * p.s);
-      ctx.lineTo(p.x + 38 * p.s, top + 66 * p.s);
-      ctx.moveTo(p.x - 8 * p.s, top + 48 * p.s);
-      ctx.lineTo(p.x + 22 * p.s, top + 72 * p.s);
-      ctx.stroke();
-      ctx.lineWidth = 6 * p.s; // a shield held in front
-      ctx.fillRect(p.x + 30 * p.s, top + 40 * p.s, 10 * p.s, 64 * p.s);
-      ctx.lineWidth = 13 * p.s;
-      ctx.beginPath(); // legs braced
-      ctx.moveTo(p.x, top + 108 * p.s);
-      ctx.lineTo(p.x + 20 * p.s, top + 156 * p.s);
-      ctx.lineTo(p.x + 22 * p.s, 214);
-      ctx.moveTo(p.x, top + 108 * p.s);
-      ctx.lineTo(p.x - 18 * p.s, top + 160 * p.s);
-      ctx.lineTo(p.x - 26 * p.s, 212);
-      ctx.stroke();
-      ctx.restore();
-    }
-  });
   // The dropship that passes over Malcolm's super: a dark hull with blue engine glow.
   canvasTexture(scene, 'fx_dropship', 420, 130, (ctx) => {
     ctx.save();
@@ -469,40 +306,6 @@ export function makeTextures(scene: Phaser.Scene): void {
       }
     });
   }
-  // The Jetsetter's spinning record.
-  canvasTexture(scene, 'fx_disc', 72, 72, (ctx) => {
-    ctx.fillStyle = '#0c0c12';
-    ctx.beginPath();
-    ctx.arc(36, 36, 34, 0, TAU);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-    ctx.lineWidth = 1;
-    for (let r = 14; r < 33; r += 3) {
-      ctx.beginPath();
-      ctx.arc(36, 36, r, 0, TAU);
-      ctx.stroke();
-    }
-    ctx.strokeStyle = 'rgba(255,230,150,0.55)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(36, 36, 28, -0.9, -0.2);
-    ctx.stroke();
-    ctx.fillStyle = '#f2b632';
-    ctx.beginPath();
-    ctx.arc(36, 36, 12, 0, TAU);
-    ctx.fill();
-    ctx.fillStyle = '#7a4a10';
-    ctx.fillRect(30, 34, 12, 2);
-    ctx.fillStyle = '#0c0c12';
-    ctx.beginPath();
-    ctx.arc(36, 36, 2.5, 0, TAU);
-    ctx.fill();
-    ctx.strokeStyle = '#ffd86b';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(36, 36, 34, 0, TAU);
-    ctx.stroke();
-  });
 }
 
 export class Effects {
@@ -579,12 +382,12 @@ export class Effects {
       }
       return;
     }
-    const key = style === 'vinyl' ? 'fx_disc' : style === 'cards' ? 'fx_card' : style === 'quake' ? 'fx_rock' : 'fx_glow';
+    const key = style === 'vinyl' ? 'px_record' : style === 'cards' ? 'px_card' : style === 'quake' ? 'fx_rock' : 'fx_glow';
     for (let i = 0; i < n + 1; i += 1) {
       const a = (dir > 0 ? 0 : Math.PI) + (Math.random() - 0.5) * 2.4 - (style === 'quake' ? 0.6 * dir : 0);
       const p = this.add(s.add.image(x, y, key), 63);
-      if (style === 'vinyl') p.setScale(0.32);
-      else if (style === 'cards') p.setScale(0.9).setRotation(Math.random() * 6);
+      if (style === 'vinyl') p.setScale(0.4);
+      else if (style === 'cards') p.setScale(0.55).setRotation(Math.random() * 6);
       else if (style === 'quake') p.setScale(0.9 + Math.random() * 0.8);
       else p.setScale(0.12 + Math.random() * 0.1).setTint(Math.random() < 0.5 ? 0xffc23d : 0xfff2b0).setBlendMode(Phaser.BlendModes.ADD);
       const len = 70 + Math.random() * 80 + power * 3;
@@ -606,10 +409,19 @@ export class Effects {
     if (style === 'quake') this.dust(x, y + 40, power >= 10 ? 6 : 3, 90);
   }
 
-  /** Malcolm's Gear Up: a squad drops in at range, holds a beat, and pulls out. */
+  /** A stone spike bursting out of the ground and crumbling (Eddnog's Ground Breaker, his super). */
+  spike(x: number, groundY: number, dir: number, scale = 1.1): void {
+    const sp = this.add(this.scene.add.sprite(x, groundY + 6, 'px_edd_spike').setOrigin(0.5, 0.86).setScale(scale).setFlipX(dir < 0), 44);
+    sp.play('px_edd_spike');
+    sp.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => sp.destroy());
+  }
+
+  /** Malcolm's Gear Up: a squad soldier sprints in at range, holds a beat behind his shield, and pulls out. */
   breach(x: number, groundY: number, facing: number): void {
     const s = this.scene;
-    const sq = this.add(s.add.image(x, groundY + 4, 'fx_squad').setOrigin(0.5, 1).setScale(1.15).setFlipX(facing < 0).setAlpha(0), 46);
+    const sq = this.add(s.add.sprite(x - facing * 60, groundY + 4, 'px_squad').setOrigin(0.5, 1).setFlipX(facing < 0).setAlpha(0), 46) as Phaser.GameObjects.Sprite;
+    sq.setScale(210 / sq.height).play('px_squad_run');
+    s.tweens.add({ targets: sq, x, duration: 160, ease: 'Quad.easeOut', onComplete: () => sq.play('px_squad_push') });
     const flash = this.add(s.add.image(x, groundY - 100, 'fx_glow').setTint(0x4aa8ff).setBlendMode(Phaser.BlendModes.ADD).setScale(0.4, 1.6).setAlpha(0.9), 45);
     s.tweens.add({ targets: sq, alpha: 1, duration: 90 });
     s.tweens.add({ targets: sq, alpha: 0, x: x - facing * 30, delay: 420, duration: 260, onComplete: () => sq.destroy() });

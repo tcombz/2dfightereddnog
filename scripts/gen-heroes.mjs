@@ -278,13 +278,13 @@ const heroes = [
       throw: { name: 'Takedown', kind: Kind.Throw, guard: Guard.Throw, limb: false, startup: 4, active: 2, recovery: 24, damage: 118, knockdown: true, kb: [14, 14], hitstop: 14, hitbox: { x: 10, y: 60, w: 74, h: 124 } },
       // Gear Up: a squadmate breaches in at mid-range and holds there for a moment.
       special: {
-        name: 'Gear Up', kind: Kind.Special, startup: 16, active: 1, recovery: 26,
-        projectile: { x: 140, y: 0, w: 150, h: 210, speed: 0, life: 22, damage: 92, chip: 14, hitstun: 24, blockstun: 18, kb: [12, 14], knockdown: true, hitstop: 12 },
+        name: 'Gear Up', kind: Kind.Special, startup: 19, active: 1, recovery: 32,
+        projectile: { x: 140, y: 0, w: 150, h: 160, speed: 0, life: 16, damage: 84, chip: 10, hitstun: 24, blockstun: 14, kb: [12, 14], knockdown: true, hitstop: 12 },
       },
-      // Suppressing fire: the fastest, lightest projectile in the game.
+      // Suppressing fire: a quick, light round, paid for with a long recovery so it cannot be spammed.
       projectile: {
-        name: 'Suppressing Fire', kind: Kind.Special, startup: 11, active: 1, recovery: 24,
-        projectile: { x: 70, y: 146, w: 60, h: 26, speed: 16, life: 70, damage: 56, chip: 9, hitstun: 18, blockstun: 13, kb: [8, 0], hitstop: 7 },
+        name: 'Suppressing Fire', kind: Kind.Special, startup: 13, active: 1, recovery: 32,
+        projectile: { x: 70, y: 146, w: 60, h: 26, speed: 13, life: 80, damage: 50, chip: 8, hitstun: 18, blockstun: 12, kb: [7, 0], hitstop: 7 },
       },
       rising: { name: 'Get Back Up', kind: Kind.Special, juggle: 1, cancel: Cancel.Super, startup: 5, active: 9, recovery: 31, invuln: 7, damage: 124, chip: 16, hitstun: 30, blockstun: 20, kb: [6, 22], knockdown: true, hitstop: 12, hitbox: { x: 0, y: 100, w: 92, h: 180 } },
       super: { name: 'Operation: Backup', kind: Kind.Super, juggle: 1, meterCost: 1000, startup: 7, active: 30, recovery: 28, hits: 6, rehit: 5, invuln: 18, damage: 56, chip: 20, hitstun: 32, blockstun: 20, kb: [4, 22], knockdown: true, hitstop: 8, hitbox: { x: -40, y: 0, w: 330, h: 260 } },

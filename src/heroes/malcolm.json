@@ -2982,9 +2982,9 @@
    "name": "Gear Up",
    "kind": 1,
    "guard": 0,
-   "startup": 16,
+   "startup": 19,
    "active": 1,
-   "recovery": 26,
+   "recovery": 32,
    "damage": 0,
    "chipDamage": 0,
    "hitstun": 0,
@@ -3007,17 +3007,17 @@
    "teleport": 0,
    "meterCost": 0,
    "projectile": {
-    "spawnTick": 16,
+    "spawnTick": 19,
     "x": 140,
     "y": 0,
     "w": 150,
-    "h": 210,
+    "h": 160,
     "speed": 0,
-    "life": 22,
-    "damage": 92,
-    "chipDamage": 14,
+    "life": 16,
+    "damage": 84,
+    "chipDamage": 10,
     "hitstun": 24,
-    "blockstun": 18,
+    "blockstun": 14,
     "knockback": {
      "x": 12,
      "y": 14
@@ -3498,6 +3498,105 @@
        "h": 236
       }
      ]
+    },
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -37,
+       "y": 0,
+       "w": 74,
+       "h": 236
+      }
+     ]
+    },
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -37,
+       "y": 0,
+       "w": 74,
+       "h": 236
+      }
+     ]
+    },
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -37,
+       "y": 0,
+       "w": 74,
+       "h": 236
+      }
+     ]
+    },
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -37,
+       "y": 0,
+       "w": 74,
+       "h": 236
+      }
+     ]
+    },
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -37,
+       "y": 0,
+       "w": 74,
+       "h": 236
+      }
+     ]
+    },
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -37,
+       "y": 0,
+       "w": 74,
+       "h": 236
+      }
+     ]
+    },
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -37,
+       "y": 0,
+       "w": 74,
+       "h": 236
+      }
+     ]
+    },
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -37,
+       "y": 0,
+       "w": 74,
+       "h": 236
+      }
+     ]
+    },
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -37,
+       "y": 0,
+       "w": 74,
+       "h": 236
+      }
+     ]
     }
    ]
   },
@@ -3505,9 +3604,9 @@
    "name": "Suppressing Fire",
    "kind": 1,
    "guard": 0,
-   "startup": 11,
+   "startup": 13,
    "active": 1,
-   "recovery": 24,
+   "recovery": 32,
    "damage": 0,
    "chipDamage": 0,
    "hitstun": 0,
@@ -3530,25 +3629,135 @@
    "teleport": 0,
    "meterCost": 0,
    "projectile": {
-    "spawnTick": 11,
+    "spawnTick": 13,
     "x": 70,
     "y": 146,
     "w": 60,
     "h": 26,
-    "speed": 16,
-    "life": 70,
-    "damage": 56,
-    "chipDamage": 9,
+    "speed": 13,
+    "life": 80,
+    "damage": 50,
+    "chipDamage": 8,
     "hitstun": 18,
-    "blockstun": 13,
+    "blockstun": 12,
     "knockback": {
-     "x": 8,
+     "x": 7,
      "y": 0
     },
     "knockdown": false,
     "hitstop": 7
    },
    "frames": [
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -37,
+       "y": 0,
+       "w": 74,
+       "h": 236
+      }
+     ]
+    },
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -37,
+       "y": 0,
+       "w": 74,
+       "h": 236
+      }
+     ]
+    },
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -37,
+       "y": 0,
+       "w": 74,
+       "h": 236
+      }
+     ]
+    },
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -37,
+       "y": 0,
+       "w": 74,
+       "h": 236
+      }
+     ]
+    },
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -37,
+       "y": 0,
+       "w": 74,
+       "h": 236
+      }
+     ]
+    },
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -37,
+       "y": 0,
+       "w": 74,
+       "h": 236
+      }
+     ]
+    },
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -37,
+       "y": 0,
+       "w": 74,
+       "h": 236
+      }
+     ]
+    },
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -37,
+       "y": 0,
+       "w": 74,
+       "h": 236
+      }
+     ]
+    },
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -37,
+       "y": 0,
+       "w": 74,
+       "h": 236
+      }
+     ]
+    },
+    {
+     "hitboxes": [],
+     "hurtboxes": [
+      {
+       "x": -37,
+       "y": 0,
+       "w": 74,
+       "h": 236
+      }
+     ]
+    },
     {
      "hitboxes": [],
      "hurtboxes": [

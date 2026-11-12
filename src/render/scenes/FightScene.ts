@@ -48,10 +48,10 @@ const CAM_NEAR = 300;
 const CAM_FAR = 640;
 
 interface ProjectileView {
-  img: Phaser.GameObjects.Image;
+  img: Phaser.GameObjects.Sprite;
   glow: Phaser.GameObjects.Image;
-  /** Extra cards for Chris's fan of cards. */
-  extra: Phaser.GameObjects.Image[];
+  /** Extra pieces: Chris's fan of cards, the Leader's crew running beside the first. */
+  extra: Phaser.GameObjects.Sprite[];
 }
 
 export class FightScene extends Phaser.Scene {
@@ -165,8 +165,8 @@ export class FightScene extends Phaser.Scene {
       this.sprites.push(this.add.image(f.x, GROUND_Y, art.key).setScale(art.scale).setDepth(30 + i));
       this.projViews.push({
         glow: this.add.image(0, 0, 'fx_glow').setBlendMode(Phaser.BlendModes.ADD).setVisible(false).setDepth(44),
-        img: this.add.image(0, 0, 'fx_disc').setVisible(false).setDepth(45),
-        extra: [0, 1].map(() => this.add.image(0, 0, 'fx_card').setVisible(false).setDepth(45)),
+        img: this.add.sprite(0, 0, 'px_record').setVisible(false).setDepth(45),
+        extra: [0, 1].map(() => this.add.sprite(0, 0, 'px_card').setVisible(false).setDepth(45)),
       });
     });
     this.world.add([...this.rallyGlow, ...this.shadows, ...this.sprites, ...this.projViews.flatMap((p) => [p.glow, p.img, ...p.extra])]);
@@ -589,37 +589,76 @@ export class FightScene extends Phaser.Scene {
         const style = art.projectiles[MOVE_KEYS[f.projMove]] ?? 'disc';
         const color = heroInfo(HEROES[f.hero].id).accent;
         const spin = (view.img.rotation + dir * 0.45) % (Math.PI * 2);
-        view.img.setVisible(true).setPosition(cx, cy).setFlipX(dir < 0).setRotation(0).setAlpha(1);
+        // Pixel-art sprites from PixelLab: animated sheets play, single sprites spin or pulse.
+        const play = (sp: Phaser.GameObjects.Sprite, key: string): void => {
+          if (sp.anims.currentAnim?.key !== key || !sp.anims.isPlaying) sp.play(key);
+        };
+        const still = (sp: Phaser.GameObjects.Sprite, key: string): void => {
+          if (sp.anims.isPlaying) sp.anims.stop();
+          if (sp.texture.key !== key) sp.setTexture(key);
+        };
+        view.img.setVisible(true).setPosition(cx, cy).setOrigin(0.5).setFlipX(dir < 0).setRotation(0).setAlpha(1).clearTint();
         view.extra.forEach((e) => e.setVisible(false));
         let glowScale = 0.9;
-        if (style === 'bolt') view.img.setTexture(`fx_bolt${Math.floor(this.clock / 2) % 4}`).setScale(1.1);
-        else if (style === 'disc') view.img.setTexture('fx_disc').setScale(1).setRotation(spin);
-        else if (style === 'wave') view.img.setTexture('fx_wave').setScale(1 + 0.08 * Math.sin(this.clock * 0.6));
-        else if (style === 'tracer') view.img.setTexture('fx_glow').setTint(0xbfe6ff).setScale(1.3, 0.12).setAlpha(0.95);
-        else if (style === 'squad') {
-          // Gear Up: the squad breaches in at range and holds the line there.
-          view.img.setTexture('fx_squad').clearTint().setDisplaySize(r.w + 20, r.h + 10).setPosition(cx, cy + 5).setFlipX(dir < 0);
-          glowScale = 1.6;
+        let glowAlpha = 0.6;
+        let trail = true;
+        if (style === 'bolt') {
+          play(view.img, 'px_rogue_bolt');
+          view.img.setScale(1.6);
+        } else if (style === 'disc') {
+          still(view.img, 'px_record');
+          view.img.setScale(1.25).setRotation(spin);
+        } else if (style === 'golden') {
+          still(view.img, 'px_golden');
+          view.img.setScale(1.45 + 0.08 * Math.sin(this.clock * 0.5));
+          glowScale = 1.3;
+        } else if (style === 'quake') {
+          // Ground Breaker: a rolling wall of rock, stone spikes bursting up along its path.
+          still(view.img, 'px_rocks');
+          view.img.setOrigin(0.5, 1).setPosition(cx, GROUND_Y + 4).setScale(1.25 + 0.05 * Math.sin(this.clock * 0.9));
+          if (this.clock % 5 === 0) this.fx.spike(cx - dir * 30, GROUND_Y, dir);
+          glowAlpha = 0.25;
+          trail = false;
+        } else if (style === 'tracer') {
+          play(view.img, 'px_mal_bolt');
+          view.img.setScale(1.5);
+          glowScale = 0.7;
+        } else if (style === 'squad') {
+          // Gear Up: the soldier is drawn by the breach effect (it outlasts the hit); just a glow here.
+          view.img.setVisible(false);
+          glowScale = 1.4;
+          glowAlpha = 0.3;
+          trail = false;
           if (this.clock % 4 === 0) this.fx.dust(cx, GROUND_Y, 2, 50);
         } else if (style === 'crew') {
-          view.img.setTexture('fx_crew').setDisplaySize(r.w + 30, r.h + 10).setPosition(cx, cy + 5);
-          glowScale = 1.8;
-          if (this.clock % 3 === 0) this.fx.dust(cx - dir * 40, GROUND_Y, 2, 40);
+          // The crew charges: three of them running side by side.
+          const k = r.h + 20;
+          const all = [view.img, ...view.extra];
+          all.forEach((sp, n) => {
+            play(sp, 'px_crew_run');
+            sp.setVisible(true).setOrigin(0.5, 1).setFlipX(dir < 0).setRotation(0).setAlpha(1).clearTint();
+            sp.setScale((k - n * 18) / sp.height).setPosition(cx + dir * (30 - n * 42), GROUND_Y + 4).setDepth(45 - n);
+          });
+          glowAlpha = 0.25;
+          trail = false;
+          if (this.clock % 3 === 0) this.fx.dust(cx - dir * 60, GROUND_Y, 2, 40);
         } else {
           // A fan of three spinning cards.
-          view.img.setTexture('fx_card').setScale(1.5).setRotation(this.clock * 0.6 * dir);
+          still(view.img, 'px_card');
+          view.img.setScale(0.95).setRotation(this.clock * 0.6 * dir);
           view.extra.forEach((e, k) => {
             const off = (k === 0 ? -1 : 1) * 16;
-            e.setVisible(true).setPosition(cx - dir * 14, cy + off).setScale(1.3).setRotation(this.clock * 0.6 * dir + (k + 1) * 1.2);
+            still(e, 'px_card');
+            e.setVisible(true).setOrigin(0.5).setFlipX(false).setDepth(45).setPosition(cx - dir * 14, cy + off).setScale(0.8).setRotation(this.clock * 0.6 * dir + (k + 1) * 1.2);
           });
           glowScale = 0.7;
         }
-        view.glow.setVisible(true).setPosition(cx, cy).setTint(color).setScale(glowScale).setAlpha(0.6 + 0.2 * Math.sin(this.clock * 0.5));
-        if (this.clock % 2 === 0) this.fx.trail(cx - dir * (r.w / 2), cy, color);
+        view.glow.setVisible(true).setPosition(cx, cy).setTint(color).setScale(glowScale).setAlpha(glowAlpha + 0.2 * Math.sin(this.clock * 0.5));
+        if (trail && this.clock % 2 === 0) this.fx.trail(cx - dir * (r.w / 2), cy, color);
       } else {
-        view.img.setVisible(false);
+        view.img.setVisible(false).anims.stop();
         view.glow.setVisible(false);
-        view.extra.forEach((e) => e.setVisible(false));
+        view.extra.forEach((e) => e.setVisible(false).anims.stop());
       }
       if (superActive && s.hitstop === 0) this.superFx.active(heroInfo(HEROES[f.hero].id), f.x, GROUND_Y - f.y, f.facing, this.clock);
     });

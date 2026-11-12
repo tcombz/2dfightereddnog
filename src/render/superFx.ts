@@ -48,14 +48,14 @@ export class SuperFx {
         s.time.delayedCall(i * 90, () => this.strike(x + (Math.random() - 0.5) * 520, footY));
       }
     } else if (style === 'crowd') {
-      const disc = this.w(s.add.image(x - facing * 30, cy - 20, 'fx_disc').setScale(0.4).setAlpha(0.95), 10);
+      const disc = this.w(s.add.image(x - facing * 30, cy - 20, 'px_record').setScale(0.5).setAlpha(0.95), 10);
       const glow = this.w(s.add.image(disc.x, disc.y, 'fx_glow').setTint(0xffc23d).setBlendMode(Phaser.BlendModes.ADD).setScale(1), 10);
-      s.tweens.add({ targets: disc, scale: 4.2, rotation: 6, duration: 900, ease: 'Cubic.easeOut' });
+      s.tweens.add({ targets: disc, scale: 5.2, rotation: 6, duration: 900, ease: 'Cubic.easeOut' });
       s.tweens.add({ targets: glow, scale: 6, duration: 700 });
       this.fadeOut([disc, glow], 900, 400);
       for (let i = 0; i < 10; i += 1) {
         const a = (i / 10) * Math.PI * 2;
-        const d = this.w(s.add.image(x, cy, 'fx_disc').setScale(0.5), 34);
+        const d = this.w(s.add.image(x, cy, 'px_record').setScale(0.62), 34);
         s.tweens.add({ targets: d, x: x + Math.cos(a) * 340, y: cy + Math.sin(a) * 200, rotation: 8, duration: 1100, ease: 'Quad.easeOut' });
         this.fadeOut([d], 700, 400);
       }
@@ -74,7 +74,7 @@ export class SuperFx {
       s.tweens.add({ targets: globe, angle: facing * 40, duration: 1400 });
       this.fadeOut([globe], 1000, 450);
       for (let i = 0; i < 14; i += 1) {
-        const card = this.w(s.add.image(x, cy, 'fx_card').setScale(1.4), i % 2 ? 34 : 12);
+        const card = this.w(s.add.image(x, cy, 'px_card').setScale(0.85), i % 2 ? 34 : 12);
         const a0 = (i / 14) * Math.PI * 2;
         const orbit = { t: 0 };
         s.tweens.add({
@@ -90,7 +90,10 @@ export class SuperFx {
         this.fadeOut([card], 1000, 300);
       }
     } else if (style === 'quake') {
-      // Titan Smash: the ground gives way. Rocks erupt along the floor and shockwaves roll out.
+      // Titan Smash: the ground gives way. Stone spikes erupt along the floor and shockwaves roll out.
+      for (let i = 0; i < 8; i += 1) {
+        s.time.delayedCall(60 + i * 70, () => this.spike(x + (i % 2 ? 1 : -1) * (80 + i * 45), footY, i % 2 ? 1 : -1, 1.3));
+      }
       for (let i = 0; i < 18; i += 1) {
         s.time.delayedCall(80 + i * 35, () => {
           const rx = x + (Math.random() - 0.5) * 700;
@@ -119,7 +122,9 @@ export class SuperFx {
       }
       for (const side of [-1, 1]) {
         for (let k = 0; k < 2; k += 1) {
-          const sq = this.w(s.add.image(x + side * (420 + k * 90), footY + 4, 'fx_squad').setOrigin(0.5, 1).setScale(1.2 - k * 0.15).setFlipX(side > 0).setAlpha(0), 11 - k);
+          const sq = this.w(s.add.sprite(x + side * (420 + k * 90), footY + 4, 'px_squad').setOrigin(0.5, 1).setFlipX(side > 0).setAlpha(0), 11 - k);
+          sq.setScale((230 - k * 30) / sq.height).play({ key: 'px_squad_run', startFrame: k * 2 });
+          s.time.delayedCall(560 + k * 120, () => sq.active && sq.play('px_squad_push'));
           s.tweens.add({ targets: sq, alpha: 0.95, x: x + side * (170 + k * 110), duration: 420, delay: 120 + k * 120, ease: 'Cubic.easeOut' });
           this.fadeOut([sq], 1150, 350);
         }
@@ -135,9 +140,12 @@ export class SuperFx {
       this.fadeOut([crown, halo], 1500, 400);
       this.crown = [crown, halo];
       for (const side of [-1, 1]) {
-        const crew = this.w(s.add.image(x + side * 190, footY + 4, 'fx_crew').setOrigin(0.5, 1).setScale(1.25).setFlipX(side > 0).setAlpha(0), 11);
-        s.tweens.add({ targets: crew, alpha: 0.95, x: x + side * 150, duration: 400, delay: 150 });
-        this.fadeOut([crew], 1100, 350);
+        for (let k = 0; k < 2; k += 1) {
+          const crew = this.w(s.add.sprite(x + side * (300 + k * 70), footY + 4, 'px_crew_run').setOrigin(0.5, 1).setFlipX(side > 0).setAlpha(0), 11 - k);
+          crew.setScale((220 - k * 24) / crew.height).play({ key: 'px_crew_run', startFrame: k * 3 });
+          s.tweens.add({ targets: crew, alpha: 1, x: x + side * (150 + k * 80), duration: 420, delay: 150 + k * 90, ease: 'Cubic.easeOut' });
+          this.fadeOut([crew], 1150, 350);
+        }
       }
       this.embers(x, footY, 40);
     }
@@ -149,8 +157,8 @@ export class SuperFx {
   active(info: HeroInfo, x: number, footY: number, facing: number, clock: number): void {
     const style = info.superStyle;
     if (style === 'storm' && clock % 5 === 0) this.strike(x + facing * (60 + Math.random() * 90), footY);
-    else if (style === 'crowd' && clock % 3 === 0) this.flyer('fx_disc', x, footY - 130, facing, 0.45);
-    else if (style === 'world' && clock % 2 === 0) this.flyer('fx_card', x, footY - 120, facing, 1.3);
+    else if (style === 'crowd' && clock % 3 === 0) this.flyer('px_record', x, footY - 130, facing, 0.55);
+    else if (style === 'world' && clock % 2 === 0) this.flyer('px_card', x, footY - 120, facing, 0.8);
     else if (style === 'crown') {
       if (clock % 2 === 0) this.embers(x + facing * 60, footY, 3);
       for (const o of this.crown) if (o.active) o.x += (x - o.x) * 0.35;
@@ -161,14 +169,21 @@ export class SuperFx {
       const t = this.w(s.add.image(x - facing * 200, y, 'fx_glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0x9fd4ff).setScale(0.9, 0.05), 34);
       s.tweens.add({ targets: t, x: x + facing * 420, alpha: 0, duration: 220, onComplete: () => t.destroy() });
     } else if (style === 'quake' && clock % 6 === 0) {
-      // Every slam kicks up rocks and dust in front of him.
+      // Every slam kicks up rocks and dust in front of him, and a spike bursts where it lands.
       const s = this.scene;
+      this.spike(x + facing * (110 + Math.random() * 60), footY, facing, 1.2);
       for (let i = 0; i < 4; i += 1) {
         const r = this.w(s.add.image(x + facing * (70 + Math.random() * 90), footY, 'fx_rock').setScale(0.9 + Math.random()), 34);
         s.tweens.add({ targets: r, y: footY - 60 - Math.random() * 120, x: r.x + facing * Math.random() * 80, rotation: Math.random() * 6, alpha: 0, duration: 480, onComplete: () => r.destroy() });
       }
       s.cameras.main.shake(90, 0.005);
     }
+  }
+
+  private spike(x: number, footY: number, dir: number, scale: number): void {
+    const sp = this.w(this.scene.add.sprite(x, footY + 6, 'px_edd_spike').setOrigin(0.5, 0.86).setScale(scale).setFlipX(dir < 0), 33);
+    sp.play('px_edd_spike');
+    sp.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => sp.destroy());
   }
 
   private strike(x: number, footY: number): void {

@@ -49,7 +49,7 @@ interface AttackArt {
 }
 
 /** How a projectile is drawn. */
-export type ProjStyle = 'bolt' | 'disc' | 'cards' | 'wave' | 'crew' | 'tracer' | 'squad';
+export type ProjStyle = 'bolt' | 'disc' | 'cards' | 'golden' | 'quake' | 'crew' | 'tracer' | 'squad';
 
 export interface HeroArt {
   key: string;
@@ -170,7 +170,7 @@ const ART: Record<string, HeroArt> = {
     base: leaderBase,
     sheet: leaderSheet,
     superArt: leaderSuper,
-    projectiles: { special: 'crew', projectile: 'wave' },
+    projectiles: { special: 'crew', projectile: 'golden' },
     ...fromJson(leaderArt),
   },
   eddnog: {
@@ -180,7 +180,7 @@ const ART: Record<string, HeroArt> = {
     base: eddnogBase,
     sheet: eddnogSheet,
     superArt: eddnogSuper,
-    projectiles: { projectile: 'wave' },
+    projectiles: { projectile: 'quake' },
     ...fromJson(eddnogArt),
   },
   malcolm: {
