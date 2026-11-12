@@ -10,6 +10,12 @@ import record from '../../assets/fx/record.png';
 import rocks from '../../assets/fx/rocks.png';
 import rogueBolt from '../../assets/fx/rogue_bolt.png';
 import cracks from '../../assets/fx/cracks.png';
+import crown from '../../assets/fx/crown.png';
+import debris from '../../assets/fx/debris.png';
+import dropship from '../../assets/fx/dropship.png';
+import dust from '../../assets/fx/dust.png';
+import globe from '../../assets/fx/globe.png';
+import strike from '../../assets/fx/strike.png';
 import crit from '../../assets/fx/crit.png';
 import heatAura from '../../assets/fx/heat_aura.png';
 import heatWave from '../../assets/fx/heat_wave.png';
@@ -41,6 +47,9 @@ const SHEETS: Sheet[] = [
   { key: 'px_heat_aura', url: heatAura, w: 126, h: 200, frames: 8, fps: 12, loop: true },
   { key: 'px_heat_wave', url: heatWave, w: 268, h: 106, frames: 8, fps: 18, loop: false },
   { key: 'px_cracks', url: cracks, w: 141, h: 55, frames: 10, fps: 14, loop: false },
+  { key: 'px_strike', url: strike, w: 96, h: 128, frames: 10, fps: 20, loop: false },
+  { key: 'px_dust', url: dust, w: 54, h: 41, frames: 8, fps: 16, loop: false },
+  { key: 'px_debris', url: debris, w: 73, h: 60, frames: 12, fps: 18, loop: false },
 ];
 
 const IMAGES: Array<[string, string]> = [
@@ -48,6 +57,9 @@ const IMAGES: Array<[string, string]> = [
   ['px_card', card],
   ['px_golden', goldenOrb],
   ['px_rocks', rocks],
+  ['px_crown', crown],
+  ['px_globe', globe],
+  ['px_dropship', dropship],
 ];
 
 export function preloadPx(scene: Phaser.Scene): void {

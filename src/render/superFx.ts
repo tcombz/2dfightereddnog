@@ -69,8 +69,8 @@ export class SuperFx {
         this.fadeOut([beam], 1300, 200);
       }
     } else if (style === 'world') {
-      const globe = this.w(s.add.image(x - facing * 20, cy - 30, 'fx_globe').setScale(0.2).setAlpha(0.95).setBlendMode(Phaser.BlendModes.ADD), 10);
-      s.tweens.add({ targets: globe, scale: 2.1, duration: 600, ease: 'Back.easeOut' });
+      const globe = this.w(s.add.image(x - facing * 20, cy - 30, 'px_globe').setScale(0.4).setAlpha(0.95), 10);
+      s.tweens.add({ targets: globe, scale: 4.2, duration: 600, ease: 'Back.easeOut' });
       s.tweens.add({ targets: globe, angle: facing * 40, duration: 1400 });
       this.fadeOut([globe], 1000, 450);
       for (let i = 0; i < 14; i += 1) {
@@ -112,7 +112,7 @@ export class SuperFx {
       s.tweens.add({ targets: glow, scale: 5, alpha: 0, duration: 1000, onComplete: () => glow.destroy() });
     } else if (style === 'squad') {
       // Operation: Backup. A dropship roars over, searchlights sweep, and the squad lines up on both sides.
-      const ship = this.w(s.add.image(x - facing * 700, footY - 430, 'fx_dropship').setScale(1.6).setFlipX(facing < 0), 10);
+      const ship = this.w(s.add.image(x - facing * 700, footY - 430, 'px_dropship').setScale(2.6).setFlipX(facing < 0), 10);
       s.tweens.add({ targets: ship, x: x + facing * 700, duration: 1400, ease: 'Sine.easeInOut' });
       this.fadeOut([ship], 1200, 300);
       for (const [bx, a] of [[x - 260, -20], [x + 260, 20]] as Array<[number, number]>) {
@@ -132,9 +132,9 @@ export class SuperFx {
       s.time.delayedCall(500, () => this.scene.cameras.main.shake(200, 0.006));
     } else {
       // The crown drops in over his head as the cut-in clears, and stays through the rush.
-      const crown = this.w(s.add.image(x, footY - 470, 'fx_crown').setScale(0.3).setAlpha(0), 33);
+      const crown = this.w(s.add.image(x, footY - 470, 'px_crown').setScale(0.7).setAlpha(0), 33);
       const halo = this.w(s.add.image(x, footY - 330, 'fx_glow').setTint(0xffb020).setBlendMode(Phaser.BlendModes.ADD).setScale(0.5).setAlpha(0), 32);
-      s.tweens.add({ targets: crown, scale: 0.9, alpha: 1, y: footY - 300, duration: 380, delay: 640, ease: 'Bounce.easeOut' });
+      s.tweens.add({ targets: crown, scale: 2.2, alpha: 1, y: footY - 300, duration: 380, delay: 640, ease: 'Bounce.easeOut' });
       s.tweens.add({ targets: halo, scale: 4.5, alpha: 0.75, duration: 380, delay: 640 });
       s.time.delayedCall(1020, () => this.scene.cameras.main.shake(160, 0.006));
       this.fadeOut([crown, halo], 1500, 400);
@@ -188,9 +188,10 @@ export class SuperFx {
 
   private strike(x: number, footY: number): void {
     const s = this.scene;
-    const b = this.w(s.add.image(x, footY + 10, `fx_strike${Math.floor(Math.random() * 3)}`).setOrigin(0.5, 1).setBlendMode(Phaser.BlendModes.ADD), 36);
-    b.setScale(1, 1.05).setAlpha(1);
-    s.tweens.add({ targets: b, alpha: 0, duration: 220, ease: 'Quad.easeIn', onComplete: () => b.destroy() });
+    // A pixel-art bolt from the sky (PixelLab), striking the floor.
+    const b = this.w(s.add.sprite(x, footY + 14, 'px_strike').setOrigin(0.5, 1).setScale(2.4 + Math.random() * 0.6).setFlipX(Math.random() < 0.5), 36);
+    b.play('px_strike');
+    b.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => b.destroy());
     const g = this.w(s.add.image(x, footY - 10, 'fx_glow').setTint(0x7ee0ff).setBlendMode(Phaser.BlendModes.ADD).setScale(1.2), 35);
     s.tweens.add({ targets: g, alpha: 0, scale: 2.4, duration: 260, onComplete: () => g.destroy() });
   }

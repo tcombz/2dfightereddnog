@@ -399,10 +399,13 @@ export class Effects {
       });
     }
     if (style === 'crown' && power >= 10) {
-      const c = this.add(s.add.image(x, y - 30, 'fx_crown').setScale(0.12).setAlpha(0.95), 64);
-      s.tweens.add({ targets: c, y: y - 90, scale: 0.22, alpha: 0, duration: 420, ease: 'Quad.easeOut', onComplete: () => c.destroy() });
+      const c = this.add(s.add.image(x, y - 30, 'px_crown').setScale(0.3).setAlpha(0.95), 64);
+      s.tweens.add({ targets: c, y: y - 90, scale: 0.55, alpha: 0, duration: 420, ease: 'Quad.easeOut', onComplete: () => c.destroy() });
     }
-    if (style === 'quake') this.dust(x, y + 40, power >= 10 ? 6 : 3, 90);
+    if (style === 'quake') {
+      this.dust(x, y + 40, power >= 10 ? 6 : 3, 90);
+      this.burst('px_debris', x, y, power >= 10 ? 1.6 : 1.1, 0, undefined, 63).setFlipX(dir < 0);
+    }
   }
 
   /** A stone spike bursting out of the ground and crumbling (Eddnog's Ground Breaker, his super). */
@@ -453,9 +456,13 @@ export class Effects {
     this.scene.tweens.add({ targets: r, scale: scale, alpha: 0, duration: 280, ease: 'Quad.easeOut', onComplete: () => r.destroy() });
   }
 
-  /** Dust kicked up at floor level. */
+  /** Dust kicked up at floor level: PixelLab puffs, a couple per call. */
   dust(x: number, y: number, amount: number, spread = 60): void {
-    for (let i = 0; i < amount; i += 1) {
+    for (let i = 0; i < Math.min(3, Math.ceil(amount / 2)); i += 1) {
+      const side = i % 2 === 0 ? -1 : 1;
+      this.burst('px_dust', x + side * Math.random() * spread * 0.4, y - 14, 0.9 + Math.random() * 0.5, 0, undefined, 20).setFlipX(side < 0);
+    }
+    for (let i = 0; i < amount >> 1; i += 1) {
       const d = this.add(this.scene.add.image(x + (Math.random() - 0.5) * spread * 0.4, y - 6, 'fx_dust'), 20);
       const side = Math.random() < 0.5 ? -1 : 1;
       d.setScale(0.5 + Math.random() * 0.5).setAlpha(0.8);
