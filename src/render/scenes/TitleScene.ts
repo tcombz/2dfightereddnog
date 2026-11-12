@@ -54,7 +54,7 @@ export class TitleScene extends Phaser.Scene {
     this.menu = new Menu(
       this,
       VIEW_W / 2 - 190,
-      250,
+      232,
       [
         { label: 'PARTY MODE', onSelect: () => goTo(this, 'party') },
         {
@@ -72,7 +72,9 @@ export class TitleScene extends Phaser.Scene {
           onRight: () => this.registry.set('cpuLevel', (cpuLevel() + 1) % 3),
         },
         { label: 'VS PLAYER', onSelect: () => start('versus') },
+        { label: 'ONLINE', onSelect: () => goTo(this, 'online') },
         { label: 'TRAINING', onSelect: () => start('training') },
+        { label: 'REPLAYS', onSelect: () => goTo(this, 'replays') },
         { label: 'HOW TO PLAY', onSelect: () => goTo(this, 'howto', { back: 'title' }) },
         { label: 'CONTROLLERS', onSelect: () => goTo(this, 'pads') },
         {
@@ -91,8 +93,8 @@ export class TitleScene extends Phaser.Scene {
         },
       ],
       380,
-      24,
-      17,
+      22,
+      16,
     );
     this.menu.setVisible(false);
     if (data?.skipIntro) this.open();

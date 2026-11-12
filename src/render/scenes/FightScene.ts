@@ -21,9 +21,10 @@ import {
   getMove,
   getProjectile,
   rallying,
+  ROUND_TICKS,
   step,
 } from '../../sim';
-import type { GameState } from '../../sim';
+import type { FighterState, GameState } from '../../sim';
 import { playMusic, sfx } from '../audio';
 import { C, CSS, GROUND_Y, VIEW_H, VIEW_W } from '../config';
 import type { MatchSetup } from '../config';
@@ -36,6 +37,9 @@ import { moveList } from '../moves';
 import { backHint, inputText } from '../prompts';
 import { STAGES } from '../stages';
 import { ComboTracker, TRIALS, stepLabel } from '../trials';
+import { Rollback } from '../../net/rollback';
+import { online, sendMine, theirs } from '../../net/session';
+import { decodeInputs, encodeInputs, saveReplay } from '../replays';
 import type { StageDef } from '../stages';
 import { Menu, body, display, goTo, goldFill } from '../ui';
 
@@ -69,6 +73,7 @@ export class FightScene extends Phaser.Scene {
   private heatAura: Phaser.GameObjects.Sprite[] = [];
   private promptStamp = -1;
   private lastSmear = [-1, -1];
+  private lastArc = [-1, -1];
   private shadows: Phaser.GameObjects.Image[] = [];
   private projViews: ProjectileView[] = [];
   private darken!: Phaser.GameObjects.Rectangle;
@@ -96,6 +101,25 @@ export class FightScene extends Phaser.Scene {
   private slowmo = { rate: 1 };
   private dummy = 3;
   private trainingText: Phaser.GameObjects.Text | null = null;
+  /** The state the match started from, every input played, and how many sim frames have run. */
+  private init!: GameState;
+  private log: Array<[number, number]> = [];
+  private frames = 0;
+  private simpleFlags: [boolean, boolean] = [false, false];
+  /** Online: the rollback session; ticks spent waiting on the other side; a pause press to confirm leaving. */
+  private rb: Rollback | null = null;
+  private stalled = 0;
+  private leaveArmed = 0;
+  private netText: Phaser.GameObjects.Text | null = null;
+  /** Replay mode: the inputs being played back, and the playback speed. */
+  private replayInputs: Array<[number, number]> | null = null;
+  private replaySpeed = 1;
+  /** The match is decided: the frame it ended, the frame the last round's fight began, the final state. */
+  private koFrame = -1;
+  private roundStart = 0;
+  private finalState: GameState | null = null;
+  /** The finishing-blow replay shown before the results: next frame to play, the last one, done. */
+  private finale: { f: number; to: number; done: boolean; objs: Phaser.GameObjects.GameObject[] } | null = null;
   /** Combo trials (training): the current trial, which are cleared, and what the current combo holds. */
   private trialOn = false;
   private trialIndex = 0;
@@ -118,10 +142,22 @@ export class FightScene extends Phaser.Scene {
     this.setup = setup;
     this.stage = STAGES[setup.stage];
     const simple = (this.registry.get('simple') as boolean | undefined) ?? false;
-    this.state = createInitialState(setup.p1, setup.p2, {
-      training: setup.mode === 'training',
-      simple: setup.simple ? [setup.simple[0], setup.simple[1] && setup.mode === 'versus'] : [simple, simple && setup.mode === 'versus'],
-    });
+    const twoHumans = setup.mode === 'versus' || setup.mode === 'online' || setup.mode === 'replay';
+    this.simpleFlags = setup.simple ? [setup.simple[0], setup.simple[1] && twoHumans] : [simple, simple && setup.mode === 'versus'];
+    this.state = createInitialState(setup.p1, setup.p2, { training: setup.mode === 'training', simple: this.simpleFlags });
+    this.init = this.state;
+    this.log = [];
+    this.frames = 0;
+    this.koFrame = -1;
+    this.roundStart = 0;
+    this.finalState = null;
+    this.finale = null;
+    this.stalled = 0;
+    this.leaveArmed = 0;
+    this.netText = null;
+    this.replaySpeed = 1;
+    this.rb = setup.mode === 'online' && setup.online ? new Rollback(this.state, setup.online.me) : null;
+    this.replayInputs = setup.mode === 'replay' && setup.replay ? decodeInputs(setup.replay.inputs) : null;
     this.acc = 0;
     this.clock = 0;
     this.paused = false;
@@ -194,6 +230,10 @@ export class FightScene extends Phaser.Scene {
     this.centerCamera(true);
     playMusic(this, this.stage.music);
     if (setup.mode !== 'training') this.hud.shout('ROUND 1', '', 1000);
+    if (this.rb || this.replayInputs) {
+      this.netText = this.add.text(VIEW_W / 2, VIEW_H - 14, '', body(13, CSS.ink)).setOrigin(0.5, 1).setBackgroundColor('#0b0e1ccc').setPadding(10, 3, 10, 3);
+      this.ui.add(this.netText);
+    }
 
     const kb = this.input.keyboard;
     if (kb) {
@@ -217,6 +257,7 @@ export class FightScene extends Phaser.Scene {
   // ---------- inputs ----------
 
   private inputs(s: GameState): [number, number] {
+    if (this.replayInputs) return this.replayInputs[this.frames] ?? [0, 0];
     const solo = this.setup.mode !== 'versus';
     // Playing alone, either set of keys (or the first pad) drives player 1.
     const p1 = solo ? controls.bits(0) | controls.bits(1) : controls.bits(0);
@@ -252,35 +293,185 @@ export class FightScene extends Phaser.Scene {
       if (this.trialOn) this.buildTrial();
     }
     for (const e of controls.take()) {
-      if (this.paused) this.pauseInput(e.action);
+      if (this.finale && !this.finale.done && (e.action === 'confirm' || e.action === 'pause' || e.action === 'back')) this.finale.done = true;
+      else if (this.replayInputs) this.replayControl(e.action);
+      else if (this.rb) this.onlineControl(e.action);
+      else if (this.paused) this.pauseInput(e.action);
       else if (e.action === 'pause' && this.state.phase !== Phase.MatchEnd) this.openPause();
     }
 
     if (!this.paused) {
       // After a KO the sim ignores input, so playing it slower changes nothing but the drama.
-      this.acc += delta * this.slowmo.rate;
+      this.acc += delta * this.slowmo.rate * this.replaySpeed;
+      const most = MAX_STEPS_PER_FRAME * this.replaySpeed;
       let steps = 0;
-      while (this.acc >= TICK_MS && steps < MAX_STEPS_PER_FRAME) {
-        const prev = this.state;
-        const [a, b] = this.inputs(prev);
-        this.state = step(prev, a, b);
-        this.clock += 1;
-        this.simEvents(prev, this.state);
+      while (this.acc >= TICK_MS && steps < most) {
         this.acc -= TICK_MS;
         steps += 1;
+        this.tick();
       }
-      if (this.acc > TICK_MS * MAX_STEPS_PER_FRAME) this.acc = 0; // tab was hidden: drop the backlog
+      if (this.acc > TICK_MS * most) this.acc = 0; // tab was hidden: drop the backlog
     }
+    if (this.rb) this.netStatus();
 
     this.draw(delta);
 
-    if (this.state.phase === Phase.MatchEnd && !this.paused) {
+    // The match is decided (online: once both sides' inputs confirm it).
+    const decided = this.state.phase === Phase.MatchEnd && (!this.rb || this.rb.confirmed + 1 >= this.rb.frame);
+    if (this.finale) {
+      if (this.finale.done) this.proceed();
+    } else if (decided && !this.paused) {
       this.matchOverTicks += delta / TICK_MS;
-      if (this.matchOverTicks > 170) {
-        const s = this.state;
-        goTo(this, 'result', { setup: this.setup, winner: s.matchResult, wins: [s.wins[0], s.wins[1]] }, 400);
-      }
+      const showFinale = this.setup.mode !== 'training' && this.setup.mode !== 'replay';
+      if (showFinale && this.matchOverTicks > 110) this.startFinale();
+      else if (!showFinale && this.matchOverTicks > 170) this.proceed();
     }
+  }
+
+  /** One sim frame: local, online (rollback), replay, or the finishing-blow replay. */
+  private tick(): void {
+    if (this.finale) return this.finaleTick();
+    if (this.rb) return this.netTick();
+    if (this.replayInputs && this.frames >= this.replayInputs.length) {
+      if (!this.finale) this.matchOverTicks = 999;
+      return;
+    }
+    const prev = this.state;
+    const [a, b] = this.inputs(prev);
+    this.log[this.frames] = [a, b];
+    this.state = step(prev, a, b);
+    this.frames += 1;
+    this.clock += 1;
+    this.simEvents(prev, this.state);
+    this.watchEnd();
+  }
+
+  private netTick(): void {
+    const rb = this.rb!;
+    const m = this.setup.online!.match;
+    const t = theirs();
+    if (t?.g && t.g.m === m) rb.receive(t.g);
+    const send = (): void => sendMine({ g: { m, ...rb.outgoing() } });
+    // Decided and confirmed: stop here (keep sending, so the other side can confirm it too).
+    if (this.state.phase === Phase.MatchEnd && rb.confirmed + 1 >= rb.frame) {
+      this.watchEnd();
+      return send();
+    }
+    if (rb.shouldWait() || !rb.canAdvance()) {
+      if (!rb.canAdvance()) this.stalled += 1;
+      return send();
+    }
+    this.stalled = 0;
+    rb.addLocal(controls.bits(0) | controls.bits(1));
+    const { prev, next } = rb.advance();
+    this.state = next;
+    this.frames = rb.frame;
+    this.clock += 1;
+    this.simEvents(prev, next);
+    send();
+  }
+
+  private netStatus(): void {
+    const rb = this.rb!;
+    const o = online();
+    const t = theirs();
+    const gone = !o || o.link.quietFor() > 8000 || (t !== null && !t.g && this.frames > 120);
+    if (gone && !this.finale) {
+      goTo(this, 'online', { notice: 'Your opponent left the match.' }, 300);
+      return;
+    }
+    let msg = '';
+    if (rb.desynced) msg = 'OUT OF SYNC: the two games disagree. Finish the round and rematch.';
+    else if (this.stalled > 20) msg = this.frames < 30 ? 'CONNECTING TO YOUR OPPONENT…' : 'WAITING FOR YOUR OPPONENT…';
+    else if (this.leaveArmed > 0 && this.time.now - this.leaveArmed < 2000) msg = 'PRESS START AGAIN TO LEAVE THE MATCH';
+    this.netText?.setText(msg).setVisible(msg !== '');
+  }
+
+  private onlineControl(action: string): void {
+    if (action !== 'pause') return;
+    if (this.leaveArmed > 0 && this.time.now - this.leaveArmed < 2000) {
+      sendMine({ g: null, ready: false });
+      goTo(this, 'online', { notice: 'You left the match.' }, 300);
+    } else this.leaveArmed = this.time.now;
+  }
+
+  private replayControl(action: string): void {
+    if (action === 'confirm') {
+      this.replaySpeed = this.replaySpeed >= 4 ? 1 : this.replaySpeed * 2;
+      sfx(this, 'ui_move', 0.7);
+    } else if (action === 'pause' || action === 'back') this.proceed();
+  }
+
+  /** Note where the last round's fight began and where the match ended. */
+  private watchEnd(): void {
+    const s = this.state;
+    if (s.phase === Phase.Fight && s.timer === ROUND_TICKS - 1) this.roundStart = this.frames - 1;
+    if (s.phase === Phase.MatchEnd && this.koFrame < 0) {
+      this.koFrame = this.frames;
+      this.finalState = s;
+    }
+  }
+
+  /** Rewind to a moment before the finishing blow and play it again, slower, letterboxed. */
+  private startFinale(): void {
+    const log = this.rb ? this.rb.log : this.log;
+    if (this.koFrame < 0) {
+      this.koFrame = this.frames;
+      this.finalState = this.state;
+    }
+    const from = Math.max(this.roundStart, this.koFrame - 170);
+    let s = this.init;
+    for (let f = 0; f < from; f += 1) s = step(s, log[f]?.[0] ?? 0, log[f]?.[1] ?? 0);
+    this.state = s;
+    this.celebrate = [0, 0];
+    this.tweens.killTweensOf(this.slowmo);
+    this.slowmo.rate = 0.6;
+    const bars = [0, VIEW_H - 54].map((y) => this.add.rectangle(0, y, VIEW_W, 54, 0x000000, 1).setOrigin(0, 0));
+    const tag = this.add.text(28, 27, '● REPLAY', display(20, '#ff4a4a', 5)).setOrigin(0, 0.5);
+    const skip = this.add.text(VIEW_W - 28, VIEW_H - 27, 'CONFIRM: skip', body(14, CSS.muted)).setOrigin(1, 0.5);
+    this.ui.add([...bars, tag, skip]);
+    this.tweens.add({ targets: tag, alpha: 0.3, duration: 500, yoyo: true, repeat: -1 });
+    this.finale = { f: from, to: this.koFrame + 40, done: false, objs: [...bars, tag, skip] };
+  }
+
+  private finaleTick(): void {
+    const fin = this.finale!;
+    if (fin.done) return;
+    const log = this.rb ? this.rb.log : this.log;
+    if (fin.f >= fin.to) {
+      fin.done = true;
+      return;
+    }
+    const prev = this.state;
+    const p = log[fin.f] ?? [0, 0];
+    this.state = step(prev, p[0], p[1]);
+    fin.f += 1;
+    this.clock += 1;
+    this.simEvents(prev, this.state);
+  }
+
+  /** Leave the fight: results (or the online lobby), saving the replay on the way. */
+  private proceed(): void {
+    if ((this as unknown as { leaving?: boolean }).leaving) return;
+    const setup = this.setup;
+    if (setup.mode === 'replay' && setup.replay) {
+      goTo(this, setup.replay.back.scene, setup.replay.back.data, 300);
+      return;
+    }
+    const s = this.finalState ?? this.state;
+    const wins: [number, number] = [s.wins[0], s.wins[1]];
+    const frames = this.koFrame > 0 ? this.koFrame : this.frames;
+    const inputs = setup.mode === 'training' ? '' : encodeInputs(this.rb ? this.rb.log : this.log, frames);
+    if (inputs) {
+      saveReplay({ at: Date.now(), p1: setup.p1, p2: setup.p2, stage: setup.stage, simple: this.simpleFlags, winner: s.matchResult, wins, mode: setup.mode, inputs });
+    }
+    const o = online();
+    if (setup.mode === 'online' && o) {
+      o.last = { winner: s.matchResult, wins };
+      goTo(this, 'online', {}, 400);
+      return;
+    }
+    goTo(this, 'result', { setup, winner: s.matchResult, wins, replay: inputs, simple: this.simpleFlags }, 400);
   }
 
   // ---------- sim events to sound and effects ----------
@@ -585,16 +776,20 @@ export class FightScene extends Phaser.Scene {
         const pulse = 0.8 + 0.2 * Math.sin(this.clock * 0.01 + i);
         glow.setPosition(f.x, GROUND_Y - f.y - 100).setScale(2.2 * pulse, 3.2).setAlpha(pulse);
       }
+      // Motion on top of the frames: wind-up, lunge and follow-through on attacks, recoil when hit.
+      const mo = this.motion(f);
       sprite
         .setFrame(pose.frame)
         .setOrigin(...feetOrigin(art, f.facing !== 1))
         .setFlipX(f.facing !== 1)
-        .setPosition(f.x + jitter, GROUND_Y - f.y)
+        .setPosition(f.x + jitter + mo.dx, GROUND_Y - f.y)
+        .setRotation(pose.angle + mo.rot)
         .setDepth(f.state === FS.Attack ? 32 : 30 + i);
       // Weight: squash for a moment on landing, stretch a touch on take-off.
       const sinceLanding = s.tick - this.landedAt[i];
       const squash = sinceLanding >= 0 && sinceLanding < 5 ? (5 - sinceLanding) * 0.012 : f.state === FS.Jump && f.stateTick < 5 ? -(5 - f.stateTick) * 0.008 : 0;
-      sprite.setScale(art.scale * (1 + squash), art.scale * (1 - squash));
+      sprite.setScale(art.scale * (1 + squash) * mo.sx, art.scale * (1 - squash) * mo.sy);
+      this.swingArc(f, i);
 
       // Flashes: white on hit, red on counter, blue on block, glow during a super flash.
       if (f.state === FS.Hitstun && f.stateTick < 3) sprite.setTintFill(0xffffff);
@@ -720,6 +915,60 @@ export class FightScene extends Phaser.Scene {
       this.trialChips.forEach((c, k) => c.setColor(k < n ? (this.trialLocked ? '#7dff9a' : CSS.gold) : CSS.ink));
     }
     this.drawDebug();
+  }
+
+  /**
+   * Procedural motion layered on the sprite frames, which are few and held for several ticks:
+   * a wind-up that pulls back through startup, a lunge and stretch on the strike, then a
+   * follow-through that eases home with a small overshoot. Heavier moves (more damage) move more.
+   * Getting hit snaps the body back and lets it ease upright over the hitstun.
+   */
+  private motion(f: FighterState): { dx: number; rot: number; sx: number; sy: number } {
+    const dir = f.facing;
+    if (f.state === FS.Hitstun && f.y === 0) {
+      const total = Math.max(1, f.stateTick + f.stunTimer);
+      const k = 1 - f.stateTick / total;
+      const e = k * k;
+      return { dx: -dir * 7 * e, rot: -dir * 0.1 * e, sx: 1, sy: 1 };
+    }
+    if (f.state === FS.Dash && f.vx * dir > 0) return { dx: 0, rot: dir * 0.07, sx: 1.03, sy: 0.98 };
+    if (f.state !== FS.Attack || f.y > 0 || f.moveId === Move.Super || f.moveId === Move.Throw) return { dx: 0, rot: 0, sx: 1, sy: 1 };
+    const m = getMove(f.hero, f.moveId);
+    const w = Math.min(1.4, Math.max(0.35, m.damage / 80));
+    const t = f.stateTick;
+    if (t < m.startup) {
+      const p = (t + 1) / m.startup;
+      const e = p * p;
+      return { dx: -dir * 6 * w * e, rot: -dir * 0.06 * w * e, sx: 1 - 0.04 * w * e, sy: 1 + 0.03 * w * e };
+    }
+    const a = t - m.startup;
+    if (a < m.active) {
+      const k = 1 - (a / Math.max(1, m.active)) * 0.35;
+      return { dx: dir * 10 * w * k, rot: dir * 0.08 * w * k, sx: 1 + 0.07 * w * k, sy: 1 - 0.05 * w * k };
+    }
+    const r = Math.min(1, (a - m.active) / Math.max(1, m.recovery));
+    const v = 0.65 * (1 - r) * (1 - r) - 0.14 * Math.sin(Math.PI * r);
+    return { dx: dir * 10 * w * v, rot: dir * 0.08 * w * v, sx: 1 + 0.04 * w * Math.max(0, v), sy: 1 - 0.03 * w * Math.max(0, v) };
+  }
+
+  /** A PixelLab swing arc through the hitbox on the first active frame of every melee strike. */
+  private swingArc(f: FighterState, i: number): void {
+    if (f.state !== FS.Attack || f.moveId === Move.Throw || f.moveId === Move.Super) return;
+    const m = getMove(f.hero, f.moveId);
+    if (f.stateTick !== m.startup) return;
+    const id = this.state.tick - f.stateTick;
+    if (this.lastArc[i] === id) return;
+    const boxes = getHitboxes(f);
+    if (boxes.length === 0) return;
+    this.lastArc[i] = id;
+    const b = boxes[0];
+    const cx = b.x + b.w / 2;
+    const cy = GROUND_Y - (b.y + b.h / 2);
+    const low = b.y + b.h < 70;
+    const k = Math.max(0.7, Math.min(2.2, Math.max(b.w, b.h) / 70));
+    const accent = heroInfo(HEROES[f.hero].id).accent;
+    const sp = this.fx.burst('px_swing', cx - f.facing * 10, cy, k, 0, accent, 47);
+    sp.setFlipX(f.facing !== 1).setScale(k, low ? k * 0.55 : k).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.95);
   }
 
   private drawDebug(): void {

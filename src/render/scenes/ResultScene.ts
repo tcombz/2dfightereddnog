@@ -15,6 +15,9 @@ interface ResultData {
   setup: MatchSetup;
   winner: number;
   wins: [number, number];
+  /** The match's inputs, for WATCH REPLAY, and the special-input flags it was played with. */
+  replay?: string;
+  simple?: [boolean, boolean];
 }
 
 export class ResultScene extends Phaser.Scene {
@@ -81,6 +84,24 @@ export class ResultScene extends Phaser.Scene {
     this.add.text(470, 248, score + extra, display(22, CSS.muted, 4));
 
     const mainMenu = { label: 'MAIN MENU', onSelect: () => goTo(this, 'title', { skipIntro: true }) };
+    const inputs = data.replay ?? '';
+    const watch = inputs
+      ? [
+          {
+            label: 'WATCH REPLAY',
+            onSelect: () =>
+              goTo(this, 'fight', {
+                mode: 'replay',
+                p1: setup.p1,
+                p2: setup.p2,
+                stage: setup.stage,
+                cpuLevel: setup.cpuLevel,
+                simple: data.simple,
+                replay: { inputs, back: { scene: 'result', data } },
+              } satisfies MatchSetup),
+          },
+        ]
+      : [];
     let items;
     const party = setup.party;
     if (party) {
@@ -103,6 +124,7 @@ export class ResultScene extends Phaser.Scene {
       };
       items = [
         { label: 'NEXT MATCH', onSelect: () => goTo(this, 'select', carry) },
+        ...watch,
         { label: 'END PARTY', onSelect: () => goTo(this, 'party') },
       ];
       this.standings(next);
@@ -111,15 +133,16 @@ export class ResultScene extends Phaser.Scene {
       return;
     }
     if (run && champion) {
-      items = [{ label: 'PLAY ARCADE AGAIN', onSelect: () => goTo(this, 'select', { mode: 'cpu', cpuLevel: run.base, arcadeStart: true }) }, mainMenu];
+      items = [{ label: 'PLAY ARCADE AGAIN', onSelect: () => goTo(this, 'select', { mode: 'cpu', cpuLevel: run.base, arcadeStart: true }) }, ...watch, mainMenu];
     } else if (run && won) {
-      items = [{ label: 'NEXT FIGHT', onSelect: () => goTo(this, 'versus', arcadeSetup(setup.p1, { ...run, fight: run.fight + 1 })) }, mainMenu];
+      items = [{ label: 'NEXT FIGHT', onSelect: () => goTo(this, 'versus', arcadeSetup(setup.p1, { ...run, fight: run.fight + 1 })) }, ...watch, mainMenu];
     } else if (run) {
-      items = [{ label: 'CONTINUE', onSelect: () => goTo(this, 'versus', arcadeSetup(setup.p1, { ...run, continues: run.continues + 1 })) }, mainMenu];
+      items = [{ label: 'CONTINUE', onSelect: () => goTo(this, 'versus', arcadeSetup(setup.p1, { ...run, continues: run.continues + 1 })) }, ...watch, mainMenu];
     } else {
       items = [
         { label: 'REMATCH', onSelect: () => goTo(this, 'versus', setup) },
         { label: 'CHARACTER SELECT', onSelect: () => goTo(this, 'select', { mode: setup.mode, cpuLevel: setup.cpuLevel, simple: setup.simple }) },
+        ...watch,
         mainMenu,
       ];
     }

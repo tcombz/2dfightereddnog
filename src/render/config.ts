@@ -37,7 +37,7 @@ export const CSS = {
   night: '#070912',
 } as const;
 
-export type Mode = 'cpu' | 'versus' | 'training';
+export type Mode = 'cpu' | 'versus' | 'training' | 'online' | 'replay';
 
 /** Everything a match needs, passed from the menus to the fight. */
 export interface MatchSetup {
@@ -53,6 +53,10 @@ export interface MatchSetup {
   party?: PartyState;
   /** Per-player simple specials (one direction + special), chosen at character select. */
   simple?: [boolean, boolean];
+  /** Online: which player this side plays, and the match number shared with the other side. */
+  online?: { me: 0 | 1; match: number };
+  /** Replay: the recorded inputs to play back, and where to go when it ends. */
+  replay?: { inputs: string; back: { scene: string; data?: object } };
 }
 
 /** Party mode: winner stays on, the loser hands the controller to the next name in the queue. */

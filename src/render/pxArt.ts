@@ -22,6 +22,7 @@ import heatWave from '../../assets/fx/heat_wave.png';
 import impact from '../../assets/fx/impact.png';
 import squad from '../../assets/fx/squad.png';
 import volt from '../../assets/fx/volt.png';
+import swing from '../../assets/fx/swing.png';
 import { PX_STRIPS } from './pxStrips';
 
 interface Sheet {
@@ -35,6 +36,7 @@ interface Sheet {
 }
 
 const SHEETS: Sheet[] = [
+  { key: 'px_swing', url: swing, w: 96, h: 96, frames: 7, fps: 30, loop: false },
   { key: 'px_rogue_bolt', url: rogueBolt, w: 72, h: 72, frames: 8, fps: 14, loop: true },
   { key: 'px_mal_bolt', url: malBolt, w: 85, h: 26, frames: 4, fps: 14, loop: true },
   { key: 'px_edd_spike', url: eddSpike, w: 142, h: 87, frames: 18, fps: 24, loop: false },
