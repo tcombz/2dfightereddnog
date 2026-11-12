@@ -48,7 +48,9 @@
   `scenes/ReplaysScene.ts`); FightScene plays the finishing blow again before the results and runs
   `mode: 'replay'`. `rivals.ts` per-matchup intro and win lines; `audio.ts` `announce()` is the
   announcer (browser speech, toggle on the title screen)
-- `src/input/controls.ts` keyboard (two players on one keyboard) and gamepads, plus menu events
+- `src/input/controls.ts` keyboard (two players on one keyboard, every key rebindable per player and
+  saved in the browser) and gamepads, plus menu events. All options live in `scenes/SettingsScene.ts`
+  (Gameplay, Audio, Display, Keyboard P1/P2, Controllers; pad remapping in `scenes/ControllerScene.ts`)
 - `src/ai/cpu.ts` computer opponent (easy, normal, hard) and the training dummy's auto-guard
 - `assets/heroes/<id>/` sprite frames, `atlas.png`, `atlas.json`, `art.json` and
   `art-overrides.json`. Heroes are PixelLab characters (about 150-165 px tall standing). Import a

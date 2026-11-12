@@ -120,7 +120,7 @@ describe('determinism', () => {
     expect(h2).toBe(h1);
     expect(h3).toBe(h1);
     // Golden value: pins the result across runs, machines and refactors.
-    expect(h1).toMatchInlineSnapshot(`"26f3a16f"`);
+    expect(h1).toMatchInlineSnapshot(`"289a3661"`);
   });
 
   it('resuming from a serialized mid-run state gives the same hash', () => {

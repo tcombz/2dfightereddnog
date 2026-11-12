@@ -126,7 +126,7 @@ const heroes = [
     name: 'The Rogue',
     color: '#2f7bff',
     stats: {
-      maxHealth: 940, walkSpeed: 6, backWalkSpeed: 5, jumpVelocity: 22, jumpSpeedX: 7, gravity: 1,
+      maxHealth: 900, walkSpeed: 6, backWalkSpeed: 5, jumpVelocity: 22, jumpSpeedX: 7, gravity: 1,
       width: 70, height: 228, crouchHeight: 150, dashSpeed: 14, dashTicks: 14, backdashSpeed: 12, backdashTicks: 16,
     },
     bodies: {
