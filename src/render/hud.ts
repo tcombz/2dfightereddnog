@@ -1,6 +1,6 @@
 // The fight HUD. Reads sim state; draws on its own camera so screen shake and zoom leave it alone.
 import Phaser from 'phaser';
-import { HEROES, METER_MAX, Phase, ROUNDS_TO_WIN, TICK_RATE, rallying } from '../sim';
+import { HEAT_TICKS, HEROES, METER_MAX, Phase, ROUNDS_TO_WIN, TICK_RATE, rallying } from '../sim';
 import type { GameState } from '../sim';
 import { C, CSS, VIEW_H, VIEW_W } from './config';
 import { heroInfo } from './heroInfo';
@@ -15,6 +15,7 @@ export class Hud {
   private readonly g: Phaser.GameObjects.Graphics;
   private readonly timer: Phaser.GameObjects.Text;
   private readonly meterLabels: Phaser.GameObjects.Text[];
+  private readonly heatLabels: Phaser.GameObjects.Text[];
   private readonly comboText: Phaser.GameObjects.Text[];
   private readonly comboSub: Phaser.GameObjects.Text[];
   private readonly announce: Phaser.GameObjects.Text;
@@ -56,6 +57,9 @@ export class Hud {
     }
     this.meterLabels = [0, 1].map((i) =>
       add(scene.add.text(i === 0 ? 24 : VIEW_W - 24, VIEW_H - 42, 'SUPER', display(13, CSS.ink, 4)).setOrigin(i === 0 ? 0 : 1, 1)),
+    );
+    this.heatLabels = [0, 1].map((i) =>
+      add(scene.add.text(i === 0 ? 24 + 230 + 14 + 33 : VIEW_W - 24 - 230 - 14 - 33, VIEW_H - 30, 'HEAT', display(11, '#ffffff', 3)).setOrigin(0.5)),
     );
     this.comboText = [0, 1].map((i) =>
       add(scene.add.text(i === 0 ? 28 : VIEW_W - 28, 150, '', display(40, CSS.gold, 7)).setOrigin(i === 0 ? 0 : 1, 0).setAlpha(0)),
@@ -148,8 +152,25 @@ export class Hud {
       const rally = !s.training && rallying(f);
       if (rally && !full) g.lineStyle(2, 0xff7a2e, 0.5 + 0.5 * Math.abs(Math.sin(s.tick * 0.15))).strokeRect(mx - 2, my - 2, mw + 4, 16);
       this.meterLabels[i]
-        .setText(full ? 'SUPER  READY' : rally ? 'SUPER  ·  RALLY x2' : 'SUPER')
+        .setText(full ? 'SUPER  READY' : rally ? 'SUPER  ·  RALLY: HALF COST' : 'SUPER')
         .setColor(full ? '#9ff6ff' : rally ? '#ff9a4a' : CSS.muted);
+
+      // Heat pill beside the meter: ready (glowing), burning down, or spent for the round.
+      const hw = 66;
+      const hx = i === 0 ? mx + mw + 14 : mx - 14 - hw;
+      const accent = heroInfo(HEROES[f.hero].id).accent;
+      g.fillStyle(0x05060c, 0.85).fillRoundedRect(hx - 2, my - 4, hw + 4, 20, 6);
+      if (f.heat > 0) {
+        const fw = Math.round((hw * f.heat) / HEAT_TICKS);
+        g.fillStyle(accent, 0.85 + 0.15 * Math.sin(s.tick * 0.4)).fillRoundedRect(i === 0 ? hx : hx + hw - fw, my - 2, Math.max(6, fw), 16, 5);
+      } else if (f.heatUsed === 0) {
+        g.fillStyle(accent, 0.25 + 0.2 * Math.abs(Math.sin(s.tick * 0.08))).fillRoundedRect(hx, my - 2, hw, 16, 5);
+      }
+      g.lineStyle(2, f.heatUsed === 0 || f.heat > 0 ? accent : 0x3a3f5a, 1).strokeRoundedRect(hx, my - 2, hw, 16, 5);
+      this.heatLabels[i]
+        .setPosition(hx + hw / 2, my + 6)
+        .setText(f.heat > 0 ? 'HEAT!' : 'HEAT')
+        .setColor(f.heatUsed === 0 || f.heat > 0 ? '#ffffff' : '#5a6080');
 
       // Combo counter for the attacker's side: shows hits taken by the other fighter.
       const def = s.fighters[1 - i];

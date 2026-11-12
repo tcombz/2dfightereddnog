@@ -22,6 +22,8 @@ const INPUTS: Array<[MoveKey, string, string]> = [
   ['projectile', '↓ ↘ → + SPECIAL', 'Projectile.'],
   ['rising', '→ ↓ ↘ + SPECIAL', 'Invincible as it starts. Anti-air.'],
   ['super', 'HEAVY + SPECIAL', `Needs a full meter (${METER_MAX}).`],
+  ['heatBurst', 'LIGHT + SPECIAL', 'Once a round: shockwave, then Heat.'],
+  ['heatSmash', 'LIGHT + SPECIAL in Heat', 'Spends the Heat on one launching blow.'],
 ];
 
 export function moveList(hero: number): MoveLine[] {
@@ -68,7 +70,9 @@ export const BASICS: Array<[string, string]> = [
   ['Buffer', 'Press your next attack a moment early: it comes out on the first free frame.'],
   ['Simple specials', 'Pick at character select (Up / Down): → + SPECIAL shoots, ↓ + SPECIAL rises.'],
   ['Armor', 'Big moves that soak hits and keep coming. Beat them with a throw or a super.'],
-  ['Rally', 'On a third of your health or less, you glow and build meter twice as fast.'],
+  ['Rally', 'On a third of your health or less: meter twice as fast, and the super costs half.'],
+  ['Heat', 'LIGHT + SPECIAL once a round: 6 s of +25% damage and chip. Again in Heat: Heat Smash.'],
+  ['Wall bounce', 'Launch them into a wall and they bounce back off it for one more hit.'],
 ];
 
 /** Routes that work for every fighter (the combo trials). ">" is a cancel, "," a chain. */

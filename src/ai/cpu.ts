@@ -227,6 +227,9 @@ export class Cpu {
         return this.chance(0.4) ? [0, LIGHT] : [0, HEAVY];
       case Move.Heavy:
       case Move.Kick:
+        // In Heat, end on the Heat Smash; otherwise burst into Heat now and then to extend the combo.
+        if (me.heat > 0 && this.chance(0.7)) return [0, LIGHT | SPECIAL];
+        if (me.heatUsed === 0 && this.chance(0.25)) return [0, LIGHT | SPECIAL];
         return superReady && this.chance(0.6) ? [0, HEAVY | SPECIAL] : this.finisher(me);
       case Move.Special:
       case Move.Rising:
@@ -266,6 +269,7 @@ export class Cpu {
     }
     // Close range.
     if (superReady && r < 0.12) this.push(HEAVY | SPECIAL);
+    else if (me.heatUsed === 0 && opp.state === FS.Block && r < 0.2) this.push(LIGHT | SPECIAL);
     else if (dist < 115 && r < 0.2 && (opp.state === FS.Block || opp.state === FS.Idle || opp.state === FS.Crouch)) this.push(LIGHT | HEAVY);
     else if (r < 0.38) this.push(LIGHT);
     else if (r < 0.5) this.push(DOWN | LIGHT);

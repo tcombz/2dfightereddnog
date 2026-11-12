@@ -98,6 +98,8 @@ export const MOVE_KEYS = [
   'projectile',
   'rising',
   'super',
+  'heatBurst',
+  'heatSmash',
 ] as const;
 export type MoveKey = (typeof MOVE_KEYS)[number];
 
@@ -113,6 +115,8 @@ export const Move = {
   Projectile: 8,
   Rising: 9,
   Super: 10,
+  HeatBurst: 11,
+  HeatSmash: 12,
 } as const;
 
 export interface HeroStats {
@@ -156,7 +160,7 @@ export const FS = {
 export const FS_NAMES = ['idle', 'walk', 'jump', 'crouch', 'attack', 'block', 'hitstun', 'knockdown', 'ko', 'dash'];
 
 /** What happened to a fighter this tick, for the renderer's sparks and sounds. */
-export const FX = { None: 0, Hit: 1, Block: 2, Counter: 3, Throw: 4, Clash: 5, Tech: 6, Parry: 7, Armor: 8, Punish: 9 } as const;
+export const FX = { None: 0, Hit: 1, Block: 2, Counter: 3, Throw: 4, Clash: 5, Tech: 6, Parry: 7, Armor: 8, Punish: 9, Wall: 10, Heat: 11 } as const;
 
 export const Phase = { Intro: 0, Fight: 1, RoundEnd: 2, MatchEnd: 3 } as const;
 
@@ -191,6 +195,11 @@ export interface FighterState {
   comboDamage: number;
   /** Extra hits taken while launched; reset on landing. */
   juggles: number;
+  /** 1 once this fighter has bounced off a wall in the current knockdown; reset on landing. */
+  wallBounced: number;
+  /** Ticks of Heat left (0: not in Heat), and whether this round's Heat Burst is spent. */
+  heat: number;
+  heatUsed: number;
   /** Strikes the current move's armor has absorbed. */
   armorHits: number;
   /** Attack buttons pressed recently but not used yet, and how many ticks ago. */

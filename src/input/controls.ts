@@ -62,7 +62,7 @@ const MENU_FROM_BITS: Array<[number, MenuAction]> = [
 // ---------- gamepad mapping ----------
 
 /** Everything a pad can be asked to do. */
-export type PadAction = 'up' | 'down' | 'left' | 'right' | 'light' | 'heavy' | 'special' | 'block' | 'throw' | 'super' | 'start';
+export type PadAction = 'up' | 'down' | 'left' | 'right' | 'light' | 'heavy' | 'special' | 'block' | 'throw' | 'super' | 'heat' | 'start';
 
 /** Where an action comes from on a pad: a button, one direction of an axis, or a hat-switch direction. */
 export type PadSource =
@@ -80,6 +80,7 @@ export const REMAP_STEPS: Array<[PadAction, string]> = [
   ['block', 'BLOCK'],
   ['throw', 'THROW (light + heavy)'],
   ['super', 'SUPER (heavy + special)'],
+  ['heat', 'HEAT (light + special)'],
   ['start', 'START / pause'],
   ['up', 'UP on the d-pad'],
   ['down', 'DOWN on the d-pad'],
@@ -98,6 +99,7 @@ const BIT: Record<PadAction, number> = {
   block: Input.Block,
   throw: Input.Light | Input.Heavy,
   super: Input.Heavy | Input.Special,
+  heat: Input.Light | Input.Special,
   start: 0,
 };
 
@@ -119,7 +121,7 @@ function hatBits(v: number): number {
 
 /**
  * The browser's standard layout: A/Cross light, X/Square light, Y/Triangle heavy, B/Circle special,
- * LB/L1 and LT/L2 block, RB/R1 throw, RT/R2 super, Start pause, d-pad and left stick to move.
+ * LB/L1 block, LT/L2 Heat, RB/R1 throw, RT/R2 super, Start pause, d-pad and left stick to move.
  */
 const STANDARD: PadMap = {
   up: [btn(12), axis(1, -1)],
@@ -129,7 +131,8 @@ const STANDARD: PadMap = {
   light: [btn(0), btn(2)],
   heavy: [btn(3)],
   special: [btn(1)],
-  block: [btn(4), btn(6)],
+  block: [btn(4)],
+  heat: [btn(6)],
   throw: [btn(5)],
   super: [btn(7)],
   start: [btn(9)],
@@ -145,7 +148,8 @@ function guessMap(p: Gamepad): PadMap {
     light: [btn(0), btn(2)],
     heavy: [btn(3)],
     special: [btn(1)],
-    block: [btn(4), btn(6)],
+    block: [btn(4)],
+    heat: [btn(6)],
     throw: [btn(5)],
     super: [btn(7)],
     start: [btn(9)],

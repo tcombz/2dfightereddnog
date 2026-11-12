@@ -17,6 +17,7 @@
 5. **Inputs are a bitmask per tick:** left=1, right=2, up=4, down=8, light=16, heavy=32,
    special=64, block=128 (see `src/sim/input.ts`). Everything else is read from these bits:
    kick is forward + heavy, sweep is down + heavy, throw is light + heavy, super is heavy + special,
+   Heat Burst / Heat Smash is light + special,
    specials use motions read from the per-fighter input history (`hist`).
 6. **Fighters are data driven.** Each hero is one JSON file in `src/heroes/`: stats plus per-move
    frame data (startup, active, recovery, damage, hitstun, blockstun, knockback, guard, cancels,
@@ -62,7 +63,8 @@
 - Rects in hero JSON are fighter-local: `x` = forward offset of the near edge (mirrored by
   facing), `y` = bottom edge above the feet, `w`, `h`.
 - Every hero has the moves in `MOVE_KEYS`: light, heavy, kick, crouchLight, sweep, jumpAttack,
-  throw, special, projectile, rising, super.
+  throw, special, projectile, rising, super, heatBurst, heatSmash (the two Heat moves are generated for
+  every hero by `heatMoves()` in gen-heroes; their art falls back to the power-up and super clips).
 - `frames.length` of a move must equal `startup + active + recovery`; hitboxes only on active
   frames (projectile moves have none: the projectile hits).
 - Any new field on the state must be added to `hashState` (`FIGHTER_KEYS` / `GAME_KEYS`); a test

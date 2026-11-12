@@ -324,9 +324,8 @@ export class Effects {
   hit(x: number, y: number, dir: number, power: number, color: number, counter: boolean): void {
     const big = power >= 10;
     const size = 0.35 + power * 0.045;
-    const star = this.add(this.scene.add.image(x, y, 'fx_star').setBlendMode(Phaser.BlendModes.ADD).setTint(color), 60);
-    star.setScale(size * 0.4).setAngle(Math.random() * 45);
-    this.scene.tweens.add({ targets: star, scale: size * 1.25, alpha: 0, duration: big ? 200 : 140, ease: 'Quad.easeOut', onComplete: () => star.destroy() });
+    // A pixel-art burst: the round spark on light hits, the sharp critical star on big ones.
+    this.burst(big || counter ? 'px_crit' : 'px_impact', x, y, big ? 1.3 + power * 0.02 : 0.9 + power * 0.03, Math.random() * 30 - 15);
     const core = this.add(this.scene.add.image(x, y, 'fx_glow').setBlendMode(Phaser.BlendModes.ADD).setScale(size * 1.4), 61);
     this.scene.tweens.add({ targets: core, alpha: 0, scale: size * 2, duration: 160, onComplete: () => core.destroy() });
     const n = big ? 11 : 7;
@@ -375,11 +374,8 @@ export class Effects {
       return;
     }
     if (style === 'volt') {
-      for (let i = 0; i < n; i += 1) {
-        const b = this.add(s.add.image(x + (Math.random() - 0.5) * 30, y, `fx_strike${i % 3}`).setBlendMode(Phaser.BlendModes.ADD), 63);
-        b.setOrigin(0.5, 0.5).setScale(0.18 + Math.random() * 0.12, 0.22 + power * 0.012).setRotation(dir * (0.9 + Math.random() * 1.2)).setTint(0x9fe8ff);
-        s.tweens.add({ targets: b, alpha: 0, duration: 120 + i * 30, onComplete: () => b.destroy() });
-      }
+      // The Rogue: a pixel-art electric burst, bolts snapping out from the hit.
+      this.burst('px_volt', x, y, power >= 10 ? 1.25 : 0.85, 0, undefined, 63).setFlipX(dir < 0);
       return;
     }
     const key = style === 'vinyl' ? 'px_record' : style === 'cards' ? 'px_card' : style === 'quake' ? 'fx_rock' : 'fx_glow';
@@ -414,6 +410,15 @@ export class Effects {
     const sp = this.add(this.scene.add.sprite(x, groundY + 6, 'px_edd_spike').setOrigin(0.5, 0.86).setScale(scale).setFlipX(dir < 0), 44);
     sp.play('px_edd_spike');
     sp.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => sp.destroy());
+  }
+
+  /** Play a one-shot PixelLab effect sheet at a point. */
+  burst(key: string, x: number, y: number, scale = 1, angle = 0, tint?: number, depth = 60): Phaser.GameObjects.Sprite {
+    const sp = this.add(this.scene.add.sprite(x, y, key).setScale(scale).setAngle(angle), depth) as Phaser.GameObjects.Sprite;
+    if (tint !== undefined) sp.setTint(tint);
+    sp.play(key);
+    sp.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => sp.destroy());
+    return sp;
   }
 
   /** Malcolm's Gear Up: a squad soldier sprints in at range, holds a beat behind his shield, and pulls out. */
@@ -484,6 +489,10 @@ export class Effects {
 
   /** Text that pops near a fighter ("COUNTER"). */
   popText(x: number, y: number, text: string, color: string): void {
+    // Keep the callout inside the camera's view, even right by a wall.
+    const view = this.scene.cameras.main.worldView;
+    const half = text.length * 9 + 12;
+    if (view.width > 0) x = Math.max(view.x + half, Math.min(view.right - half, x));
     const t = this.add(
       this.scene.add
         .text(x, y, text, { fontFamily: '"Bungee", Impact, sans-serif', fontSize: '26px', color, stroke: '#000000', strokeThickness: 6 })

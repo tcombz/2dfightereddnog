@@ -66,6 +66,7 @@ export function inputText(text: string, player: number): string {
   return text
     .replace(/LIGHT \+ HEAVY/g, b('throw'))
     .replace(/HEAVY \+ SPECIAL/g, b('super'))
+    .replace(/LIGHT \+ SPECIAL/g, b('heat'))
     .replace(/\bLIGHT\b/g, b('light'))
     .replace(/\bHEAVY\b/g, b('heavy'))
     .replace(/\bSPECIAL\b/g, b('special'))

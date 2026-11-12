@@ -36,6 +36,10 @@ export const BUFFER_TICKS = 6;
 /** Most extra hits a launched opponent can take before landing. */
 export const JUGGLE_LIMIT = 2;
 
+/** Heat (Light + Special, once a round): how long it lasts, and the knockback speed a wall bounce needs. */
+export const HEAT_TICKS = 360;
+export const WALL_BOUNCE_SPEED = 3;
+
 /** Damage scaling in sixteenths, by hit number within a combo (last entry repeats). */
 export const COMBO_SCALE: readonly number[] = [16, 15, 13, 11, 10, 9, 8];
 

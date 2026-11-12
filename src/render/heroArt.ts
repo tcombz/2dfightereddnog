@@ -128,8 +128,24 @@ function fromJson(j: ArtJson): ArtFields {
     backdash: j.backdash ?? [],
     hitLow: j.hitLow ?? [],
     crouchBlock: j.crouchBlock ?? [],
-    attacks: j.attacks as Record<MoveKey, AttackArt>,
+    attacks: withHeat(j),
   };
+}
+
+/**
+ * Heat Burst and Heat Smash are shared moves with no clips of their own: the burst plays the hero's
+ * power-up (a flex that throws the shockwave), the smash borrows the super's strike.
+ */
+function withHeat(j: ArtJson): Record<MoveKey, AttackArt> {
+  const a = { ...j.attacks } as Record<string, AttackArt>;
+  const pu = j.powerUp;
+  if (!a.heatBurst) {
+    a.heatBurst = pu.length >= 4
+      ? { anim: 'power_up', startup: pu.slice(0, pu.length >> 1), active: pu.slice(pu.length >> 1), recovery: [...pu].reverse().slice(0, 3) }
+      : { ...a.special };
+  }
+  if (!a.heatSmash) a.heatSmash = { ...a.super, loopActive: false };
+  return a as Record<MoveKey, AttackArt>;
 }
 
 const ART: Record<string, HeroArt> = {

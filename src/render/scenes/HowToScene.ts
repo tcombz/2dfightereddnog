@@ -14,9 +14,10 @@ const CONTROLS: Array<[string, string, string, string]> = [
   ['Light', 'F or J', 'U or Numpad 1', 'A / ✕  or  X / □'],
   ['Heavy', 'G or K', 'I or Numpad 2', 'Y / △'],
   ['Special', 'H or L', 'O or Numpad 3', 'B / ○'],
-  ['Block', 'Hold back (or R, Space)', 'Hold back (or P)', 'Hold back, LB / L1, LT / L2'],
+  ['Block', 'Hold back (or R, Space)', 'Hold back (or P)', 'Hold back, LB / L1'],
   ['Throw', 'Light + Heavy', 'Light + Heavy', 'RB / R1'],
   ['Super', 'Heavy + Special', 'Heavy + Special', 'RT / R2'],
+  ['Heat', 'Light + Special', 'Light + Special', 'LT / L2'],
   ['Pause', 'Esc', 'Esc', 'Start / Options'],
 ];
 
@@ -60,7 +61,8 @@ export class HowToScene extends Phaser.Scene {
     rows[5][3] = `Hold back, or ${pad('block')}`;
     rows[6][3] = pad('throw');
     rows[7][3] = pad('super');
-    rows[8][3] = pad('start');
+    rows[8][3] = pad('heat');
+    rows[9][3] = pad('start');
     return rows;
   }
 
@@ -81,7 +83,7 @@ export class HowToScene extends Phaser.Scene {
 
     if (this.page === 0) {
       this.controlsTable().forEach((row, r) => {
-        const y = 122 + r * 40;
+        const y = 120 + r * 35;
         row.forEach((cell, c) => {
           const x = [70, 220, 470, 690][c];
           const style = r === 0 ? display(15, CSS.gold, 4) : c === 0 ? display(15, CSS.ink, 4) : body(16, CSS.ink);
@@ -98,7 +100,7 @@ export class HowToScene extends Phaser.Scene {
       });
     } else if (this.page === 1) {
       BASICS.forEach(([name, text], r) => {
-        const y = 106 + r * 31;
+        const y = 104 + r * 28;
         add(this.add.text(70, y, name.toUpperCase(), display(16, CSS.gold, 4)));
         add(this.add.text(290, y, inputText(text, -1), body(15, CSS.ink)).setWordWrapWidth(620));
       });
@@ -107,7 +109,7 @@ export class HowToScene extends Phaser.Scene {
       const info = heroInfo(HEROES[hero].id);
       add(this.add.text(70, 108, `${info.archetype}  ·  ${info.plan}`, body(14, CSS.muted)));
       moveList(hero).forEach((m, r) => {
-        const y = 136 + r * 33;
+        const y = 132 + r * 27;
         add(this.add.text(70, y, m.name, display(15, CSS.ink, 4)));
         add(this.add.text(290, y, inputText(m.input, -1), body(16, CSS.gold)));
         add(this.add.text(560, y + 1, m.note, body(13, CSS.muted)));

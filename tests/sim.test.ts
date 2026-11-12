@@ -13,6 +13,7 @@ import {
   Move,
   Phase,
   Result,
+  STAGE_WIDTH,
   SUPER_FREEZE,
   createInitialState,
   getMove,
@@ -119,7 +120,7 @@ describe('determinism', () => {
     expect(h2).toBe(h1);
     expect(h3).toBe(h1);
     // Golden value: pins the result across runs, machines and refactors.
-    expect(h1).toMatchInlineSnapshot(`"aed3869d"`);
+    expect(h1).toMatchInlineSnapshot(`"26f3a16f"`);
   });
 
   it('resuming from a serialized mid-run state gives the same hash', () => {
@@ -643,6 +644,67 @@ describe('every fighter kicks and sweeps their own way', () => {
       fx.push(s.fighters[1].fx);
     }
     expect(fx).toContain(FX.Hit);
+  });
+});
+
+describe('heat, wall bounces and the rally super', () => {
+  it('Heat Burst (light + special) starts Heat once a round; hits in Heat do more damage', () => {
+    let s = fight(ROGUE, JET, 110);
+    s = step(s, Light | Special, 0);
+    expect(s.fighters[0].moveId).toBe(Move.HeatBurst);
+    expect(s.fighters[0].heat).toBeGreaterThan(0);
+    for (let t = 0; t < 60; t += 1) s = step(s, 0, 0);
+    // Spent for the round: the same press now does nothing new.
+    s = step(s, Light | Special, 0);
+    expect(s.fighters[0].moveId).not.toBe(Move.HeatBurst);
+
+    const jab = (heat: number): number => {
+      let t0 = fight(ROGUE, JET, 90);
+      t0.fighters[0].heat = heat;
+      for (let t = 0; t < 14; t += 1) t0 = step(t0, t === 0 ? Light : 0, 0);
+      return t0.fighters[1].comboDamage;
+    };
+    expect(jab(200)).toBe(jab(0) + (jab(0) >> 2));
+  });
+
+  it('in Heat, the same press is the Heat Smash, and it spends the Heat', () => {
+    let s = fight(ROGUE, JET, 120);
+    s.fighters[0].heat = 200;
+    s.fighters[0].heatUsed = 1;
+    s = step(s, Light | Special, 0);
+    expect(s.fighters[0].moveId).toBe(Move.HeatSmash);
+    expect(s.fighters[0].heat).toBe(0);
+    for (let t = 0; t < 40; t += 1) s = step(s, 0, 0);
+    expect(s.fighters[1].comboDamage).toBeGreaterThan(100);
+  });
+
+  it('a launch into the wall bounces back off it, once', () => {
+    // Pin the Jetsetter by the right wall and launch him with the Rogue's rising attack.
+    let s = fight(ROGUE, JET, 70);
+    s.fighters[0].x = STAGE_WIDTH - 140;
+    s.fighters[1].x = STAGE_WIDTH - 70;
+    const fx: number[] = [];
+    s = step(s, R, 0);
+    s = step(s, D, 0);
+    s = step(s, D | R | Special, 0);
+    for (let t = 0; t < 90; t += 1) {
+      s = step(s, 0, 0);
+      fx.push(s.fighters[1].fx);
+    }
+    expect(fx.filter((f) => f === FX.Wall).length).toBe(1);
+  });
+
+  it('while rallying, the super costs half a bar', () => {
+    let s = fight(ROGUE, JET, 110);
+    s.fighters[0].meter = METER_MAX >> 1;
+    s = step(s, Heavy | Special, 0);
+    expect(s.fighters[0].moveId).not.toBe(Move.Super);
+    s = fight(ROGUE, JET, 110);
+    s.fighters[0].meter = METER_MAX >> 1;
+    s.fighters[0].health = HEROES[ROGUE].stats.maxHealth >> 2;
+    s = step(s, Heavy | Special, 0);
+    expect(s.fighters[0].moveId).toBe(Move.Super);
+    expect(s.fighters[0].meter).toBe(0);
   });
 });
 

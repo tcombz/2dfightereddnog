@@ -6,7 +6,9 @@ import {
   HIST_LEN,
   HIST_MASK,
   INTRO_TICKS,
+  HEAT_TICKS,
   JUGGLE_LIMIT,
+  WALL_BOUNCE_SPEED,
   KNOCKDOWN_TICKS,
   KO_FREEZE,
   LAUNCH_MIN_VY,
@@ -52,6 +54,9 @@ function createFighter(hero: number, slot: number): FighterState {
     combo: 0,
     comboDamage: 0,
     juggles: 0,
+    wallBounced: 0,
+    heat: 0,
+    heatUsed: 0,
     armorHits: 0,
     buf: 0,
     bufAge: 0,
@@ -190,6 +195,12 @@ export function isActiveTick(m: MoveData, tick: number): boolean {
 
 // ---------- small helpers ----------
 
+/** The super costs half a bar while rallying: a comeback swing, like a Fatal Blow or a Rage Art. */
+function superCost(f: FighterState): number {
+  const cost = HEROES[f.hero].moves.super.meterCost;
+  return rallying(f) ? cost >> 1 : cost;
+}
+
 /** Rally: on a third of your health or less, meter builds twice as fast (a way back into the round). */
 export function rallying(f: FighterState): boolean {
   return f.health > 0 && f.health * 3 <= HEROES[f.hero].stats.maxHealth;
@@ -317,10 +328,15 @@ function chooseMove(f: FighterState, input: number, pressed: number, tick: numbe
   const holdLight = ((input | pressed) & Input.Light) !== 0;
   const holdHeavy = ((input | pressed) & Input.Heavy) !== 0;
   const holdSpecial = ((input | pressed) & Input.Special) !== 0;
-  if ((heavy || special) && holdHeavy && holdSpecial && f.meter >= HEROES[f.hero].moves.super.meterCost) {
+  if ((heavy || special) && holdHeavy && holdSpecial && f.meter >= superCost(f)) {
     return Move.Super;
   }
   if ((light || heavy) && holdLight && holdHeavy) return Move.Throw;
+  // Heat: Light + Special. Burst once a round; while in Heat the same press is the Heat Smash.
+  if ((light || special) && holdLight && holdSpecial) {
+    if (f.heat > 0) return Move.HeatSmash;
+    if (f.heatUsed === 0) return Move.HeatBurst;
+  }
 
   // A buffered press keeps the direction held when it was pressed: down + LIGHT pressed during a
   // hit is still a low jab if down is let go before it comes out.
@@ -348,8 +364,14 @@ function startMove(s: GameState, f: FighterState, slot: number, moveId: number):
     f.vy = 0;
   }
   f.low = moveId === Move.CrouchLight || moveId === Move.Sweep ? 1 : 0;
+  if (moveId === Move.HeatBurst) {
+    f.heatUsed = 1;
+    f.heat = HEAT_TICKS;
+  } else if (moveId === Move.HeatSmash) {
+    f.heat = 0;
+  }
   if (m.kind === Kind.Super) {
-    f.meter -= m.meterCost;
+    f.meter -= superCost(f);
     s.hitstop = SUPER_FREEZE;
     s.freezeSlot = slot;
   }
@@ -370,8 +392,9 @@ function tryCancel(s: GameState, f: FighterState, slot: number, input: number): 
   if (m.air) return;
   const next = chooseMove(f, input, pressed, s.tick);
   if (next < 0) return;
-  // The second button of a throw or super pressed a few ticks late still counts (before the normal lands).
-  if (m.kind === Kind.Normal && f.moveHits === 0 && f.stateTick <= PRESS_LENIENCY && (next === Move.Throw || next === Move.Super)) {
+  // The second button of a throw, super or Heat pressed a few ticks late still counts (before the normal lands).
+  const twoButton = next === Move.Throw || next === Move.Super || next === Move.HeatBurst || next === Move.HeatSmash;
+  if (m.kind === Kind.Normal && f.moveHits === 0 && f.stateTick <= PRESS_LENIENCY && twoButton) {
     startMove(s, f, slot, next);
     return;
   }
@@ -447,8 +470,25 @@ function spawnProjectile(f: FighterState, p: ProjectileData): void {
   f.projY = f.y + p.y;
 }
 
+/**
+ * Wall bounce: a fighter knocked into a wall in the air comes back off it, popped up, with one more
+ * juggle allowed. Once per knockdown (reset on landing).
+ */
+function wallBounce(f: FighterState): void {
+  if (f.state !== FS.Knockdown || f.y <= 0 || f.wallBounced !== 0 || Math.abs(f.push) < WALL_BOUNCE_SPEED) return;
+  const half = HEROES[f.hero].stats.width >> 1;
+  const atWall = f.push < 0 ? f.x <= half : f.x >= STAGE_WIDTH - half;
+  if (!atWall) return;
+  f.wallBounced = 1;
+  f.push = f.push < 0 ? 4 : -4;
+  f.vy = Math.max(f.vy, 11);
+  f.juggles = Math.max(0, f.juggles - 1);
+  setFx(f, FX.Wall, f.x, f.y + 120, 12);
+}
+
 function updateFighter(s: GameState, f: FighterState, slot: number, opp: FighterState, input: number): void {
   f.stateTick += 1;
+  if (f.heat > 0) f.heat -= 1;
 
   // Input buffer: remember fresh attack presses for a few ticks so early presses still come out.
   const fresh = input & ~f.prevInput & (Input.Light | Input.Heavy | Input.Special);
@@ -525,6 +565,7 @@ function updateFighter(s: GameState, f: FighterState, slot: number, opp: Fighter
         if (fall(f)) {
           f.vx = 0;
           f.juggles = 0;
+          f.wallBounced = 0;
           f.stunTimer = KNOCKDOWN_TICKS;
         }
       } else if (f.state === FS.Knockdown) {
@@ -543,6 +584,7 @@ function updateFighter(s: GameState, f: FighterState, slot: number, opp: Fighter
   if (f.push !== 0) {
     f.x += f.push;
     if (f.y === 0 || (f.stateTick & 1) === 0) f.push = toward0(f.push);
+    wallBounce(f);
   }
 
   if (f.state === FS.Jump && (f.buf & (Input.Light | Input.Heavy)) !== 0) {
@@ -741,7 +783,9 @@ function applyHit(s: GameState, att: FighterState, def: FighterState, c: Contact
   // A blocked super can still finish someone on their last sliver of health (chip KO).
   const chipKo = c.kind === Kind.Super && def.health <= d.chipDamage;
   if (!chipKo && guarding(def, c.guard, dir)) {
-    def.health = Math.max(1, def.health - d.chipDamage);
+    // In Heat, even normals wear down a guard.
+    const chip = att.heat > 0 ? Math.max(d.chipDamage, d.damage >> 3) : d.chipDamage;
+    def.health = Math.max(1, def.health - chip);
     if (def.state !== FS.Block) setState(def, FS.Block);
     def.low = def.prevInput & Input.Down ? 1 : 0;
     def.stunTimer = d.blockstun;
@@ -769,6 +813,7 @@ function applyHit(s: GameState, att: FighterState, def: FighterState, c: Contact
   if (def.combo === 1) def.comboDamage = 0;
   let dmg = (d.damage * COMBO_SCALE[Math.min(def.combo - 1, COMBO_SCALE.length - 1)]) >> 4;
   if (counter || punish) dmg = (dmg * 5) >> 2;
+  if (att.heat > 0) dmg += dmg >> 2; // Heat: a quarter more on every hit
   dmg = Math.max(1, dmg);
   def.health -= dmg;
   def.comboDamage += dmg;

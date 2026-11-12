@@ -9,7 +9,13 @@ import malBolt from '../../assets/fx/mal_bolt.png';
 import record from '../../assets/fx/record.png';
 import rocks from '../../assets/fx/rocks.png';
 import rogueBolt from '../../assets/fx/rogue_bolt.png';
+import cracks from '../../assets/fx/cracks.png';
+import crit from '../../assets/fx/crit.png';
+import heatAura from '../../assets/fx/heat_aura.png';
+import heatWave from '../../assets/fx/heat_wave.png';
+import impact from '../../assets/fx/impact.png';
 import squad from '../../assets/fx/squad.png';
+import volt from '../../assets/fx/volt.png';
 import { PX_STRIPS } from './pxStrips';
 
 interface Sheet {
@@ -28,6 +34,13 @@ const SHEETS: Sheet[] = [
   { key: 'px_edd_spike', url: eddSpike, w: 142, h: 87, frames: 18, fps: 24, loop: false },
   { key: 'px_crew_run', url: crewRun, ...PX_STRIPS.crew_run, fps: 14, loop: true },
   { key: 'px_squad', url: squad, ...PX_STRIPS.squad, fps: 10, loop: true },
+  // Hit sparks and Heat, from PixelLab's VFX workbench (white-grey ones are tinted per fighter).
+  { key: 'px_impact', url: impact, w: 92, h: 92, frames: 7, fps: 30, loop: false },
+  { key: 'px_crit', url: crit, w: 124, h: 128, frames: 8, fps: 28, loop: false },
+  { key: 'px_volt', url: volt, w: 200, h: 120, frames: 32, fps: 60, loop: false },
+  { key: 'px_heat_aura', url: heatAura, w: 126, h: 200, frames: 8, fps: 12, loop: true },
+  { key: 'px_heat_wave', url: heatWave, w: 268, h: 106, frames: 8, fps: 18, loop: false },
+  { key: 'px_cracks', url: cracks, w: 141, h: 55, frames: 10, fps: 14, loop: false },
 ];
 
 const IMAGES: Array<[string, string]> = [

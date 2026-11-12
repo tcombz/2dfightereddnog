@@ -65,6 +65,8 @@ export class FightScene extends Phaser.Scene {
   private sprites: Phaser.GameObjects.Image[] = [];
   /** Rally: a hot glow behind a fighter who is low on health and building meter fast. */
   private rallyGlow: Phaser.GameObjects.Image[] = [];
+  /** Heat: a flame aura in the fighter's colour while it lasts. */
+  private heatAura: Phaser.GameObjects.Sprite[] = [];
   private promptStamp = -1;
   private lastSmear = [-1, -1];
   private shadows: Phaser.GameObjects.Image[] = [];
@@ -158,9 +160,11 @@ export class FightScene extends Phaser.Scene {
     this.sprites = [];
     this.shadows = [];
     this.rallyGlow = [];
+    this.heatAura = [];
     this.state.fighters.forEach((f, i) => {
       const art = artFor(f.hero);
       this.rallyGlow.push(this.add.image(f.x, GROUND_Y, 'fx_glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xff5a1e).setDepth(29).setVisible(false));
+      this.heatAura.push(this.add.sprite(f.x, GROUND_Y, 'px_heat_aura').setOrigin(0.5, 0.94).setBlendMode(Phaser.BlendModes.ADD).setDepth(28).setVisible(false).play('px_heat_aura'));
       this.shadows.push(this.add.image(f.x, GROUND_Y + 2, 'fx_shadow').setDepth(12).setAlpha(0.8));
       this.sprites.push(this.add.image(f.x, GROUND_Y, art.key).setScale(art.scale).setDepth(30 + i));
       this.projViews.push({
@@ -169,7 +173,7 @@ export class FightScene extends Phaser.Scene {
         extra: [0, 1].map(() => this.add.sprite(0, 0, 'px_card').setVisible(false).setDepth(45)),
       });
     });
-    this.world.add([...this.rallyGlow, ...this.shadows, ...this.sprites, ...this.projViews.flatMap((p) => [p.glow, p.img, ...p.extra])]);
+    this.world.add([...this.heatAura, ...this.rallyGlow, ...this.shadows, ...this.sprites, ...this.projViews.flatMap((p) => [p.glow, p.img, ...p.extra])]);
     this.debugG = this.add.graphics().setDepth(90);
     this.world.add(this.debugG);
     this.fx = new Effects(this, this.world);
@@ -347,6 +351,16 @@ export class FightScene extends Phaser.Scene {
         sfx(this, 'block', 0.6, -700);
         this.cameras.main.shake(120, 0.004);
         controls.rumble(i, 0.5, 110);
+      } else if (f.fx === FX.Wall) {
+        // Wall bounce: they hit the wall, cracks spread, and the screen jolts.
+        const wx = f.x + (f.push > 0 ? -40 : 40);
+        this.fx.burst('px_cracks', wx, GROUND_Y - f.y - 40, 1.8, 90 * (f.push > 0 ? -1 : 1), undefined, 58);
+        this.fx.burst('px_crit', wx, GROUND_Y - f.y - 60, 1.6);
+        this.fx.popText(f.x, GROUND_Y - f.y - 220, 'WALL BOUNCE!', '#9fe6ff');
+        this.cameras.main.shake(220, 0.012);
+        sfx(this, 'slam', 0.8);
+        sfx(this, 'hit_crunch', 0.8);
+        controls.rumble(i, 0.8, 200);
       } else if (f.fx === FX.Tech) {
         this.fx.block(x, y, dir);
         this.fx.popText(f.x, GROUND_Y - 260, 'BREAK!', '#9fe6ff');
@@ -373,6 +387,26 @@ export class FightScene extends Phaser.Scene {
         else if (key === 'heavy' || key === 'kick' || key === 'sweep' || key === 'throw') sfx(this, 'whoosh_heavy', 0.8);
         else if (key === 'rising') sfx(this, 'whoosh_heavy', 0.9);
         else if (key === 'special' && !getMove(f.hero, f.moveId).projectile) sfx(this, this.signature(i), 0.8);
+      }
+      // Heat Burst: a shockwave ring on the floor, a flash in their colour and a callout.
+      if (f.state === FS.Attack && f.moveId === Move.HeatBurst && (p.moveId !== Move.HeatBurst || p.state !== FS.Attack)) {
+        const info = heroInfo(HEROES[f.hero].id);
+        this.fx.burst('px_heat_wave', f.x, GROUND_Y - 6, 2.2, 0, info.accent, 27);
+        this.fx.burst('px_heat_wave', f.x, GROUND_Y - 110, 1.2, 0, info.color, 27);
+        this.fx.popText(f.x, GROUND_Y - f.y - 270, 'HEAT!', '#ffb030');
+        this.cameras.main.flash(140, 255, 160, 60);
+        this.cameras.main.shake(200, 0.008);
+        sfx(this, 'super', 0.6, -200);
+        sfx(this, this.signature(i), 0.7);
+        controls.rumble(i, 0.6, 220);
+      }
+      // Heat Smash: everything spent on one blow.
+      if (f.state === FS.Attack && f.moveId === Move.HeatSmash && (p.moveId !== Move.HeatSmash || p.state !== FS.Attack)) {
+        const info = heroInfo(HEROES[f.hero].id);
+        this.fx.popText(f.x, GROUND_Y - f.y - 270, 'HEAT SMASH!', '#ff6a2a');
+        this.fx.burst('px_heat_wave', f.x, GROUND_Y - 6, 2.6, 0, info.accent, 27);
+        this.cameras.main.flash(160, 255, 120, 40);
+        sfx(this, 'super', 0.8);
       }
       if (p.projLife === 0 && f.projLife > 0) {
         sfx(this, this.signature(i, f.projMove === Move.Projectile ? 'projectile' : 'special'), 0.9);
@@ -536,6 +570,14 @@ export class FightScene extends Phaser.Scene {
       // Hit shake: whoever was just hit (or blocked) jitters for the length of the impact freeze.
       const shaken = s.hitstop > 0 && s.freezeSlot < 0 && (f.state === FS.Hitstun || f.state === FS.Knockdown || f.state === FS.KO || (f.state === FS.Block && f.stunTimer > 0));
       const jitter = shaken ? ((this.clock & 1) === 0 ? 1 : -1) * Math.min(7, 2 + (s.hitstop >> 1)) : 0;
+      // Heat: the aura burns in the fighter's colour, flickering faster as it runs out.
+      const aura = this.heatAura[i];
+      aura.setVisible(f.heat > 0);
+      if (f.heat > 0) {
+        const info = heroInfo(HEROES[f.hero].id);
+        const ending = f.heat < 90 && (this.clock & 4) === 0;
+        aura.setPosition(f.x, GROUND_Y - f.y + 6).setScale(art.scale * 1.35 * 1.15, art.scale * 1.35).setTint(info.accent).setAlpha(ending ? 0.35 : 0.85);
+      }
       const glow = this.rallyGlow[i];
       const rally = !s.training && rallying(f) && (s.phase === Phase.Fight || s.phase === Phase.Intro);
       glow.setVisible(rally);
@@ -965,7 +1007,7 @@ export class FightScene extends Phaser.Scene {
     const info = heroInfo(HEROES[f.hero].id);
     objs.push(this.add.text(60, 46, `${info.title}  ·  MOVE LIST`, display(24, CSS.gold, 5)));
     moveList(f.hero).forEach((m, i) => {
-      const y = 92 + i * 36;
+      const y = 90 + i * 30;
       objs.push(this.add.text(60, y, m.name, display(16, CSS.ink, 4)));
       objs.push(this.add.text(300, y, inputText(m.input, -1), body(16, CSS.gold)));
       objs.push(this.add.text(600, y + 1, m.note, body(13, CSS.muted)));

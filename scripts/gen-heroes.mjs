@@ -82,7 +82,28 @@ function move(bodies, spec) {
   return m;
 }
 
+/**
+ * Heat moves every hero shares, sized to the hero's body: Heat Burst (Light + Special, once a round) is an
+ * invulnerable shockwave that shoves them off, hit or blocked, and starts Heat; Heat Smash (the same press
+ * while in Heat) spends what is left of it on a launching blow.
+ */
+function heatMoves(stats) {
+  return {
+    heatBurst: {
+      name: 'Heat Burst', kind: Kind.Special, startup: 10, active: 4, recovery: 18, invuln: 14, damage: 40, chip: 10,
+      hitstun: 22, blockstun: 20, kb: [20, 0], hitstop: 16, limb: false,
+      hitbox: { x: -20, y: 0, w: (stats.width >> 1) + 130, h: stats.height },
+    },
+    heatSmash: {
+      name: 'Heat Smash', kind: Kind.Special, juggle: 1, startup: 12, active: 6, recovery: 28, invuln: 10, advance: 7,
+      damage: 150, chip: 24, hitstun: 30, blockstun: 22, kb: [10, 22], knockdown: true, hitstop: 18,
+      hitbox: { x: 0, y: 30, w: 150, h: stats.height },
+    },
+  };
+}
+
 function hero({ id, name, color, stats, bodies, moves }) {
+  moves = { ...moves, ...heatMoves(stats) };
   const fit = FIT[id];
   if (fit) {
     // The body matches the sprite: standing and crouching heights from the art.
