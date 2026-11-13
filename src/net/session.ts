@@ -20,6 +20,8 @@ export interface Lobby extends Presence {
   stage: number;
   start: StartMsg | null;
   g: (NetFrame & { m: number }) | null;
+  /** Set to a match number when this side quit that match on purpose. */
+  bye?: number;
   /** The last match result each side saw, for the lobby banner. */
   wins: [number, number];
 }

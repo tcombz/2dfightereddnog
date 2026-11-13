@@ -371,10 +371,13 @@ export class FightScene extends Phaser.Scene {
     const t = theirs();
     if (t?.g && t.g.m === m) rb.receive(t.g);
     const send = (): void => sendMine({ g: { m, ...rb.outgoing() } });
-    // Decided and confirmed: stop here (keep sending, so the other side can confirm it too).
-    if (this.state.phase === Phase.MatchEnd && rb.confirmed + 1 >= rb.frame) {
+    // The match is over (as far as we know): hold at this frame. Both sides reach the same final
+    // frame, so each already has, or will get, every input the other needs to confirm it. A late
+    // correction can still undo the ending, in which case play carries on.
+    if (this.state.phase === Phase.MatchEnd) {
+      this.state = rb.settle();
       this.watchEnd();
-      return send();
+      if (this.state.phase === Phase.MatchEnd) return send();
     }
     if (rb.shouldWait() || !rb.canAdvance()) {
       if (!rb.canAdvance()) this.stalled += 1;
@@ -395,7 +398,8 @@ export class FightScene extends Phaser.Scene {
     const rb = this.rb!;
     const o = online();
     const t = theirs();
-    const gone = !o || o.link.quietFor() > 8000 || (t !== null && !t.g && this.frames > 120);
+    // Gone: silent for a while, or they left this match on purpose.
+    const gone = !o || o.link.quietFor() > 8000 || (t !== null && t.bye === this.setup.online!.match);
     if (gone && !this.finale) {
       goTo(this, 'online', { notice: 'Your opponent left the match.' }, 300);
       return;
@@ -410,7 +414,7 @@ export class FightScene extends Phaser.Scene {
   private onlineControl(action: string): void {
     if (action !== 'pause') return;
     if (this.leaveArmed > 0 && this.time.now - this.leaveArmed < 2000) {
-      sendMine({ g: null, ready: false });
+      sendMine({ g: null, ready: false, bye: this.setup.online!.match });
       goTo(this, 'online', { notice: 'You left the match.' }, 300);
     } else this.leaveArmed = this.time.now;
   }
@@ -460,6 +464,8 @@ export class FightScene extends Phaser.Scene {
 
   private finaleTick(): void {
     const fin = this.finale!;
+    // Online: keep repeating our last inputs, in case the other side still needs one to finish.
+    if (this.rb) sendMine({ g: { m: this.setup.online!.match, ...this.rb.outgoing() } });
     if (fin.done) return;
     const log = this.rb ? this.rb.log : this.log;
     if (fin.f >= fin.to) {

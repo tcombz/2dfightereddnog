@@ -34,6 +34,7 @@ export class OnlineScene extends Phaser.Scene {
   private metAt = -1;
   /** The invite link went to the clipboard. */
   private copied = false;
+  private help!: Phaser.GameObjects.Text;
   private linkText!: Phaser.GameObjects.Text;
   private beatAt = 0;
   private clock = 0;
@@ -74,9 +75,10 @@ export class OnlineScene extends Phaser.Scene {
     const o = online();
     if (o) {
       // Back from a match: straight to the lobby, everyone un-readied.
-      sendMine({ ready: false, start: null, g: null });
+      // Keep our last match inputs in what we send: the other side may still be finishing it.
+      sendMine({ ready: false, start: null });
       this.enterLobby();
-      if (o.last) this.status.setText(`${o.last.winner === o.me ? 'YOU WON' : 'YOU LOST'} ${o.last.wins[o.me]}-${o.last.wins[1 - o.me]}  ·  Ready up for a rematch`);
+      if (o.last) this.status.setText(this.banner());
       if (data.notice) this.status.setText(data.notice);
     } else if (data.join) this.connect(cleanCode(data.join), false);
     else this.setMode('menu');
@@ -192,6 +194,9 @@ export class OnlineScene extends Phaser.Scene {
   // ---------- the lobby ----------
 
   private buildLobby(): void {
+    // A fresh scene each visit: drop the last visit's (destroyed) objects.
+    this.sides = [];
+    this.lobbyObjs = [];
     [0, 1].forEach((i) => {
       const x = i === 0 ? 220 : VIEW_W - 220;
       const g = this.add.graphics();
@@ -206,8 +211,8 @@ export class OnlineScene extends Phaser.Scene {
       this.lobbyObjs.push(g, tag, img, name, ready);
     });
     this.stageText = this.add.text(VIEW_W / 2, 214, '', body(15, CSS.ink)).setOrigin(0.5);
-    const help = this.add
-      .text(VIEW_W / 2, 340, '◀ ▶  fighter\n▲ ▼  stage (host)\nCONFIRM  ready\nBACK  leave\n\nKeyboard or controller:\nyour keys from Settings', body(14, CSS.muted))
+    const help = (this.help = this.add
+      .text(VIEW_W / 2, 340, '', body(14, CSS.muted)))
       .setOrigin(0.5)
       .setAlign('center')
       .setLineSpacing(6);
@@ -224,6 +229,16 @@ export class OnlineScene extends Phaser.Scene {
     this.status.setText(o.host ? 'Share this code with your friend.' : 'Looking for the host…');
   }
 
+  /** After a match: the score, and what both players can do next. */
+  private banner(): string {
+    const o = online();
+    if (!o?.last) return '';
+    const won = o.last.winner === o.me;
+    const draw = o.last.winner !== 0 && o.last.winner !== 1;
+    const score = `${o.last.wins[o.me]}-${o.last.wins[1 - o.me]}`;
+    return `${draw ? 'DRAW' : won ? 'YOU WON' : 'YOU LOST'} ${score}  ·  Rematch when you both press CONFIRM, or change fighter first`;
+  }
+
   /** The status line: honest about whether the other player is actually here yet. */
   private lobbyStatus(here: boolean): void {
     const o = online();
@@ -232,7 +247,7 @@ export class OnlineScene extends Phaser.Scene {
       if (this.metAt < 0) {
         this.metAt = this.clock;
         sfx(this, 'ui_confirm', 0.7);
-        if (!o.last) this.status.setText('Your friend is here. Pick your fighter and ready up.');
+        this.status.setText(o.last ? this.banner() : 'Your friend is here. Pick your fighter and ready up.');
       }
       this.linkText.setText('');
       return;
@@ -242,6 +257,11 @@ export class OnlineScene extends Phaser.Scene {
       this.lobbyAt = this.clock;
     }
     const waited = this.clock - this.lobbyAt;
+    if (o.last) {
+      // Back from a match and the other side is not here yet (still watching the replay).
+      this.status.setText(`${this.banner()}\nWaiting for your opponent to finish the replay…`);
+      return;
+    }
     const quick = o.code.startsWith('QM') || o.code === 'QUICK';
     const invite = inviteUrl(o.code);
     this.linkText.setText(o.host && !quick && invite ? invite : '');
@@ -278,6 +298,11 @@ export class OnlineScene extends Phaser.Scene {
     const t = theirs();
     const here = t !== null && o.link.quietFor() < 6000;
     this.lobbyStatus(here);
+    this.help.setText(
+      o.last
+        ? 'CONFIRM  rematch\n◀ ▶  change fighter\n▲ ▼  stage (host)\nBACK  leave'
+        : '◀ ▶  fighter\n▲ ▼  stage (host)\nCONFIRM  ready\nBACK  leave\n\nKeyboard or controller:\nyour keys from Settings',
+    );
     const bySlot: Array<Partial<Lobby> | null> = o.me === 0 ? [o.mine, here ? t : null] : [here ? t : null, o.mine];
     bySlot.forEach((p, i) => {
       const v = this.sides[i];
@@ -297,7 +322,8 @@ export class OnlineScene extends Phaser.Scene {
         .setOrigin(...feetOrigin(art, i === 1))
         .setScale(menuScale(art, 1.5));
       v.name.setText(heroInfo(HEROES[p.hero].id).title);
-      v.ready.setText(p.ready ? '✔ READY' : '');
+      const after = !!o.last;
+      v.ready.setText(p.ready ? (after ? '✔ WANTS A REMATCH' : '✔ READY') : after ? (mine ? 'CONFIRM: REMATCH' : 'DECIDING…') : '');
     });
     const stage = o.host ? o.mine.stage : (t?.stage ?? 0);
     this.stageText.setText(`STAGE: ${STAGES[Math.max(0, Math.min(STAGES.length - 1, stage | 0))].name.toUpperCase()}`);

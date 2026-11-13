@@ -138,6 +138,26 @@ export class Rollback {
   }
 
   /**
+   * Apply any late correction without stepping a new frame (used once the match has ended: both
+   * sides hold at the same final frame and only need the other's inputs to confirm it).
+   */
+  settle(): GameState {
+    if (this.mismatch >= 0) {
+      let s = this.states.get(this.mismatch);
+      if (s) {
+        this.rollbacks += 1;
+        for (let f = this.mismatch; f < this.frame; f += 1) {
+          s = this.run(s, f);
+          this.states.set(f + 1, s);
+        }
+        this.state = s;
+      }
+      this.mismatch = -1;
+    }
+    return this.state;
+  }
+
+  /**
    * Rewind and re-run if a prediction was wrong (no effects: the caller only sees the result),
    * then step one new frame. Returns the visible step, for sound and effects.
    */
