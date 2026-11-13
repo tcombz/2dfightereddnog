@@ -315,7 +315,7 @@ export class TitleScene extends Phaser.Scene {
     const tick = Math.floor(this.clock / (1000 / 60));
     const art = artFor(this.featured);
     this.hero.setFrame(frameName('idle', art.idle[Math.floor(tick / 9) % art.idle.length]));
-    this.pet = menuPet(this, this.pet, art, this.hero, this.hero.frame.name, 1);
+    this.pet = menuPet(this, this.pet, art, this.hero, 1);
     if (this.clock - this.featuredAt > 7000) {
       this.featuredAt = this.clock;
       this.featured = (this.featured + 1) % HEROES.length;

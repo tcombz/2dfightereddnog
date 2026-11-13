@@ -1,45 +1,21 @@
-// A companion that rides a fighter's shoulder: Quincy's cat. Presentation only (the sim never sees
-// it). Each frame it is told where the host sprite is and which atlas frame it shows; the per-frame
-// shoulder points come from scripts/shoulder-anchors.py. It follows with a little lag, hisses when
-// the host is hit, leaps off when he is knocked down and hops back when he is up, and cheers on a
-// super or a win.
+// A fighter's companion: Quincy's cat. Presentation only (the sim never sees it). In a fight it sits
+// in the background of the stage, on the back of the floor on its owner's side, and reacts: it
+// hisses when its owner is knocked down and paws up with a meow on his super and his wins. In the
+// menus it sits on the floor beside him.
 import Phaser from 'phaser';
 import { sfx } from './audio';
 
-export type Anchors = Record<string, [number, number]>;
-
-/** The host, as drawn this frame. */
-export interface Host {
-  sprite: Phaser.GameObjects.Image;
-  /** Atlas frame name, e.g. "idle/03". */
-  frame: string;
-  facing: number;
-  /** The host's art: cell size and feet point (anchors are in cell pixels). */
-  feetX: number;
-  feetY: number;
-  scale: number;
-  /** Where the floor is under him (world y), for jumping off. */
-  floorY: number;
-}
-
-type Mode = 'ride' | 'leap' | 'ground' | 'return';
-
-/** How big the cat is drawn (the sheets are 64 px). */
-const CAT_SCALE = 0.95;
+/** How big the cat is drawn at a fighter's draw scale (the sheets are 64 px). */
+const CAT_SCALE = 1.1;
+/** In the fight it sits further back: a little smaller and in the stage's shade. */
+const STAGE_SCALE = 1.0;
+const STAGE_TINT = 0xb8b0d0;
 
 export class Companion {
   readonly sprite: Phaser.GameObjects.Sprite;
-  private mode: Mode = 'ride';
-  private x = 0;
-  private y = 0;
-  private placed = false;
-
-  /** The fight's draw scale for the host: in menus the cat grows with a bigger preview sprite. */
-  hostScale = 1.3;
 
   constructor(
     private readonly scene: Phaser.Scene,
-    private readonly anchors: Anchors,
     depth: number,
     layer?: Phaser.GameObjects.Layer,
   ) {
@@ -51,36 +27,15 @@ export class Companion {
     });
   }
 
-  /** The shoulder point in world space for the host's current frame. */
-  private shoulder(h: Host): { x: number; y: number } {
-    const a = this.anchors[h.frame] ?? this.anchors['idle/00'] ?? [h.feetX, h.feetY - 160];
-    return { x: h.sprite.x + (a[0] - h.feetX) * h.scale * h.facing, y: h.sprite.y + (a[1] - h.feetY) * h.scale + 4 };
+  /** Sit in the stage background at a world point (its feet), facing the middle of the stage. */
+  sitInStage(x: number, floorY: number, faceRight: boolean): this {
+    this.sprite.setPosition(x, floorY).setScale(STAGE_SCALE).setTint(STAGE_TINT).setFlipX(!faceRight);
+    return this;
   }
 
-  /** Follow the host this frame (riding, or waiting on the floor). */
-  update(h: Host): void {
-    const s = this.shoulder(h);
-    this.sprite.setFlipX(h.facing < 0);
-    if (!this.placed) {
-      this.x = s.x;
-      this.y = s.y;
-      this.placed = true;
-    }
-    if (this.mode === 'ride') {
-      // A little lag, so it sways with him instead of being glued on.
-      this.x += (s.x - this.x) * 0.55;
-      this.y += (s.y - this.y) * 0.55;
-      this.sprite.setPosition(Math.round(this.x), Math.round(this.y));
-    }
-  }
-
-  setVisible(v: boolean): void {
-    this.sprite.setVisible(v);
-  }
-
-  /** The host got hit: a quick hiss (if it is riding). */
+  /** Its owner was knocked down: a hiss (if it is not mid-cheer). */
   hiss(): void {
-    if (this.mode !== 'ride' || this.sprite.anims.currentAnim?.key === 'px_cat_hiss') return;
+    if (this.sprite.anims.currentAnim?.key === 'px_cat_cheer' && this.sprite.anims.isPlaying) return;
     this.sprite.play('px_cat_hiss');
   }
 
@@ -90,93 +45,34 @@ export class Companion {
     sfx(this.scene, 'meow', volume);
   }
 
-  /** The host is going down: jump clear and sit on the floor behind him. */
-  leap(h: Host): void {
-    if (this.mode !== 'ride') return;
-    this.mode = 'leap';
-    const tx = h.sprite.x - h.facing * 80;
-    const ty = h.floorY;
-    this.sprite.play('px_cat_hiss');
-    const sx = this.sprite.x;
-    const sy = this.sprite.y;
-    const arc = { t: 0 };
-    this.scene.tweens.add({
-      targets: arc,
-      t: 1,
-      duration: 380,
-      onUpdate: () => {
-        const p = arc.t;
-        this.sprite.setPosition(sx + (tx - sx) * p, sy + (ty - sy) * p - Math.sin(p * Math.PI) * 70);
-      },
-      onComplete: () => {
-        this.mode = 'ground';
-        this.x = tx;
-        this.y = ty;
-      },
-    });
-  }
-
-  /** The host is back up: hop back onto the shoulder. */
-  hopBack(h: Host): void {
-    if (this.mode !== 'ground') return;
-    this.mode = 'return';
-    const sx = this.sprite.x;
-    const sy = this.sprite.y;
-    const arc = { t: 0 };
-    this.scene.tweens.add({
-      targets: arc,
-      t: 1,
-      duration: 320,
-      onUpdate: () => {
-        const s = this.shoulder(h);
-        const p = arc.t;
-        this.sprite.setPosition(sx + (s.x - sx) * p, sy + (s.y - sy) * p - Math.sin(p * Math.PI) * 60);
-      },
-      onComplete: () => {
-        this.mode = 'ride';
-        const s = this.shoulder(h);
-        this.x = s.x;
-        this.y = s.y;
-      },
-    });
-  }
-
-  get anchorsFor(): Anchors {
-    return this.anchors;
-  }
-
-  get riding(): boolean {
-    return this.mode === 'ride';
-  }
-
-  get grounded(): boolean {
-    return this.mode === 'ground';
-  }
-
   destroy(): void {
     this.sprite.destroy();
   }
 }
 
 /**
- * Menus: keep a companion on a hero's preview sprite, creating or removing it as the hero changes.
- * Call every frame with the sprite's current frame name; returns the companion (or null).
+ * Menus: keep the cat sitting on the floor beside a hero's preview sprite (in front of him),
+ * creating or removing it as the hero changes. Call every frame; returns the companion (or null).
  */
 export function menuPet(
   scene: Phaser.Scene,
   current: Companion | null,
-  art: { anchors?: Anchors; feetX: number; feetY: number },
+  art: { companion?: boolean; scale: number },
   sprite: Phaser.GameObjects.Image,
-  frame: string,
   facing: number,
 ): Companion | null {
-  if (!art.anchors || !sprite.visible) {
+  if (!art.companion || !sprite.visible) {
     current?.destroy();
     return null;
   }
-  const pet = current && current.anchorsFor === art.anchors ? current : (current?.destroy(), new Companion(scene, art.anchors, sprite.depth + 0.5));
-  pet.sprite.setScale(CAT_SCALE * (sprite.scaleY / Math.max(0.01, pet.hostScale)));
-  pet.update({ sprite, frame, facing, feetX: art.feetX, feetY: art.feetY, scale: sprite.scaleY, floorY: sprite.y });
-  pet.sprite.setAlpha(sprite.alpha).setDepth(sprite.depth + 0.5);
+  const pet = current ?? new Companion(scene, sprite.depth - 0.5);
+  // Previews are drawn bigger than in a fight: the cat grows with them. It sits in front of him.
+  const k = sprite.scaleY / art.scale;
+  pet.sprite
+    .setScale(CAT_SCALE * k)
+    .setPosition(sprite.x + facing * 78 * k, sprite.y)
+    .setFlipX(facing < 0)
+    .setAlpha(sprite.alpha)
+    .setDepth(sprite.depth - 0.5);
   return pet;
 }

@@ -411,7 +411,7 @@ export class SelectScene extends Phaser.Scene {
         const t = Math.floor((this.clock - side.lockedAt) / (1000 / 60));
         side.preview.setFrame(frameName('win', art.win[Math.min(art.win.length - 1, Math.floor(t / 6))]));
       } else side.preview.setFrame(frameName('idle', art.idle[Math.floor((tick + i * 17) / 9) % art.idle.length]));
-      this.pets[i] = menuPet(this, this.pets[i], art, side.preview, side.preview.frame.name, i === 0 ? 1 : -1);
+      this.pets[i] = menuPet(this, this.pets[i], art, side.preview, i === 0 ? 1 : -1);
     });
     this.draw(tick);
   }

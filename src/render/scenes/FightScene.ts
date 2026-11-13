@@ -13,6 +13,7 @@ import {
   Phase,
   Result,
   STAGE_WIDTH,
+  START_X,
   SUPER_FREEZE,
   TICK_RATE,
   createInitialState,
@@ -218,9 +219,11 @@ export class FightScene extends Phaser.Scene {
       });
     });
     this.world.add([...this.heatAura, ...this.rallyGlow, ...this.shadows, ...this.sprites, ...this.projViews.flatMap((p) => [p.glow, p.img, ...p.extra])]);
+    // Quincy's cat watches from the back of the floor on his side of the stage.
     this.pets = this.state.fighters.map((f, i) => {
-      const art = artFor(f.hero);
-      return art.anchors ? new Companion(this, art.anchors, 31 + i, this.world) : null;
+      if (!artFor(f.hero).companion) return null;
+      const x = i === 0 ? START_X[0] - 240 : START_X[1] + 240;
+      return new Companion(this, 7, this.world).sitInStage(x, GROUND_Y - 36, i === 0);
     });
     this.petPrev = [-1, -1];
     this.debugG = this.add.graphics().setDepth(90);
@@ -814,15 +817,15 @@ export class FightScene extends Phaser.Scene {
       this.swingArc(f, i);
       const pet = this.pets[i];
       if (pet) {
-        const host = { sprite, frame: pose.frame, facing: f.facing, feetX: art.feetX, feetY: art.feetY, scale: art.scale, floorY: GROUND_Y };
+        // Keep it in shot: on its owner's side of whatever part of the stage the camera shows,
+        // drifting along the back of the floor as the camera moves.
+        const view = this.cameras.main.worldView;
+        const want = i === 0 ? view.x + 70 : view.right - 70;
+        pet.sprite.x += (want - pet.sprite.x) * 0.08;
         const prev = this.petPrev[i];
         const down = f.state === FS.Knockdown || f.state === FS.KO;
-        if (down && prev !== FS.Knockdown && prev !== FS.KO) pet.leap(host);
-        else if (f.state === FS.Hitstun && prev !== FS.Hitstun) pet.hiss();
-        else if (!down && f.y === 0 && pet.grounded && f.state !== FS.Hitstun) pet.hopBack(host);
+        if (down && prev !== FS.Knockdown && prev !== FS.KO) pet.hiss();
         if (won && this.celebrate[i] === 12) pet.cheer();
-        pet.update(host);
-        pet.sprite.setDepth(sprite.depth + 0.5);
         this.petPrev[i] = f.state;
       }
 

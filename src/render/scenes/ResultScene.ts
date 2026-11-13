@@ -196,7 +196,7 @@ export class ResultScene extends Phaser.Scene {
       const t = Math.floor(this.clock / (1000 / 60));
       this.sprite.setFrame(frameName('win', art.win[Math.min(art.win.length - 1, Math.floor(t / 7))]));
       const had = this.pet !== null;
-      this.pet = menuPet(this, this.pet, art, this.sprite, this.sprite.frame.name, 1);
+      this.pet = menuPet(this, this.pet, art, this.sprite, 1);
       if (this.pet && !had) this.time.delayedCall(500, () => this.pet?.cheer(0.6));
     }
     controls.poll();

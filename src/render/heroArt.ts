@@ -29,7 +29,6 @@ import malcolmPng from '../../assets/heroes/malcolm/atlas.png';
 import malcolmBase from '../../assets/heroes/malcolm/base/east.png';
 import malcolmSheet from '../../assets/heroes/malcolm/sheet_portrait.jpg';
 import malcolmSuper from '../../assets/heroes/malcolm/super_art.jpg';
-import quincyAnchors from '../../assets/heroes/quincy/anchors.json';
 import quincyArt from '../../assets/heroes/quincy/art.json';
 import quincyAtlas from '../../assets/heroes/quincy/atlas.json';
 import quincyPng from '../../assets/heroes/quincy/atlas.png';
@@ -69,8 +68,8 @@ export interface HeroArt {
   superArt?: string;
   /** Which projectile look each projectile-throwing move uses. */
   projectiles: Partial<Record<MoveKey, ProjStyle>>;
-  /** A companion riding the shoulder (Quincy's cat): shoulder points per atlas frame. */
-  anchors?: Record<string, [number, number]>;
+  /** A companion who watches from the stage background (Quincy's cat). */
+  companion?: boolean;
   /** Sprites are drawn at this multiple of their pixel size. */
   scale: number;
   /** Where the fighter's feet centre sits inside the atlas cell, in cell pixels. */
@@ -226,7 +225,7 @@ const ART: Record<string, HeroArt> = {
     sheet: quincySheet,
     superArt: quincySuper,
     projectiles: { projectile: 'emblem' },
-    anchors: quincyAnchors as unknown as Record<string, [number, number]>,
+    companion: true,
     ...fromJson(quincyArt),
   },
 };
