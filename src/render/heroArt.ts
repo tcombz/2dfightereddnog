@@ -29,6 +29,13 @@ import malcolmPng from '../../assets/heroes/malcolm/atlas.png';
 import malcolmBase from '../../assets/heroes/malcolm/base/east.png';
 import malcolmSheet from '../../assets/heroes/malcolm/sheet_portrait.jpg';
 import malcolmSuper from '../../assets/heroes/malcolm/super_art.jpg';
+import quincyAnchors from '../../assets/heroes/quincy/anchors.json';
+import quincyArt from '../../assets/heroes/quincy/art.json';
+import quincyAtlas from '../../assets/heroes/quincy/atlas.json';
+import quincyPng from '../../assets/heroes/quincy/atlas.png';
+import quincyBase from '../../assets/heroes/quincy/base/east.png';
+import quincySheet from '../../assets/heroes/quincy/sheet_portrait.jpg';
+import quincySuper from '../../assets/heroes/quincy/super_art.jpg';
 import rogueAtlas from '../../assets/heroes/rogue/atlas.json';
 import roguePng from '../../assets/heroes/rogue/atlas.png';
 import rogueArt from '../../assets/heroes/rogue/art.json';
@@ -49,7 +56,7 @@ interface AttackArt {
 }
 
 /** How a projectile is drawn. */
-export type ProjStyle = 'bolt' | 'disc' | 'cards' | 'golden' | 'quake' | 'crew' | 'tracer' | 'squad';
+export type ProjStyle = 'bolt' | 'disc' | 'cards' | 'golden' | 'quake' | 'crew' | 'tracer' | 'squad' | 'emblem';
 
 export interface HeroArt {
   key: string;
@@ -62,6 +69,8 @@ export interface HeroArt {
   superArt?: string;
   /** Which projectile look each projectile-throwing move uses. */
   projectiles: Partial<Record<MoveKey, ProjStyle>>;
+  /** A companion riding the shoulder (Quincy's cat): shoulder points per atlas frame. */
+  anchors?: Record<string, [number, number]>;
   /** Sprites are drawn at this multiple of their pixel size. */
   scale: number;
   /** Where the fighter's feet centre sits inside the atlas cell, in cell pixels. */
@@ -208,6 +217,17 @@ const ART: Record<string, HeroArt> = {
     superArt: malcolmSuper,
     projectiles: { special: 'squad', projectile: 'tracer' },
     ...fromJson(malcolmArt),
+  },
+  quincy: {
+    key: 'quincy',
+    png: quincyPng,
+    atlas: quincyAtlas,
+    base: quincyBase,
+    sheet: quincySheet,
+    superArt: quincySuper,
+    projectiles: { projectile: 'emblem' },
+    anchors: quincyAnchors as unknown as Record<string, [number, number]>,
+    ...fromJson(quincyArt),
   },
 };
 

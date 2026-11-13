@@ -4,6 +4,7 @@ import crown from '../../assets/stages/crown.png';
 import embassy from '../../assets/stages/embassy.png';
 import fortress from '../../assets/stages/fortress.png';
 import helipad from '../../assets/stages/helipad.png';
+import penthouse from '../../assets/stages/penthouse.png';
 import rooftop from '../../assets/stages/rooftop.png';
 
 export type Ambient = 'storm' | 'concert' | 'rain' | 'smoke' | 'embers';
@@ -104,5 +105,16 @@ export const STAGES: StageDef[] = [
     ambient: 'storm',
     tint: 0xe8f0ff,
     glow: { x: 478, y: 118, r: 40, color: 0x8fd0ff },
+  },
+  {
+    id: 'penthouse',
+    name: 'THE PENTHOUSE',
+    place: 'Gamer loft above the city',
+    url: penthouse,
+    groundSrcY: 298,
+    music: 'penthouse',
+    ambient: 'smoke',
+    tint: 0xf4ecff,
+    glow: { x: 210, y: 180, r: 46, color: 0xb070ff },
   },
 ];

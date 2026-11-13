@@ -5,13 +5,13 @@ import type { ArcadeRun, MatchSetup } from './config';
 import { STAGES } from './stages';
 
 /** Where each fighter is met. */
-const HOME: Record<string, string> = { rogue: 'rooftop', jetsetter: 'concert', chris: 'embassy', leader: 'crown', eddnog: 'fortress', malcolm: 'helipad' };
+const HOME: Record<string, string> = { rogue: 'rooftop', jetsetter: 'concert', chris: 'embassy', leader: 'crown', eddnog: 'fortress', malcolm: 'helipad', quincy: 'penthouse' };
 
 /** CPU level for each fight of the ladder, by the difficulty picked on the title screen. */
 const LADDER = [
-  [0, 0, 1, 1, 1],
-  [0, 1, 1, 2, 2],
-  [1, 1, 2, 2, 2],
+  [0, 0, 1, 1, 1, 1],
+  [0, 1, 1, 1, 2, 2],
+  [1, 1, 2, 2, 2, 2],
 ];
 
 export function newArcadeRun(p1: number, base: number): ArcadeRun {

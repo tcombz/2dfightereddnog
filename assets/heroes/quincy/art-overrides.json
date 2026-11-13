@@ -1,0 +1,11 @@
+{
+ "skip": ["heavy_st"],
+ "rename": {
+  "jab_st": "light_punch",
+  "crouch_jab": "crouch_light",
+  "special_st": "special",
+  "block_st": "block",
+  "projectile_st": "projectile"
+ },
+ "block": [3, 4]
+}

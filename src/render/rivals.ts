@@ -13,6 +13,7 @@ const RIVALS: Record<string, Record<string, Lines>> = {
     leader: { intro: "Your crew can't follow me up here.", win: 'Lead from the floor.' },
     eddnog: { intro: "Big guy. Can't hit what you can't catch.", win: 'Too slow, Tank.' },
     malcolm: { intro: 'Your plan dies the second I blink.', win: 'Briefing over.' },
+    quincy: { intro: 'New blood. Let me show you the ropes.', win: 'Welcome to the league, kid.' },
   },
   jetsetter: {
     rogue: { intro: 'All that brooding and no rhythm.', win: 'Lights out, moody.' },
@@ -20,6 +21,7 @@ const RIVALS: Record<string, Record<string, Lines>> = {
     leader: { intro: 'You bring a crew, I bring a crowd.', win: "The crowd's mine now." },
     eddnog: { intro: 'Hope that armor bends, big man.', win: 'Heavy, but off beat.' },
     malcolm: { intro: 'Relax, Captain. This is a party.', win: 'Dismissed. Next song.' },
+    quincy: { intro: 'Nice cat. Shame about the fit.', win: 'Stick to the queue, rookie.' },
   },
   chris: {
     rogue: { intro: "Let's negotiate. You lose, I win.", win: 'The house always wins.' },
@@ -27,6 +29,7 @@ const RIVALS: Record<string, Record<string, Lines>> = {
     leader: { intro: 'Two leaders, one table.', win: 'Motion carried.' },
     eddnog: { intro: 'Strength is not strategy, my friend.', win: 'Diplomacy beats force.' },
     malcolm: { intro: 'I read your plan last week.', win: 'Outmaneuvered, Captain.' },
+    quincy: { intro: 'A finance man. Let us talk terms.', win: 'Check your portfolio.' },
   },
   leader: {
     rogue: { intro: 'Come down from the roof. Join us.', win: 'Nobody wins alone.' },
@@ -34,6 +37,7 @@ const RIVALS: Record<string, Record<string, Lines>> = {
     chris: { intro: 'No speeches. Just results.', win: "That's leadership." },
     eddnog: { intro: 'Let us see who carries the team.', win: 'Good fight, big bro.' },
     malcolm: { intro: 'Captain, meet the boss.', win: 'Chain of command.' },
+    quincy: { intro: 'Rookie season. Make it count.', win: 'You will get there. Not today.' },
   },
   eddnog: {
     rogue: { intro: 'Stand still and fight, little guy!', win: 'Caught you!' },
@@ -41,6 +45,7 @@ const RIVALS: Record<string, Record<string, Lines>> = {
     chris: { intro: 'No talking. Smash time!', win: "Can't negotiate a hug!" },
     leader: { intro: 'Team first... but I win first!', win: 'Bear hug for the boss!' },
     malcolm: { intro: 'Your squad is small. I am big!', win: 'Tank beats squad!' },
+    quincy: { intro: 'Can I pet the cat after?', win: 'Big hug! Cat too!' },
   },
   malcolm: {
     rogue: { intro: "Contact. Fast mover. Pin him down.", win: 'Target neutralized.' },
@@ -48,6 +53,15 @@ const RIVALS: Record<string, Record<string, Lines>> = {
     chris: { intro: 'Talk is cheap. Cover fire is not.', win: 'No treaty for you.' },
     leader: { intro: 'With respect, sir, step aside.', win: 'Mission first, boss.' },
     eddnog: { intro: 'Heavy armor. Flank him, squad.', win: 'Even tanks go down.' },
+    quincy: { intro: 'Leave the cat out of this, son.', win: 'Rank revoked.' },
+  },
+  quincy: {
+    rogue: { intro: "Bet. You're cooked.", win: 'Ez. Next game.' },
+    jetsetter: { intro: 'Nice drip. My cat is better dressed.', win: 'Turn the music down, I won.' },
+    chris: { intro: 'I do finance too. You are overleveraged.', win: 'Good money. Better hands.' },
+    leader: { intro: 'Respect, boss. Still taking the dub.', win: 'GG, boss. Run it back?' },
+    eddnog: { intro: 'Big man. My cat says no.', win: "It's just a game, big man." },
+    malcolm: { intro: 'Captain? I only take orders from my cat.', win: 'Mission failed. One more?' },
   },
 };
 

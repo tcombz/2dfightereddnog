@@ -6,14 +6,15 @@ import { C, CSS, VIEW_H, VIEW_W } from '../config';
 import { CPU_LEVELS } from '../config';
 import type { MatchSetup } from '../config';
 import { arcadeSetup, newArcadeRun } from '../arcade';
+import { Companion, menuPet } from '../companion';
 import { artFor, feetOrigin, frameName, menuScale } from '../heroArt';
 import { heroInfo } from '../heroInfo';
 import { STAGES } from '../stages';
 import { menuHint } from '../prompts';
 import { body, display, fitText, goTo, goldFill, stripes } from '../ui';
 
-const TILE_W = 118;
-const TILE_H = 62;
+const TILE_W = 110;
+const TILE_H = 52;
 /** How far each tile's top edge leans over its bottom edge. */
 const SKEW = 12;
 const RATING_NAMES: Array<[keyof ReturnType<typeof heroInfo>['ratings'], string]> = [
@@ -58,6 +59,7 @@ export class SelectScene extends Phaser.Scene {
   private sheets: Phaser.GameObjects.Image[] = [];
   private tileMasks: Phaser.GameObjects.Graphics[] = [];
   private stageShade!: Phaser.GameObjects.Rectangle;
+  private pets: Array<Companion | null> = [null, null];
   private stageTitle!: Phaser.GameObjects.Text;
   private hint!: Phaser.GameObjects.Text;
   private ratingLabels: Phaser.GameObjects.Text[] = [];
@@ -89,6 +91,7 @@ export class SelectScene extends Phaser.Scene {
       simple: data.simple ? [...data.simple] : [simple, simple && mode === 'versus'],
     };
     this.phase = 'heroes';
+    this.pets = [null, null];
     this.stage = Math.floor(Math.random() * STAGES.length);
     this.cameras.main.fadeIn(250, 5, 6, 12);
     playMusic(this, 'menu');
@@ -408,6 +411,7 @@ export class SelectScene extends Phaser.Scene {
         const t = Math.floor((this.clock - side.lockedAt) / (1000 / 60));
         side.preview.setFrame(frameName('win', art.win[Math.min(art.win.length - 1, Math.floor(t / 6))]));
       } else side.preview.setFrame(frameName('idle', art.idle[Math.floor((tick + i * 17) / 9) % art.idle.length]));
+      this.pets[i] = menuPet(this, this.pets[i], art, side.preview, side.preview.frame.name, i === 0 ? 1 : -1);
     });
     this.draw(tick);
   }

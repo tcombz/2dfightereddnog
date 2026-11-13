@@ -224,7 +224,7 @@ const heroes = [
     name: 'The Leader',
     color: '#d4a017',
     stats: {
-      maxHealth: 980, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 21, jumpSpeedX: 6, gravity: 1,
+      maxHealth: 880, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 21, jumpSpeedX: 6, gravity: 1,
       width: 76, height: 236, crouchHeight: 152, dashSpeed: 12, dashTicks: 15, backdashSpeed: 10, backdashTicks: 18,
     },
     bodies: {
@@ -324,6 +324,40 @@ const heroes = [
       },
       rising: { name: 'Get Back Up', kind: Kind.Special, juggle: 1, cancel: Cancel.Super, startup: 5, active: 9, recovery: 31, invuln: 7, damage: 124, chip: 16, hitstun: 30, blockstun: 20, kb: [6, 22], knockdown: true, hitstop: 12, hitbox: { x: 0, y: 100, w: 92, h: 180 } },
       super: { name: 'Operation: Backup', kind: Kind.Super, juggle: 1, meterCost: 1000, startup: 7, active: 30, recovery: 28, hits: 6, rehit: 5, invuln: 18, damage: 56, chip: 20, hitstun: 32, blockstun: 20, kb: [4, 22], knockdown: true, hitstop: 8, hitbox: { x: -40, y: 0, w: 330, h: 260 } },
+    },
+  }),
+  // Quincy "The New Blood": a brawler who gets in and stays in. Big swings, a diving lunge to close
+  // the gap, an emblem toss to make them jump. His cat rides along (presentation only).
+  hero({
+    id: 'quincy',
+    name: 'Quincy',
+    color: '#8a3dff',
+    stats: {
+      maxHealth: 1060, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 21, jumpSpeedX: 6, gravity: 1,
+      width: 78, height: 214, crouchHeight: 150, dashSpeed: 13, dashTicks: 14, backdashSpeed: 11, backdashTicks: 16,
+    },
+    bodies: {
+      stand: { x: -39, y: 0, w: 78, h: 214 },
+      crouch: { x: -43, y: 0, w: 86, h: 150 },
+      air: { x: -39, y: 30, w: 78, h: 170 },
+    },
+    moves: {
+      light: { name: 'Talk Smack', startup: 5, active: 3, recovery: 8, damage: 32, hitstun: 15, blockstun: 11, kb: [3, 0], hitstop: 7, cancel: ALL, hitbox: { x: 15, y: 150, w: 92, h: 32 } },
+      heavy: { name: 'Bigger Ego', startup: 11, active: 4, recovery: 20, damage: 96, hitstun: 25, blockstun: 18, kb: [12, 0], hitstop: 13, advance: 3, cancel: SP, hitbox: { x: 15, y: 126, w: 120, h: 60 } },
+      kick: { name: 'Roundhouse', startup: 11, active: 4, recovery: 18, damage: 80, hitstun: 22, blockstun: 16, kb: [14, 0], hitstop: 11, cancel: SP, hitbox: { x: 20, y: 120, w: 128, h: 70 } },
+      crouchLight: { name: 'Low Poke', guard: Guard.Low, body: 'crouch', startup: 5, active: 3, recovery: 9, damage: 26, hitstun: 14, blockstun: 10, kb: [3, 0], hitstop: 7, cancel: ALL, hitbox: { x: 20, y: 100, w: 100, h: 52 } },
+      sweep: { name: 'Sweep the Legs', guard: Guard.Low, body: 'crouch', startup: 10, active: 5, recovery: 25, damage: 80, knockdown: true, blockstun: 14, kb: [8, 6], hitstop: 11, cancel: Cancel.Super, hitbox: { x: 10, y: 0, w: 128, h: 84 } },
+      jumpAttack: { name: 'Up and Over', guard: Guard.High, body: 'air', air: true, startup: 5, active: 14, recovery: 4, damage: 74, hitstun: 20, blockstun: 14, kb: [6, 0], hitstop: 10, hitbox: { x: 10, y: 40, w: 124, h: 120 } },
+      throw: { name: 'Headlock', kind: Kind.Throw, guard: Guard.Throw, limb: false, startup: 4, active: 2, recovery: 24, damage: 122, knockdown: true, kb: [14, 14], hitstop: 14, hitbox: { x: 10, y: 60, w: 74, h: 124 } },
+      // Ranked Dive: a headfirst lunge that closes the screen; punishable up close if blocked.
+      special: { name: 'Ranked Dive', kind: Kind.Special, startup: 13, active: 10, recovery: 26, advance: 12, damage: 104, chip: 16, hitstun: 24, blockstun: 16, kb: [12, 14], knockdown: true, hitstop: 13, cancel: Cancel.Super, hitbox: { x: 10, y: 30, w: 130, h: 90 } },
+      // Emblem Toss: a spinning rank emblem at chest height.
+      projectile: {
+        name: 'Emblem Toss', kind: Kind.Special, startup: 13, active: 1, recovery: 26,
+        projectile: { x: 60, y: 120, w: 56, h: 56, speed: 10, life: 90, damage: 62, chip: 9, hitstun: 19, blockstun: 13, kb: [8, 0], hitstop: 8 },
+      },
+      rising: { name: 'GG', kind: Kind.Special, juggle: 1, cancel: Cancel.Super, startup: 5, active: 9, recovery: 31, invuln: 7, damage: 122, chip: 16, hitstun: 30, blockstun: 20, kb: [6, 22], knockdown: true, hitstop: 12, hitbox: { x: 0, y: 100, w: 92, h: 180 } },
+      super: { name: 'Rank Up', kind: Kind.Super, juggle: 1, meterCost: 1000, startup: 7, active: 28, recovery: 28, hits: 6, rehit: 5, invuln: 18, damage: 58, chip: 20, hitstun: 32, blockstun: 20, kb: [4, 22], knockdown: true, hitstop: 8, hitbox: { x: -40, y: 0, w: 320, h: 260 } },
     },
   }),
 ];

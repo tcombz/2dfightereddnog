@@ -23,6 +23,10 @@ import impact from '../../assets/fx/impact.png';
 import squad from '../../assets/fx/squad.png';
 import volt from '../../assets/fx/volt.png';
 import swing from '../../assets/fx/swing.png';
+import emblems from '../../assets/fx/emblems.png';
+import catIdle from '../../assets/fx/cat_idle.png';
+import catHiss from '../../assets/fx/cat_hiss.png';
+import catCheer from '../../assets/fx/cat_cheer.png';
 import { PX_STRIPS } from './pxStrips';
 
 interface Sheet {
@@ -37,6 +41,12 @@ interface Sheet {
 
 const SHEETS: Sheet[] = [
   { key: 'px_swing', url: swing, w: 96, h: 96, frames: 7, fps: 30, loop: false },
+  // Quincy's rank emblems: eight still frames, one picked per emblem.
+  { key: 'px_emblems', url: emblems, w: 64, h: 64, frames: 8, fps: 1, loop: false },
+  // Quincy's cat: idle on his shoulder (loops), a hiss when he is hit, a paw-up meow on a super or a win.
+  { key: 'px_cat_idle', url: catIdle, w: 64, h: 64, frames: 9, fps: 7, loop: true },
+  { key: 'px_cat_hiss', url: catHiss, w: 64, h: 64, frames: 9, fps: 16, loop: false },
+  { key: 'px_cat_cheer', url: catCheer, w: 64, h: 64, frames: 9, fps: 12, loop: false },
   { key: 'px_rogue_bolt', url: rogueBolt, w: 72, h: 72, frames: 8, fps: 14, loop: true },
   { key: 'px_mal_bolt', url: malBolt, w: 85, h: 26, frames: 4, fps: 14, loop: true },
   { key: 'px_edd_spike', url: eddSpike, w: 142, h: 87, frames: 18, fps: 24, loop: false },

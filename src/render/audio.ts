@@ -19,6 +19,7 @@ const LOOPS: Record<string, { start: number; end: number }> = {
   crown: { start: 50.55, end: 152.455 },
   fortress: { start: 46.347, end: 128.182 },
   helipad: { start: 49.459, end: 148.69 },
+  penthouse: { start: 1.0, end: 83.9 },
 };
 
 interface Settings {

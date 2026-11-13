@@ -17,7 +17,7 @@ from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
-HEROES = ['rogue', 'jetsetter', 'chris', 'leader', 'eddnog', 'malcolm']
+HEROES = ['rogue', 'jetsetter', 'chris', 'leader', 'eddnog', 'malcolm', 'quincy']
 # move -> (lowest, highest) limb height in world px, and whether the hitbox height is refit too.
 BANDS = {
     'light': ((110, 240), True),

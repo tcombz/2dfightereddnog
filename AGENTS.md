@@ -44,6 +44,10 @@
   rewind, time sync, desync hash check), `link.ts` (the claude.ai page's room when hosted there,
   WebRTC through PeerJS elsewhere, `?net=local` for two tabs), `session.ts` (lobby state across
   scenes; lobby UI in `scenes/OnlineScene.ts`)
+- `src/render/companion.ts` a companion riding a fighter's shoulder (Quincy's cat: idle, hiss when
+  hit, leaps off on a knockdown and hops back, cheers on a super or win). Per-frame shoulder points
+  are `assets/heroes/<id>/anchors.json`, written by `python3 -I scripts/shoulder-anchors.py <id>`
+  (rerun after re-importing that hero); a hero with anchors gets the companion everywhere it is drawn
 - `src/render/replays.ts` replays (run-length encoded inputs, last 10 saved in the browser; list in
   `scenes/ReplaysScene.ts`); FightScene plays the finishing blow again before the results and runs
   `mode: 'replay'`. `rivals.ts` per-matchup intro and win lines; `audio.ts` `announce()` is the

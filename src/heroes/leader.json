@@ -3,7 +3,7 @@
  "name": "The Leader",
  "color": "#d4a017",
  "stats": {
-  "maxHealth": 980,
+  "maxHealth": 880,
   "walkSpeed": 5,
   "backWalkSpeed": 4,
   "jumpVelocity": 21,

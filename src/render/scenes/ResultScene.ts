@@ -10,6 +10,7 @@ import { arcadeSetup } from '../arcade';
 import { afterMatch, leaderboard } from '../party';
 import { STAGES } from '../stages';
 import { Menu, body, display, goTo, goldFill, stripes } from '../ui';
+import { Companion, menuPet } from '../companion';
 import { winLine } from '../rivals';
 
 interface ResultData {
@@ -25,6 +26,7 @@ export class ResultScene extends Phaser.Scene {
   private menu!: Menu;
   private sprite: Phaser.GameObjects.Image | null = null;
   private hero = 0;
+  private pet: Companion | null = null;
   private clock = 0;
 
   constructor() {
@@ -34,6 +36,7 @@ export class ResultScene extends Phaser.Scene {
   create(data: ResultData): void {
     (this as unknown as { leaving: boolean }).leaving = false;
     this.clock = 0;
+    this.pet = null;
     this.cameras.main.fadeIn(350, 5, 6, 12);
     playMusic(this, 'menu');
     const { setup, winner } = data;
@@ -192,6 +195,9 @@ export class ResultScene extends Phaser.Scene {
       const art = artFor(this.hero);
       const t = Math.floor(this.clock / (1000 / 60));
       this.sprite.setFrame(frameName('win', art.win[Math.min(art.win.length - 1, Math.floor(t / 7))]));
+      const had = this.pet !== null;
+      this.pet = menuPet(this, this.pet, art, this.sprite, this.sprite.frame.name, 1);
+      if (this.pet && !had) this.time.delayedCall(500, () => this.pet?.cheer(0.6));
     }
     controls.poll();
     for (const e of controls.take()) this.menu.handle(e.action);

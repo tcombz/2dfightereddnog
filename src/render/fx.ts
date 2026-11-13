@@ -373,6 +373,21 @@ export class Effects {
       }
       return;
     }
+    if (style === 'arcane') {
+      // Quincy: purple and gold motes spray off the hit, and a big hit flashes an emblem.
+      for (let i = 0; i < n + 3; i += 1) {
+        const a = (dir > 0 ? 0 : Math.PI) + (Math.random() - 0.5) * 2.2;
+        const m = this.add(s.add.image(x, y, 'fx_glow').setBlendMode(Phaser.BlendModes.ADD).setTint(i % 3 === 0 ? 0xffc23d : 0xb070ff), 63);
+        m.setScale(0.1 + Math.random() * 0.12);
+        const len = 60 + Math.random() * 80 + power * 3;
+        s.tweens.add({ targets: m, x: x + Math.cos(a) * len, y: y + Math.sin(a) * len, alpha: 0, duration: 260 + Math.random() * 160, onComplete: () => m.destroy() });
+      }
+      if (power >= 10) {
+        const e = this.add(s.add.image(x, y - 30, 'px_emblems', Math.floor(Math.random() * 8)).setScale(0.6).setAlpha(0.95), 62);
+        s.tweens.add({ targets: e, y: y - 110, scale: 1.1, alpha: 0, duration: 520, ease: 'Quad.easeOut', onComplete: () => e.destroy() });
+      }
+      return;
+    }
     if (style === 'volt') {
       // The Rogue: a pixel-art electric burst, bolts snapping out from the hit.
       this.burst('px_volt', x, y, power >= 10 ? 1.25 : 0.85, 0, undefined, 63).setFlipX(dir < 0);

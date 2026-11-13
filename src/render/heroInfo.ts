@@ -1,10 +1,10 @@
 // Presentation-only information about each hero: titles, quotes and select-screen ratings.
 // Move names, damage and frame data live in the hero JSON (src/heroes/).
 
-export type SuperStyle = 'storm' | 'crowd' | 'world' | 'crown' | 'quake' | 'squad';
+export type SuperStyle = 'storm' | 'crowd' | 'world' | 'crown' | 'quake' | 'squad' | 'rank';
 
 /** The signature particles every hit of this fighter throws off. */
-export type HitStyle = 'volt' | 'vinyl' | 'cards' | 'crown' | 'quake' | 'tactical';
+export type HitStyle = 'volt' | 'vinyl' | 'cards' | 'crown' | 'quake' | 'tactical' | 'arcane';
 
 export interface HeroInfo {
   title: string;
@@ -150,6 +150,23 @@ export const HERO_INFO: Record<string, HeroInfo> = {
     color: 0x2f7bff,
     accent: 0x7fc8ff,
     ratings: { power: 4, speed: 3, range: 4, defense: 3, technique: 4 },
+  },
+  quincy: {
+    title: 'QUINCY "THE NEW BLOOD"',
+    short: 'QUINCY',
+    name: 'QUINCY',
+    superStyle: 'rank',
+    sfx: { special: 'whoosh_heavy', projectile: 'cards' },
+    hitStyle: 'arcane',
+    hitSfx: 'hit_crunch',
+    style: 'Brawler · Support · Cat Dad',
+    archetype: 'BRAWLER',
+    plan: 'Toss emblems to make them jump, Ranked Dive across the screen, then swing big up close.',
+    tagline: 'Good games. Good money. Better company.',
+    quotes: ['Bet.', 'Ez.', "It's just a game.", 'My cat says no.', "You're cooked.", 'One more.', 'Just one more game.'],
+    color: 0x8a3dff,
+    accent: 0xffc23d,
+    ratings: { power: 4, speed: 3, range: 3, defense: 2, technique: 3 },
   },
 };
 

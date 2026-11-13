@@ -12,6 +12,7 @@ const TINT: Record<SuperStyle, number> = {
   crown: 0x2a1200,
   quake: 0x1c1404,
   squad: 0x020c26,
+  rank: 0x1a0638,
 };
 
 export class SuperFx {
@@ -130,6 +131,20 @@ export class SuperFx {
         }
       }
       s.time.delayedCall(500, () => this.scene.cameras.main.shake(200, 0.006));
+    } else if (style === 'rank') {
+      // Rank Up: emblems burst out around him in a ring, rise, and a purple-gold light pours down.
+      const beam = this.w(s.add.image(x, footY - 640, 'fx_beam').setOrigin(0.5, 0).setTint(0xb070ff).setAlpha(0).setBlendMode(Phaser.BlendModes.ADD).setScale(2.2, 1.3), 11);
+      s.tweens.add({ targets: beam, alpha: 0.75, duration: 260, yoyo: true, hold: 600 });
+      this.fadeOut([beam], 1300, 200);
+      for (let k = 0; k < 10; k += 1) {
+        const a = (k / 10) * Math.PI * 2;
+        const e = this.w(s.add.image(x, cy, 'px_emblems', k % 8).setScale(0.4).setAlpha(0), 33);
+        s.tweens.add({ targets: e, x: x + Math.cos(a) * 230, y: cy + Math.sin(a) * 120 - 60, scale: 1.4, alpha: 1, duration: 420, delay: 100 + k * 40, ease: 'Back.easeOut' });
+        s.tweens.add({ targets: e, y: '-=260', alpha: 0, duration: 520, delay: 900 + k * 30, ease: 'Quad.easeIn', onComplete: () => e.destroy() });
+      }
+      const ring = this.w(s.add.image(x, footY - 10, 'fx_glow').setTint(0xffc23d).setBlendMode(Phaser.BlendModes.ADD).setScale(0.6, 0.18), 33);
+      s.tweens.add({ targets: ring, scaleX: 10, scaleY: 1.2, alpha: 0, duration: 620, delay: 200, ease: 'Quad.easeOut', onComplete: () => ring.destroy() });
+      s.time.delayedCall(420, () => this.scene.cameras.main.shake(160, 0.006));
     } else {
       // The crown drops in over his head as the cut-in clears, and stays through the rush.
       const crown = this.w(s.add.image(x, footY - 470, 'px_crown').setScale(0.7).setAlpha(0), 33);
@@ -168,6 +183,11 @@ export class SuperFx {
       const y = footY - 90 - Math.random() * 120;
       const t = this.w(s.add.image(x - facing * 200, y, 'fx_glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0x9fd4ff).setScale(0.9, 0.05), 34);
       s.tweens.add({ targets: t, x: x + facing * 420, alpha: 0, duration: 220, onComplete: () => t.destroy() });
+    } else if (style === 'rank' && clock % 3 === 0) {
+      // Emblems pour off him at the target, spinning.
+      const s = this.scene;
+      const e = this.w(s.add.image(x, footY - 80 - Math.random() * 140, 'px_emblems', Math.floor(Math.random() * 8)).setScale(1.1), 34);
+      s.tweens.add({ targets: e, x: x + facing * (240 + Math.random() * 160), angle: facing * 360, alpha: 0, duration: 440, onComplete: () => e.destroy() });
     } else if (style === 'quake' && clock % 6 === 0) {
       // Every slam kicks up rocks and dust in front of him, and a spike bursts where it lands.
       const s = this.scene;

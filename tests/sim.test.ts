@@ -35,7 +35,8 @@ const CHRIS = heroIndex('chris');
 const LEADER = heroIndex('leader');
 const EDD = heroIndex('eddnog');
 const MAL = heroIndex('malcolm');
-const ALL_HEROES = [ROGUE, JET, CHRIS, LEADER, EDD, MAL];
+const QUINCY = heroIndex('quincy');
+const ALL_HEROES = [ROGUE, JET, CHRIS, LEADER, EDD, MAL, QUINCY];
 const { Left: L, Right: R, Up: U, Down: D, Light, Heavy, Special, Block } = Input;
 
 /** Test-side integer LCG. The sim itself has no randomness. */

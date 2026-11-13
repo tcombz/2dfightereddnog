@@ -8,12 +8,13 @@ import { C, CPU_LEVELS, CSS, GAME_SUBTITLE, GAME_TITLE, VIEW_H, VIEW_W } from '.
 import type { MatchSetup, Mode } from '../config';
 import { artFor, feetOrigin, frameName, menuScale } from '../heroArt';
 import { heroInfo } from '../heroInfo';
+import { Companion, menuPet } from '../companion';
 import { familyName, menuHint, onPad } from '../prompts';
 import { savedReplays } from '../replays';
 import { STAGES } from '../stages';
 import { body, display, fitText, goTo, goldFill, stripes } from '../ui';
 
-const HOME: Record<string, string> = { rogue: 'rooftop', jetsetter: 'concert', chris: 'embassy', leader: 'crown', eddnog: 'fortress', malcolm: 'helipad' };
+const HOME: Record<string, string> = { rogue: 'rooftop', jetsetter: 'concert', chris: 'embassy', leader: 'crown', eddnog: 'fortress', malcolm: 'helipad', quincy: 'penthouse' };
 
 const TIPS = [
   'Hold back to block. Low attacks need down-back.',
@@ -53,6 +54,7 @@ export class TitleScene extends Phaser.Scene {
   private featured = 0;
   private featuredAt = 0;
   private hero!: Phaser.GameObjects.Image;
+  private pet: Companion | null = null;
   private sheet!: Phaser.GameObjects.Image;
   private stageBg!: Phaser.GameObjects.Image;
   private splash!: Phaser.GameObjects.Graphics;
@@ -66,6 +68,7 @@ export class TitleScene extends Phaser.Scene {
     (this as unknown as { leaving: boolean }).leaving = false;
     this.started = false;
     this.clock = 0;
+    this.pet = null;
     this.cameras.main.fadeIn(300, 5, 6, 12);
 
     // Backdrop: the featured fighter's home stage, a paint splash in their colour, their sheet art.
@@ -312,6 +315,7 @@ export class TitleScene extends Phaser.Scene {
     const tick = Math.floor(this.clock / (1000 / 60));
     const art = artFor(this.featured);
     this.hero.setFrame(frameName('idle', art.idle[Math.floor(tick / 9) % art.idle.length]));
+    this.pet = menuPet(this, this.pet, art, this.hero, this.hero.frame.name, 1);
     if (this.clock - this.featuredAt > 7000) {
       this.featuredAt = this.clock;
       this.featured = (this.featured + 1) % HEROES.length;

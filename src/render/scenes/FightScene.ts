@@ -38,6 +38,7 @@ import { backHint, inputText } from '../prompts';
 import { STAGES } from '../stages';
 import { ComboTracker, TRIALS, stepLabel } from '../trials';
 import { Rollback } from '../../net/rollback';
+import { Companion } from '../companion';
 import { online, sendMine, theirs } from '../../net/session';
 import { decodeInputs, encodeInputs, saveReplay } from '../replays';
 import type { StageDef } from '../stages';
@@ -74,6 +75,9 @@ export class FightScene extends Phaser.Scene {
   private promptStamp = -1;
   private lastSmear = [-1, -1];
   private lastArc = [-1, -1];
+  /** Quincy's cat (one per fighter who has a companion), and each fighter's state last frame. */
+  private pets: Array<Companion | null> = [null, null];
+  private petPrev = [-1, -1];
   private shadows: Phaser.GameObjects.Image[] = [];
   private projViews: ProjectileView[] = [];
   private darken!: Phaser.GameObjects.Rectangle;
@@ -214,6 +218,11 @@ export class FightScene extends Phaser.Scene {
       });
     });
     this.world.add([...this.heatAura, ...this.rallyGlow, ...this.shadows, ...this.sprites, ...this.projViews.flatMap((p) => [p.glow, p.img, ...p.extra])]);
+    this.pets = this.state.fighters.map((f, i) => {
+      const art = artFor(f.hero);
+      return art.anchors ? new Companion(this, art.anchors, 31 + i, this.world) : null;
+    });
+    this.petPrev = [-1, -1];
     this.debugG = this.add.graphics().setDepth(90);
     this.world.add(this.debugG);
     this.fx = new Effects(this, this.world);
@@ -702,6 +711,7 @@ export class FightScene extends Phaser.Scene {
     const id = HEROES[f.hero].id;
     const move = getMove(f.hero, Move.Super);
     sfx(this, 'super');
+    this.pets[slot]?.cheer(0.8);
     sfx(this, this.signature(slot), 0.7);
     const cam = this.cameras.main;
     this.tweens.add({ targets: this.punch, z: 1.14, duration: 160, ease: 'Quad.easeOut', yoyo: true, hold: 440 });
@@ -802,6 +812,19 @@ export class FightScene extends Phaser.Scene {
       const squash = sinceLanding >= 0 && sinceLanding < 5 ? (5 - sinceLanding) * 0.012 : f.state === FS.Jump && f.stateTick < 5 ? -(5 - f.stateTick) * 0.008 : 0;
       sprite.setScale(art.scale * (1 + squash) * mo.sx, art.scale * (1 - squash) * mo.sy);
       this.swingArc(f, i);
+      const pet = this.pets[i];
+      if (pet) {
+        const host = { sprite, frame: pose.frame, facing: f.facing, feetX: art.feetX, feetY: art.feetY, scale: art.scale, floorY: GROUND_Y };
+        const prev = this.petPrev[i];
+        const down = f.state === FS.Knockdown || f.state === FS.KO;
+        if (down && prev !== FS.Knockdown && prev !== FS.KO) pet.leap(host);
+        else if (f.state === FS.Hitstun && prev !== FS.Hitstun) pet.hiss();
+        else if (!down && f.y === 0 && pet.grounded && f.state !== FS.Hitstun) pet.hopBack(host);
+        if (won && this.celebrate[i] === 12) pet.cheer();
+        pet.update(host);
+        pet.sprite.setDepth(sprite.depth + 0.5);
+        this.petPrev[i] = f.state;
+      }
 
       // Flashes: white on hit, red on counter, blue on block, glow during a super flash.
       if (f.state === FS.Hitstun && f.stateTick < 3) sprite.setTintFill(0xffffff);
@@ -868,6 +891,12 @@ export class FightScene extends Phaser.Scene {
           if (this.clock % 5 === 0) this.fx.spike(cx - dir * 30, GROUND_Y, dir);
           glowAlpha = 0.25;
           trail = false;
+        } else if (style === 'emblem') {
+          // Quincy's Emblem Toss: a rank emblem spinning like a frisbee.
+          if (view.img.anims.isPlaying) view.img.anims.stop();
+          if (view.img.texture.key !== 'px_emblems') view.img.setTexture('px_emblems', 0);
+          view.img.setScale(1.15, 1.15 * (0.75 + 0.25 * Math.abs(Math.cos(this.clock * 0.35)))).setRotation(dir * 0.25);
+          glowScale = 1.0;
         } else if (style === 'tracer') {
           play(view.img, 'px_mal_bolt');
           view.img.setScale(1.5);
