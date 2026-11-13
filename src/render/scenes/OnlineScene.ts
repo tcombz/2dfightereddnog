@@ -15,6 +15,9 @@ import { Menu, backdrop, body, display, goTo, goldFill } from '../ui';
 
 type Mode = 'menu' | 'join' | 'connecting' | 'lobby';
 
+/** The GitHub Pages copy of the game: online play there needs no Claude account. */
+const PAGES_URL = 'tcombz.github.io/2dfightereddnog';
+
 export class OnlineScene extends Phaser.Scene {
   private mode: Mode = 'menu';
   private menu!: Menu;
@@ -26,6 +29,10 @@ export class OnlineScene extends Phaser.Scene {
   private stageText!: Phaser.GameObjects.Text;
   private lobbyObjs: Phaser.GameObjects.GameObject[] = [];
   private beat = 0;
+  /** When the lobby opened (or the other player left), and when they arrived (-1: not here). */
+  private lobbyAt = 0;
+  private metAt = -1;
+  private linkText!: Phaser.GameObjects.Text;
   private beatAt = 0;
   private clock = 0;
 
@@ -40,8 +47,9 @@ export class OnlineScene extends Phaser.Scene {
     playMusic(this, 'menu');
     const title = this.add.text(VIEW_W / 2, 40, 'ONLINE', display(36, '#ffffff', 7)).setOrigin(0.5);
     goldFill(title);
-    this.status = this.add.text(VIEW_W / 2, 84, data.notice ?? 'Play a friend anywhere. One of you hosts and shares the code.', body(15, CSS.muted)).setOrigin(0.5);
+    this.status = this.add.text(VIEW_W / 2, 84, data.notice ?? 'Play a friend anywhere. One of you hosts and shares the code.', body(15, CSS.muted)).setOrigin(0.5).setAlign('center');
     this.codeText = this.add.text(VIEW_W / 2, 150, '', display(44, CSS.gold, 7)).setOrigin(0.5);
+    this.linkText = this.add.text(VIEW_W / 2, 182, '', body(12, CSS.muted)).setOrigin(0.5);
     this.add.text(VIEW_W / 2, VIEW_H - 16, menuHint(), body(13, CSS.muted)).setOrigin(0.5, 1);
 
     this.menu = new Menu(
@@ -77,6 +85,7 @@ export class OnlineScene extends Phaser.Scene {
     for (const o of this.lobbyObjs) (o as unknown as Phaser.GameObjects.Components.Visible).setVisible(m === 'lobby');
     if (m !== 'join') this.box?.remove();
     if (m === 'menu') this.codeText.setText('');
+    if (m !== 'lobby') this.linkText.setText('');
   }
 
   // ---------- joining ----------
@@ -179,7 +188,38 @@ export class OnlineScene extends Phaser.Scene {
     if (!o) return;
     this.setMode('lobby');
     this.codeText.setText(o.code);
-    this.status.setText(o.host ? 'Share this code with your friend.' : 'Connected. Pick your fighter.');
+    this.lobbyAt = this.clock;
+    this.metAt = -1;
+    this.status.setText(o.host ? 'Share this code with your friend.' : 'Looking for the host…');
+  }
+
+  /** The status line: honest about whether the other player is actually here yet. */
+  private lobbyStatus(here: boolean): void {
+    const o = online();
+    if (!o) return;
+    if (here) {
+      if (this.metAt < 0) {
+        this.metAt = this.clock;
+        sfx(this, 'ui_confirm', 0.7);
+        if (!o.last) this.status.setText('Your friend is here. Pick your fighter and ready up.');
+      }
+      this.linkText.setText(`Connected via ${o.link.kind}`);
+      return;
+    }
+    if (this.metAt >= 0) {
+      this.metAt = -1;
+      this.lobbyAt = this.clock;
+    }
+    const waited = this.clock - this.lobbyAt;
+    this.linkText.setText(`Link: ${o.link.kind}  ·  code ${o.code}`);
+    if (waited < 10000) {
+      this.status.setText(o.host ? `Waiting for your friend to join with code ${o.code}…` : `Looking for the host of ${o.code}…`);
+    } else {
+      this.status.setText(
+        'Still not seeing each other. Check you both typed the same code. On the claude.ai link, both of you must be signed in\n' +
+          `to Claude in the same organization; if not, play at ${PAGES_URL} instead (works for anyone).`,
+      );
+    }
   }
 
   private lobbyInput(action: string): void {
@@ -208,6 +248,7 @@ export class OnlineScene extends Phaser.Scene {
     if (!o) return;
     const t = theirs();
     const here = t !== null && o.link.quietFor() < 6000;
+    this.lobbyStatus(here);
     const bySlot: Array<Partial<Lobby> | null> = o.me === 0 ? [o.mine, here ? t : null] : [here ? t : null, o.mine];
     bySlot.forEach((p, i) => {
       const v = this.sides[i];
