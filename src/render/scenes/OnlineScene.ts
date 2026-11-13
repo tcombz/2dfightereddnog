@@ -2,7 +2,7 @@
 // The host plays player 1 and picks the stage. The fight itself runs on rollback (src/net/rollback.ts).
 import Phaser from 'phaser';
 import { controls } from '../../input/controls';
-import { cleanCode, newCode, openLink } from '../../net/link';
+import { cleanCode, inviteUrl, newCode, openLink, quickMatch } from '../../net/link';
 import { online, sendMine, setOnline, theirs, type Lobby } from '../../net/session';
 import { HEROES } from '../../sim';
 import { sfx, playMusic } from '../audio';
@@ -32,6 +32,8 @@ export class OnlineScene extends Phaser.Scene {
   /** When the lobby opened (or the other player left), and when they arrived (-1: not here). */
   private lobbyAt = 0;
   private metAt = -1;
+  /** The invite link went to the clipboard. */
+  private copied = false;
   private linkText!: Phaser.GameObjects.Text;
   private beatAt = 0;
   private clock = 0;
@@ -40,14 +42,14 @@ export class OnlineScene extends Phaser.Scene {
     super('online');
   }
 
-  create(data: { notice?: string } = {}): void {
+  create(data: { notice?: string; join?: string } = {}): void {
     (this as unknown as { leaving: boolean }).leaving = false;
     this.cameras.main.fadeIn(200, 5, 6, 12);
     backdrop(this, 'stage_helipad', 0.78);
     playMusic(this, 'menu');
     const title = this.add.text(VIEW_W / 2, 40, 'ONLINE', display(36, '#ffffff', 7)).setOrigin(0.5);
     goldFill(title);
-    this.status = this.add.text(VIEW_W / 2, 84, data.notice ?? 'Play a friend anywhere. One of you hosts and shares the code.', body(15, CSS.muted)).setOrigin(0.5).setAlign('center');
+    this.status = this.add.text(VIEW_W / 2, 84, data.notice ?? 'QUICK MATCH: you and your friend both press it.  PLAY A FRIEND: send them an invite link.', body(15, CSS.muted)).setOrigin(0.5).setAlign('center');
     this.codeText = this.add.text(VIEW_W / 2, 150, '', display(44, CSS.gold, 7)).setOrigin(0.5);
     this.linkText = this.add.text(VIEW_W / 2, 182, '', body(12, CSS.muted)).setOrigin(0.5);
     this.add.text(VIEW_W / 2, VIEW_H - 16, menuHint(), body(13, CSS.muted)).setOrigin(0.5, 1);
@@ -57,7 +59,8 @@ export class OnlineScene extends Phaser.Scene {
       VIEW_W / 2 - 170,
       240,
       [
-        { label: 'HOST A MATCH', onSelect: () => this.connect(newCode(), true) },
+        { label: 'QUICK MATCH', onSelect: () => this.quick() },
+        { label: 'PLAY A FRIEND', onSelect: () => this.connect(newCode(), true) },
         { label: 'JOIN WITH A CODE', onSelect: () => this.startJoin() },
         { label: 'BACK', onSelect: () => this.leave() },
       ],
@@ -75,8 +78,40 @@ export class OnlineScene extends Phaser.Scene {
       this.enterLobby();
       if (o.last) this.status.setText(`${o.last.winner === o.me ? 'YOU WON' : 'YOU LOST'} ${o.last.wins[o.me]}-${o.last.wins[1 - o.me]}  ·  Ready up for a rematch`);
       if (data.notice) this.status.setText(data.notice);
-    } else this.setMode('menu');
+    } else if (data.join) this.connect(cleanCode(data.join), false);
+    else this.setMode('menu');
     controls.take();
+  }
+
+  /** Quick Match: no codes, meet whoever else pressed it. */
+  private async quick(): Promise<void> {
+    this.setMode('connecting');
+    this.status.setText('Finding a match…');
+    try {
+      const { link, host, code } = await quickMatch();
+      if (!this.scene.isActive()) return void link.close();
+      this.begin2(link, code, host);
+    } catch {
+      this.setMode('menu');
+      this.status.setText(`Could not reach the internet match service. Try the game at ${PAGES_URL}`);
+    }
+  }
+
+  /** Connected: set up the session and open the lobby. */
+  private begin2(link: Awaited<ReturnType<typeof openLink>>, code: string, host: boolean): void {
+    const simple = (this.registry.get('simple') as boolean | undefined) ?? false;
+    const mine: Lobby = { hero: host ? 0 : 1, simple, ready: false, stage: 0, start: null, g: null, wins: [0, 0] };
+    setOnline({ link, code, host, me: host ? 0 : 1, mine, played: 0 });
+    sendMine();
+    this.copied = false;
+    const invite = host && !code.startsWith('QM') && code !== 'QUICK' ? inviteUrl(code) : null;
+    if (invite) {
+      navigator.clipboard?.writeText(invite).then(
+        () => (this.copied = true),
+        () => undefined,
+      );
+    }
+    this.enterLobby();
   }
 
   private setMode(m: Mode): void {
@@ -143,15 +178,11 @@ export class OnlineScene extends Phaser.Scene {
   private async connect(code: string, host: boolean): Promise<void> {
     this.setMode('connecting');
     this.codeText.setText(code);
-    this.status.setText(host ? 'Opening a room…' : 'Joining…');
+    this.status.setText(host ? 'Setting up your match…' : 'Joining your friend…');
     try {
       const link = await openLink(code, host);
       if (!this.scene.isActive()) return void link.close();
-      const simple = (this.registry.get('simple') as boolean | undefined) ?? false;
-      const mine: Lobby = { hero: host ? 0 : 1, simple, ready: false, stage: 0, start: null, g: null, wins: [0, 0] };
-      setOnline({ link, code, host, me: host ? 0 : 1, mine, played: 0 });
-      sendMine();
-      this.enterLobby();
+      this.begin2(link, code, host);
     } catch (e) {
       this.setMode('menu');
       this.status.setText((e as Error).message || 'Could not connect.');
@@ -187,7 +218,7 @@ export class OnlineScene extends Phaser.Scene {
     const o = online();
     if (!o) return;
     this.setMode('lobby');
-    this.codeText.setText(o.code);
+    this.codeText.setText(o.code.startsWith('QM') || o.code === 'QUICK' ? '' : o.code);
     this.lobbyAt = this.clock;
     this.metAt = -1;
     this.status.setText(o.host ? 'Share this code with your friend.' : 'Looking for the host…');
@@ -203,7 +234,7 @@ export class OnlineScene extends Phaser.Scene {
         sfx(this, 'ui_confirm', 0.7);
         if (!o.last) this.status.setText('Your friend is here. Pick your fighter and ready up.');
       }
-      this.linkText.setText(`Connected via ${o.link.kind}`);
+      this.linkText.setText('');
       return;
     }
     if (this.metAt >= 0) {
@@ -211,15 +242,13 @@ export class OnlineScene extends Phaser.Scene {
       this.lobbyAt = this.clock;
     }
     const waited = this.clock - this.lobbyAt;
-    this.linkText.setText(`Link: ${o.link.kind}  ·  code ${o.code}`);
-    if (waited < 10000) {
-      this.status.setText(o.host ? `Waiting for your friend to join with code ${o.code}…` : `Looking for the host of ${o.code}…`);
-    } else {
-      this.status.setText(
-        'Still not seeing each other. Check you both typed the same code. On the claude.ai link, both of you must be signed in\n' +
-          `to Claude in the same organization; if not, play at ${PAGES_URL} instead (works for anyone).`,
-      );
-    }
+    const quick = o.code.startsWith('QM') || o.code === 'QUICK';
+    const invite = inviteUrl(o.code);
+    this.linkText.setText(o.host && !quick && invite ? invite : '');
+    if (quick) this.status.setText('Waiting for an opponent… (your friend presses QUICK MATCH too)');
+    else if (o.host) this.status.setText(invite ? (this.copied ? 'Invite link copied! Send it to your friend.' : 'Send your friend this link:') : 'Tell your friend this code:');
+    else this.status.setText('Joining your friend…');
+    if (waited > 15000) this.status.setText(`${this.status.text}\nNot connecting? Use the game at ${PAGES_URL}`);
   }
 
   private lobbyInput(action: string): void {

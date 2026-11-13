@@ -140,7 +140,7 @@ interface PeerConn {
 class PeerLink extends Base implements Link {
   readonly kind = 'direct';
   private conn: PeerConn | null = null;
-  constructor(private readonly peer: { destroy(): void }) {
+  constructor(private readonly peer: { destroy(): void; disconnect(): void }) {
     super();
   }
   attach(c: PeerConn): void {
@@ -149,6 +149,9 @@ class PeerLink extends Base implements Link {
       return;
     }
     this.conn = c;
+    // Matched: let the code go, so it is free for someone else (this connection stays up).
+    c.on('open', () => this.peer.disconnect());
+    if (c.open) this.peer.disconnect();
     c.on('data', (d) => this.hear(d as Presence));
     c.on('close', () => {
       if (this.conn === c) {
@@ -166,27 +169,39 @@ class PeerLink extends Base implements Link {
   }
 }
 
-async function peerLink(code: string, host: boolean): Promise<Link> {
+async function peerLink(code: string, host: boolean, waitMs = 12000): Promise<Link> {
   const { Peer } = await import('peerjs');
   const id = `afterhours-game-${code.toLowerCase()}`;
   return new Promise<Link>((resolve, reject) => {
     const peer = host ? new Peer(id) : new Peer();
     const link = new PeerLink(peer);
-    const timer = setTimeout(() => reject(new Error('Could not reach the matchmaking server.')), 12000);
-    peer.on('error', (e: { type?: string }) => {
+    let settled = false;
+    const fail = (msg: string): void => {
+      if (settled) return;
+      settled = true;
       clearTimeout(timer);
-      if (e.type === 'unavailable-id') reject(new Error('That room code is taken. Try again.'));
-      else if (e.type === 'peer-unavailable') reject(new Error('No room with that code.'));
-      else reject(new Error('Connection failed.'));
+      peer.destroy();
+      reject(new Error(msg));
+    };
+    const timer = setTimeout(() => fail(host ? 'Could not reach the matchmaking server.' : 'No match with that code.'), waitMs);
+    peer.on('error', (e: { type?: string }) => {
+      if (e.type === 'unavailable-id') fail('taken');
+      else if (e.type === 'peer-unavailable') fail('No match with that code.');
+      else fail('Connection failed.');
     });
     peer.on('open', () => {
       clearTimeout(timer);
       if (host) {
         peer.on('connection', (c) => link.attach(c as unknown as PeerConn));
+        settled = true;
+        clearTimeout(timer);
         resolve(link);
       } else {
         const c = peer.connect(id, { reliable: false, serialization: 'json' }) as unknown as PeerConn;
         c.on('open', () => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
           link.attach(c);
           resolve(link);
         });
@@ -268,9 +283,61 @@ export async function openLink(code: string, host: boolean): Promise<Link> {
     const failed = (e: unknown): void => {
       errors.push((e as Error)?.message ?? String(e));
       pending -= 1;
-      if (pending === 0 && !done) reject(new Error(errors.find((m) => m !== 'no room' && m !== 'not admitted to the room') ?? 'Could not connect.'));
+      if (pending === 0 && !done) reject(new Error(errors.find((m) => m !== 'no room' && m !== 'not admitted to the room' && m !== 'taken') ?? 'Could not connect.'));
     };
     roomLink(code).then(up, failed);
     peerLink(code, host).then(up, failed);
   });
+}
+
+/**
+ * Quick Match: no codes. Both players press it and meet in the first free public slot: look for
+ * someone already waiting there (and join them), else wait there for the next person.
+ */
+export async function quickMatch(): Promise<{ link: Link; host: boolean; code: string }> {
+  if (new URLSearchParams(location.search).get('net') === 'local') {
+    // Two tabs: the first to press it in the last half minute hosts.
+    const t = Number(localStorage.getItem('ah-quick') ?? 0);
+    const host = Date.now() - t > 30000;
+    localStorage.setItem('ah-quick', host ? String(Date.now()) : '0');
+    return { link: new LocalLink('quick'), host, code: 'QUICK' };
+  }
+  for (let k = 1; k <= 6; k += 1) {
+    const code = `QM${k}`;
+    try {
+      const l = await peerLink(code, false, 5000);
+      return { link: withRoom(l, code), host: false, code };
+    } catch {
+      // Nobody waiting in this slot: try to wait in it ourselves.
+    }
+    try {
+      const l = await peerLink(code, true);
+      return { link: withRoom(l, code), host: true, code };
+    } catch (e) {
+      if ((e as Error).message === 'taken') continue;
+      break;
+    }
+  }
+  // No direct route at all: the page room alone, first one in hosts.
+  const room = await roomLink('QM1');
+  await new Promise((r) => setTimeout(r, 1500));
+  return { link: room, host: room.other() === null, code: 'QM1' };
+}
+
+/** Add the page room (when this viewer is admitted) as a second route for the same code. */
+function withRoom(l: Link, code: string): Link {
+  const multi = new MultiLink();
+  multi.add(l);
+  roomLink(code).then(
+    (r) => multi.add(r),
+    () => undefined,
+  );
+  return multi;
+}
+
+/** A link that drops a friend straight into this match, where the page has a shareable address. */
+export function inviteUrl(code: string): string | null {
+  const embedded = !!(window as unknown as { claude?: unknown }).claude || window.top !== window.self;
+  if (embedded || location.protocol === 'file:') return null;
+  return `${location.origin}${location.pathname}?join=${code}`;
 }

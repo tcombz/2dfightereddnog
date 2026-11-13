@@ -48,7 +48,10 @@ export class BootScene extends Phaser.Scene {
     } catch {
       this.registry.set('simple', false);
     }
-    this.scene.start('title');
+    // An invite link (?join=CODE) goes straight into that friend's match.
+    const join = new URLSearchParams(location.search).get('join');
+    if (join) this.scene.start('online', { join });
+    else this.scene.start('title');
   }
 
   /** Square head-and-shoulders portrait cut from the base sprite, on a dark tinted card. */
