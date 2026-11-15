@@ -114,6 +114,9 @@ export class FightScene extends Phaser.Scene {
   /** Online: the rollback session; ticks spent waiting on the other side; a pause press to confirm leaving. */
   private rb: Rollback | null = null;
   private stalled = 0;
+  /** Online: when the sim last ran (wall clock), and the background timer. */
+  private netAt = 0;
+  private bgTimer = 0;
   private leaveArmed = 0;
   private netText: Phaser.GameObjects.Text | null = null;
   /** Replay mode: the inputs being played back, and the playback speed. */
@@ -167,6 +170,16 @@ export class FightScene extends Phaser.Scene {
     this.replaySpeed = 1;
     this.rb = setup.mode === 'online' && setup.online ? new Rollback(this.state, setup.online.me) : null;
     this.replayInputs = setup.mode === 'replay' && setup.replay ? decodeInputs(setup.replay.inputs) : null;
+    this.netAt = performance.now();
+    window.clearInterval(this.bgTimer);
+    if (this.rb) {
+      this.bgTimer = window.setInterval(() => {
+        if (document.hidden || performance.now() - this.netAt > 120) {
+          if (this.rb && this.scene.isActive()) this.runNet();
+        }
+      }, 50);
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => window.clearInterval(this.bgTimer));
+    }
     this.acc = 0;
     this.clock = 0;
     this.paused = false;
@@ -319,7 +332,10 @@ export class FightScene extends Phaser.Scene {
       else if (e.action === 'pause' && this.state.phase !== Phase.MatchEnd) this.openPause();
     }
 
-    if (!this.paused) {
+    if (this.rb) {
+      // Online runs on the wall clock, so a backgrounded window can catch up from a timer (below).
+      this.runNet();
+    } else if (!this.paused) {
       // After a KO the sim ignores input, so playing it slower changes nothing but the drama.
       this.acc += delta * this.slowmo.rate * this.replaySpeed;
       const most = MAX_STEPS_PER_FRAME * this.replaySpeed;
@@ -347,6 +363,25 @@ export class FightScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * Online: run the sim by real elapsed time. Browsers stop drawing a window that is minimized or
+   * covered, and then the other player's game would freeze waiting for this one's inputs; a timer
+   * keeps calling this while the page is in the background (bursts of ticks, but it keeps going).
+   */
+  private runNet(): void {
+    const now = performance.now();
+    const elapsed = Math.min(2000, now - this.netAt) * this.slowmo.rate * this.replaySpeed;
+    this.netAt = now;
+    this.acc += elapsed;
+    let steps = 0;
+    while (this.acc >= TICK_MS && steps < 150) {
+      this.acc -= TICK_MS;
+      steps += 1;
+      this.tick();
+    }
+    if (steps >= 150) this.acc = 0;
+  }
+
   /** One sim frame: local, online (rollback), replay, or the finishing-blow replay. */
   private tick(): void {
     if (this.finale) return this.finaleTick();
@@ -370,7 +405,7 @@ export class FightScene extends Phaser.Scene {
     const m = this.setup.online!.match;
     const t = theirs();
     if (t?.g && t.g.m === m) rb.receive(t.g);
-    const send = (): void => sendMine({ g: { m, ...rb.outgoing() } });
+    const send = (): void => sendMine({ g: { m, ...rb.outgoing() }, hid: document.hidden || undefined });
     // The match is over (as far as we know): hold at this frame. Both sides reach the same final
     // frame, so each already has, or will get, every input the other needs to confirm it. A late
     // correction can still undo the ending, in which case play carries on.
@@ -406,6 +441,7 @@ export class FightScene extends Phaser.Scene {
     }
     let msg = '';
     if (rb.desynced) msg = 'OUT OF SYNC: the two games disagree. Finish the round and rematch.';
+    else if (this.stalled > 20 && t?.hid) msg = "YOUR OPPONENT'S GAME IS IN THE BACKGROUND: they need to bring that window to the front";
     else if (this.stalled > 20) msg = this.frames < 30 ? 'CONNECTING TO YOUR OPPONENT…' : 'WAITING FOR YOUR OPPONENT…';
     else if (this.leaveArmed > 0 && this.time.now - this.leaveArmed < 2000) msg = 'PRESS START AGAIN TO LEAVE THE MATCH';
     this.netText?.setText(msg).setVisible(msg !== '');

@@ -67,3 +67,28 @@ describe('online play (rollback)', () => {
     expect(code.length).toBeLessThan(log.length * 2);
   });
 });
+
+describe('online play (rollback): a long dropout', () => {
+  it('recovers when every message is lost for a whole second, instead of freezing', () => {
+    const init = createInitialState(1, 4);
+    const sides = [new Rollback(init, 0), new Rollback(init, 1)];
+    const press = [player(7), player(9)];
+    const wire: Array<[number, number, NetFrame]> = [];
+    const FRAMES = 900;
+    let t = 0;
+    for (; sides.some((s) => s.frame < FRAMES) && t < 6000; t += 1) {
+      sides.forEach((s, i) => {
+        for (const w of wire) if (w[1] === i && w[0] === t) s.receive(w[2]);
+        if (s.frame < FRAMES && !s.shouldWait() && s.canAdvance()) {
+          s.addLocal(press[i](s.frame));
+          s.advance();
+        }
+        // Everything sent between ticks 300 and 360 is lost (a wifi hiccup).
+        if (t < 300 || t > 360) wire.push([t + 4, 1 - i, s.outgoing()]);
+      });
+    }
+    expect(t).toBeLessThan(6000);
+    expect(sides[0].frame).toBe(FRAMES);
+    expect(sides[1].frame).toBe(FRAMES);
+  });
+});

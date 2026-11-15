@@ -82,6 +82,13 @@ export class OnlineScene extends Phaser.Scene {
       if (data.notice) this.status.setText(data.notice);
     } else if (data.join) this.connect(cleanCode(data.join), false);
     else this.setMode('menu');
+    // Browsers stop drawing a hidden window: keep the heartbeat and the start check going anyway.
+    const timer = window.setInterval(() => {
+      if (!document.hidden || this.mode !== 'lobby' || !this.scene.isActive()) return;
+      this.clock += 500;
+      this.lobbyTick();
+    }, 500);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => window.clearInterval(timer));
     controls.take();
   }
 
@@ -368,14 +375,17 @@ export class OnlineScene extends Phaser.Scene {
       } else if (this.mode === 'join') this.padEntry(e.action);
       else if (this.mode === 'lobby') this.lobbyInput(e.action);
     }
-    if (this.mode === 'lobby') {
-      // A heartbeat, so each side can tell the other is still there.
-      if (this.clock - this.beatAt > 500) {
-        this.beatAt = this.clock;
-        this.beat += 1;
-        sendMine({ beat: this.beat } as Partial<Lobby>);
-      }
-      this.drawLobby();
+    if (this.mode === 'lobby') this.lobbyTick();
+  }
+
+  /** The lobby's heartbeat and start check (also run from a timer while the window is hidden). */
+  private lobbyTick(): void {
+    // A heartbeat, so each side can tell the other is still there.
+    if (this.clock - this.beatAt > 500) {
+      this.beatAt = this.clock;
+      this.beat += 1;
+      sendMine({ beat: this.beat, hid: document.hidden || undefined } as Partial<Lobby>);
     }
+    this.drawLobby();
   }
 }
