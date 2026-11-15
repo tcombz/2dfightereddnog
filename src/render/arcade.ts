@@ -5,7 +5,7 @@ import type { ArcadeRun, MatchSetup } from './config';
 import { STAGES } from './stages';
 
 /** Where each fighter is met. */
-const HOME: Record<string, string> = { rogue: 'rooftop', jetsetter: 'concert', chris: 'embassy', leader: 'crown', eddnog: 'fortress', malcolm: 'helipad', quincy: 'penthouse' };
+const HOME: Record<string, string> = { rogue: 'rooftop', jetsetter: 'concert', chris: 'embassy', leader: 'crown', eddnog: 'fortress', malcolm: 'helipad', quincy: 'penthouse', ignar: 'fortress', vesper: 'rooftop' };
 
 /** A fighter's home stage id. */
 export function homeStage(id: string): string {

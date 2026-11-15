@@ -1,10 +1,10 @@
 // Presentation-only information about each hero: titles, quotes and select-screen ratings.
 // Move names, damage and frame data live in the hero JSON (src/heroes/).
 
-export type SuperStyle = 'storm' | 'crowd' | 'world' | 'crown' | 'quake' | 'squad' | 'rank';
+export type SuperStyle = 'storm' | 'crowd' | 'world' | 'crown' | 'quake' | 'squad' | 'rank' | 'dragon' | 'cosmos';
 
 /** The signature particles every hit of this fighter throws off. */
-export type HitStyle = 'volt' | 'vinyl' | 'cards' | 'crown' | 'quake' | 'tactical' | 'arcane';
+export type HitStyle = 'volt' | 'vinyl' | 'cards' | 'crown' | 'quake' | 'tactical' | 'arcane' | 'ember' | 'stardust';
 
 export interface HeroInfo {
   title: string;
@@ -167,6 +167,40 @@ export const HERO_INFO: Record<string, HeroInfo> = {
     color: 0x8a3dff,
     accent: 0xffc23d,
     ratings: { power: 4, speed: 3, range: 3, defense: 2, technique: 3 },
+  },
+  ignar: {
+    title: 'IGNAR "THE DRAGON KNIGHT"',
+    short: 'IGNAR',
+    name: 'IGNAR',
+    superStyle: 'dragon',
+    sfx: { special: 'slam', projectile: 'whoosh_heavy' },
+    hitStyle: 'ember',
+    hitSfx: 'hit_crunch',
+    style: 'Dragon-blooded · Brawler · Fire',
+    archetype: 'RUSHDOWN',
+    plan: 'Charge through their pokes with the Dragon Rush, burn them up close, and never let them rest.',
+    tagline: 'The last dragon does not kneel.',
+    quotes: ['Burn bright.', 'Kneel to the flame.', 'Ash and embers.', 'You fought well. For a mortal.', 'The fire remembers.', 'Again!'],
+    color: 0xe0402a,
+    accent: 0xffa23d,
+    ratings: { power: 5, speed: 4, range: 3, defense: 3, technique: 2 },
+  },
+  vesper: {
+    title: 'VESPER "THE STAR WITCH"',
+    short: 'VESPER',
+    name: 'VESPER',
+    superStyle: 'cosmos',
+    sfx: { special: 'blink', projectile: 'zap' },
+    hitStyle: 'stardust',
+    hitSfx: 'hit_light',
+    style: 'Witch · Zoner · Starlight',
+    archetype: 'ZONER',
+    plan: 'Keep them out with Star Orbs and the long Staff Arc, and drop a Gravity Well where they want to be.',
+    tagline: 'The stars already know how this ends.',
+    quotes: ['Written in the stars.', 'Mind the gravity.', 'Such a small orbit.', 'The night is mine.', 'Wish upon a falling star.', 'Fate is a polite word.'],
+    color: 0x6a4cff,
+    accent: 0xc9a8ff,
+    ratings: { power: 3, speed: 3, range: 5, defense: 2, technique: 4 },
   },
 };
 

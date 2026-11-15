@@ -14,7 +14,7 @@ import { savedReplays } from '../replays';
 import { STAGES } from '../stages';
 import { body, display, fitText, goTo, goldFill, stripes } from '../ui';
 
-const HOME: Record<string, string> = { rogue: 'rooftop', jetsetter: 'concert', chris: 'embassy', leader: 'crown', eddnog: 'fortress', malcolm: 'helipad', quincy: 'penthouse' };
+const HOME: Record<string, string> = { rogue: 'rooftop', jetsetter: 'concert', chris: 'embassy', leader: 'crown', eddnog: 'fortress', malcolm: 'helipad', quincy: 'penthouse', ignar: 'fortress', vesper: 'rooftop' };
 
 const TIPS = [
   'Hold back to block. Low attacks need down-back.',

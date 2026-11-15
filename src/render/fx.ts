@@ -373,6 +373,24 @@ export class Effects {
       }
       return;
     }
+    if (style === 'ember' || style === 'stardust') {
+      // Ignar: sparks of fire. Vesper: stardust. A flash of the projectile art on big hits.
+      const cols = style === 'ember' ? [0xffa23d, 0xff5a1e, 0xffe08a] : [0xc9a8ff, 0x8a6cff, 0xffffff];
+      for (let i = 0; i < n + 3; i += 1) {
+        const a = (dir > 0 ? 0 : Math.PI) + (Math.random() - 0.5) * 2.2;
+        const m = this.add(s.add.image(x, y, 'fx_glow').setBlendMode(Phaser.BlendModes.ADD).setTint(cols[i % 3]), 63);
+        m.setScale(0.08 + Math.random() * 0.12);
+        const len = 60 + Math.random() * 80 + power * 3;
+        s.tweens.add({ targets: m, x: x + Math.cos(a) * len, y: y + Math.sin(a) * len - (style === 'ember' ? 40 : 0), alpha: 0, duration: 280 + Math.random() * 180, onComplete: () => m.destroy() });
+      }
+      if (power >= 10) {
+        const key = style === 'ember' ? 'px_dragon_fire' : 'px_star_orb';
+        const b = this.add(s.add.sprite(x, y, key).setScale(0.6).setBlendMode(Phaser.BlendModes.ADD), 62) as Phaser.GameObjects.Sprite;
+        b.play(key);
+        s.tweens.add({ targets: b, scale: 1.6, alpha: 0, duration: 300, onComplete: () => b.destroy() });
+      }
+      return;
+    }
     if (style === 'arcane') {
       // Quincy: purple and gold motes spray off the hit, and a big hit flashes an emblem.
       for (let i = 0; i < n + 3; i += 1) {

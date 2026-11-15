@@ -30,7 +30,25 @@ export class VersusScene extends Phaser.Scene {
     g.lineStyle(6, 0xffffff, 0.9).lineBetween(VIEW_W / 2 + 70, 0, VIEW_W / 2 - 70, VIEW_H);
 
     const said = (h: number): string => heroInfo(HEROES[h].id).name.toLowerCase();
-    announce(`${said(setup.p1)}. Versus. ${said(setup.p2)}!`);
+    const team = (i: number): string => (setup.partners ? `${said(i === 0 ? setup.p1 : setup.p2)} and ${said(setup.partners[i])}` : said(i === 0 ? setup.p1 : setup.p2));
+    announce(`${team(0)}. Versus. ${team(1)}!`);
+    // Tag teams: the partner's sheet art behind the point fighter's, smaller, with a name tag.
+    if (setup.partners) {
+      setup.partners.forEach((hero, i) => {
+        const id = HEROES[hero].id;
+        if (!this.textures.exists(`sheet_${id}`)) return;
+        const fromX = i === 0 ? -200 : VIEW_W + 200;
+        const toX = i === 0 ? 420 : VIEW_W - 420;
+        const art = this.add.image(fromX, VIEW_H / 2 + 60, `sheet_${id}`).setFlipX(i === 1).setTint(0xb8bcd8);
+        art.setScale((VIEW_H - 160) / art.height);
+        this.tweens.add({ targets: art, x: toX, duration: 380, ease: 'Cubic.easeOut', delay: 200 + i * 120 });
+        const tag = this.add
+          .text(toX, VIEW_H - 70, `+ ${heroInfo(id).name}`, display(22, '#ffffff', 6))
+          .setOrigin(0.5)
+          .setAlpha(0);
+        this.tweens.add({ targets: tag, alpha: 1, duration: 300, delay: 600 + i * 120 });
+      });
+    }
     [setup.p1, setup.p2].forEach((hero, i) => {
       const art = artFor(hero);
       const info = heroInfo(HEROES[hero].id);

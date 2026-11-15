@@ -13,6 +13,8 @@ const TINT: Record<SuperStyle, number> = {
   quake: 0x1c1404,
   squad: 0x020c26,
   rank: 0x1a0638,
+  dragon: 0x2a0600,
+  cosmos: 0x0a0630,
 };
 
 export class SuperFx {
@@ -131,6 +133,28 @@ export class SuperFx {
         }
       }
       s.time.delayedCall(500, () => this.scene.cameras.main.shake(200, 0.006));
+    } else if (style === 'dragon') {
+      // Wrath of the Wyrm: a ring of fire bursts up around him, embers everywhere.
+      for (let k = 0; k < 9; k += 1) {
+        const fx = x + (k - 4) * 70;
+        const f = this.w(s.add.sprite(fx, footY - 20, 'px_dragon_fire').setScale(0.4).setAlpha(0), 33);
+        f.play('px_dragon_fire');
+        s.tweens.add({ targets: f, scale: 2.2 - Math.abs(k - 4) * 0.25, y: footY - 80 - (4 - Math.abs(k - 4)) * 30, alpha: 1, duration: 380, delay: 80 + Math.abs(k - 4) * 70, ease: 'Back.easeOut' });
+        this.fadeOut([f], 1100 + k * 20, 300);
+      }
+      this.embers(x, footY, 70);
+      s.time.delayedCall(380, () => this.scene.cameras.main.shake(220, 0.01));
+    } else if (style === 'cosmos') {
+      // Starfall: the sky darkens, star orbs gather in a ring and rise.
+      for (let k = 0; k < 12; k += 1) {
+        const a = (k / 12) * Math.PI * 2;
+        const o = this.w(s.add.sprite(x, cy, 'px_star_orb').setScale(0.3).setAlpha(0), 33);
+        o.play('px_star_orb');
+        s.tweens.add({ targets: o, x: x + Math.cos(a) * 260, y: cy + Math.sin(a) * 140 - 40, scale: 1.4, alpha: 1, duration: 450, delay: 60 + k * 35, ease: 'Cubic.easeOut' });
+        s.tweens.add({ targets: o, y: '-=320', alpha: 0, duration: 520, delay: 950 + k * 25, ease: 'Quad.easeIn', onComplete: () => o.destroy() });
+      }
+      const glow = this.w(s.add.image(x, cy, 'fx_glow').setTint(0x8a6cff).setBlendMode(Phaser.BlendModes.ADD).setScale(0.5).setAlpha(0.9), 10);
+      s.tweens.add({ targets: glow, scale: 6, alpha: 0, duration: 1100, onComplete: () => glow.destroy() });
     } else if (style === 'rank') {
       // Rank Up: emblems burst out around him in a ring, rise, and a purple-gold light pours down.
       const beam = this.w(s.add.image(x, footY - 640, 'fx_beam').setOrigin(0.5, 0).setTint(0xb070ff).setAlpha(0).setBlendMode(Phaser.BlendModes.ADD).setScale(2.2, 1.3), 11);
@@ -183,6 +207,18 @@ export class SuperFx {
       const y = footY - 90 - Math.random() * 120;
       const t = this.w(s.add.image(x - facing * 200, y, 'fx_glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0x9fd4ff).setScale(0.9, 0.05), 34);
       s.tweens.add({ targets: t, x: x + facing * 420, alpha: 0, duration: 220, onComplete: () => t.destroy() });
+    } else if (style === 'dragon' && clock % 3 === 0) {
+      // Fire roars off him at the target.
+      const s = this.scene;
+      const f = this.w(s.add.sprite(x + facing * 60, footY - 60 - Math.random() * 120, 'px_dragon_fire').setScale(1.2), 34);
+      f.play('px_dragon_fire');
+      s.tweens.add({ targets: f, x: f.x + facing * (220 + Math.random() * 140), scale: 0.5, alpha: 0, duration: 420, onComplete: () => f.destroy() });
+    } else if (style === 'cosmos' && clock % 3 === 0) {
+      // Stars rain down in front of her.
+      const s = this.scene;
+      const o = this.w(s.add.sprite(x + facing * (80 + Math.random() * 220), footY - 420, 'px_star_orb').setScale(0.9), 34);
+      o.play('px_star_orb');
+      s.tweens.add({ targets: o, y: footY - 20, duration: 360, ease: 'Quad.easeIn', onComplete: () => o.destroy() });
     } else if (style === 'rank' && clock % 3 === 0) {
       // Emblems pour off him at the target, spinning.
       const s = this.scene;

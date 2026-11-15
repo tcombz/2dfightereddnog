@@ -24,6 +24,8 @@ import squad from '../../assets/fx/squad.png';
 import volt from '../../assets/fx/volt.png';
 import swing from '../../assets/fx/swing.png';
 import emblems from '../../assets/fx/emblems.png';
+import dragonFire from '../../assets/fx/dragon_fire.png';
+import starOrb from '../../assets/fx/star_orb.png';
 import catIdle from '../../assets/fx/cat_idle.png';
 import catHiss from '../../assets/fx/cat_hiss.png';
 import catCheer from '../../assets/fx/cat_cheer.png';
@@ -43,6 +45,9 @@ const SHEETS: Sheet[] = [
   { key: 'px_swing', url: swing, w: 96, h: 96, frames: 7, fps: 30, loop: false },
   // Quincy's rank emblems: eight still frames, one picked per emblem.
   { key: 'px_emblems', url: emblems, w: 64, h: 64, frames: 8, fps: 1, loop: false },
+  // Ignar's dragon fire and Vesper's star orb (PixelLab effects workbench).
+  { key: 'px_dragon_fire', url: dragonFire, w: 72, h: 72, frames: 8, fps: 14, loop: true },
+  { key: 'px_star_orb', url: starOrb, w: 61, h: 61, frames: 8, fps: 12, loop: true },
   // Quincy's cat: idle on his shoulder (loops), a hiss when he is hit, a paw-up meow on a super or a win.
   { key: 'px_cat_idle', url: catIdle, w: 64, h: 64, frames: 9, fps: 7, loop: true },
   { key: 'px_cat_hiss', url: catHiss, w: 64, h: 64, frames: 9, fps: 16, loop: false },

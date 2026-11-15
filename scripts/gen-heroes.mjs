@@ -374,6 +374,75 @@ const heroes = [
       super: { name: 'Rank Up', kind: Kind.Super, juggle: 1, meterCost: 1000, startup: 7, active: 28, recovery: 28, hits: 6, rehit: 5, invuln: 18, damage: 58, chip: 20, hitstun: 32, blockstun: 20, kb: [4, 22], knockdown: true, hitstop: 8, hitbox: { x: -40, y: 0, w: 320, h: 260 } },
     },
   }),
+  // Ignar, the Dragon Knight (original fantasy fighter): rushdown with an armored charge and short fire.
+  hero({
+    id: 'ignar',
+    name: 'Ignar',
+    color: '#e0402a',
+    stats: {
+      maxHealth: 1000, walkSpeed: 6, backWalkSpeed: 5, jumpVelocity: 21, jumpSpeedX: 7, gravity: 1,
+      width: 76, height: 214, crouchHeight: 150, dashSpeed: 15, dashTicks: 13, backdashSpeed: 12, backdashTicks: 15,
+    },
+    bodies: {
+      stand: { x: -38, y: 0, w: 76, h: 214 },
+      crouch: { x: -42, y: 0, w: 84, h: 150 },
+      air: { x: -38, y: 30, w: 76, h: 170 },
+    },
+    moves: {
+      light: { name: 'Claw Jab', startup: 4, active: 3, recovery: 8, damage: 32, hitstun: 15, blockstun: 11, kb: [3, 0], hitstop: 7, cancel: ALL, hitbox: { x: 15, y: 150, w: 92, h: 32 } },
+      heavy: { name: 'Molten Fist', startup: 10, active: 4, recovery: 19, damage: 90, hitstun: 25, blockstun: 18, kb: [12, 0], hitstop: 13, advance: 3, cancel: SP, hitbox: { x: 15, y: 126, w: 118, h: 56 } },
+      kick: { name: 'Dragon Kick', startup: 10, active: 4, recovery: 17, advance: 6, damage: 78, hitstun: 22, blockstun: 16, kb: [12, 0], hitstop: 11, cancel: SP, hitbox: { x: 20, y: 110, w: 120, h: 80 } },
+      crouchLight: { name: 'Low Claw', guard: Guard.Low, body: 'crouch', startup: 4, active: 3, recovery: 9, damage: 26, hitstun: 14, blockstun: 10, kb: [3, 0], hitstop: 7, cancel: ALL, hitbox: { x: 20, y: 100, w: 100, h: 52 } },
+      sweep: { name: 'Tail Sweep', guard: Guard.Low, body: 'crouch', startup: 9, active: 6, recovery: 25, hits: 2, rehit: 3, damage: 42, knockdown: true, blockstun: 14, kb: [8, 6], hitstop: 9, cancel: Cancel.Super, hitbox: { x: 10, y: 0, w: 132, h: 80 } },
+      jumpAttack: { name: 'Wyrm Dive', guard: Guard.High, body: 'air', air: true, startup: 5, active: 14, recovery: 4, damage: 74, hitstun: 20, blockstun: 14, kb: [6, 0], hitstop: 10, hitbox: { x: 10, y: 40, w: 124, h: 120 } },
+      throw: { name: 'Inferno Slam', kind: Kind.Throw, guard: Guard.Throw, limb: false, startup: 4, active: 2, recovery: 24, damage: 124, knockdown: true, kb: [14, 14], hitstop: 14, hitbox: { x: 10, y: 60, w: 74, h: 124 } },
+      // Dragon Rush: a burning charge that shrugs off one hit.
+      special: { name: 'Dragon Rush', kind: Kind.Special, startup: 13, active: 12, recovery: 26, armor: 1, advance: 11, damage: 108, chip: 16, hitstun: 24, blockstun: 18, kb: [13, 14], knockdown: true, hitstop: 14, cancel: Cancel.Super, hitbox: { x: 10, y: 40, w: 132, h: 160 } },
+      // Dragon Breath: a short, wide, slow burst of fire.
+      projectile: {
+        name: 'Dragon Breath', kind: Kind.Special, startup: 14, active: 1, recovery: 26,
+        projectile: { x: 50, y: 110, w: 90, h: 80, speed: 7, life: 40, damage: 70, chip: 12, hitstun: 20, blockstun: 14, kb: [9, 0], hitstop: 9 },
+      },
+      rising: { name: 'Rising Wing', kind: Kind.Special, juggle: 1, cancel: Cancel.Super, startup: 5, active: 9, recovery: 31, invuln: 7, damage: 122, chip: 16, hitstun: 30, blockstun: 20, kb: [6, 22], knockdown: true, hitstop: 12, hitbox: { x: 0, y: 100, w: 92, h: 180 } },
+      super: { name: 'Wrath of the Wyrm', kind: Kind.Super, juggle: 1, meterCost: 1000, startup: 7, active: 26, recovery: 28, hits: 5, rehit: 5, advance: 8, invuln: 16, damage: 66, chip: 22, hitstun: 32, blockstun: 20, kb: [4, 22], knockdown: true, hitstop: 10, hitbox: { x: -20, y: 0, w: 220, h: 240 } },
+    },
+  }),
+  // Vesper, the Star Witch (original fantasy fighter): a zoner with a long staff and star magic.
+  hero({
+    id: 'vesper',
+    name: 'Vesper',
+    color: '#6a4cff',
+    stats: {
+      maxHealth: 920, walkSpeed: 5, backWalkSpeed: 5, jumpVelocity: 22, jumpSpeedX: 7, gravity: 1,
+      width: 66, height: 214, crouchHeight: 150, dashSpeed: 13, dashTicks: 14, backdashSpeed: 13, backdashTicks: 16,
+    },
+    bodies: {
+      stand: { x: -33, y: 0, w: 66, h: 214 },
+      crouch: { x: -37, y: 0, w: 74, h: 150 },
+      air: { x: -33, y: 30, w: 66, h: 170 },
+    },
+    moves: {
+      light: { name: 'Star Flick', startup: 5, active: 3, recovery: 8, damage: 30, hitstun: 15, blockstun: 11, kb: [3, 0], hitstop: 7, cancel: ALL, hitbox: { x: 15, y: 150, w: 100, h: 32 } },
+      heavy: { name: 'Staff Arc', startup: 10, active: 5, recovery: 20, damage: 82, hitstun: 24, blockstun: 18, kb: [13, 0], hitstop: 12, cancel: SP, hitbox: { x: 15, y: 110, w: 150, h: 80 } },
+      kick: { name: 'Comet Kick', startup: 11, active: 4, recovery: 18, damage: 72, hitstun: 22, blockstun: 16, kb: [16, 0], hitstop: 11, cancel: SP, hitbox: { x: 20, y: 110, w: 128, h: 70 } },
+      crouchLight: { name: 'Low Spark', guard: Guard.Low, body: 'crouch', startup: 5, active: 3, recovery: 9, damage: 24, hitstun: 14, blockstun: 10, kb: [3, 0], hitstop: 7, cancel: ALL, hitbox: { x: 20, y: 100, w: 110, h: 52 } },
+      sweep: { name: 'Staff Sweep', guard: Guard.Low, body: 'crouch', startup: 10, active: 5, recovery: 25, damage: 74, knockdown: true, blockstun: 14, kb: [8, 6], hitstop: 11, cancel: Cancel.Super, hitbox: { x: 10, y: 0, w: 150, h: 80 } },
+      jumpAttack: { name: 'Falling Star', guard: Guard.High, body: 'air', air: true, startup: 5, active: 14, recovery: 4, damage: 68, hitstun: 20, blockstun: 14, kb: [6, 0], hitstop: 10, hitbox: { x: 10, y: 40, w: 130, h: 120 } },
+      throw: { name: 'Lunar Lift', kind: Kind.Throw, guard: Guard.Throw, limb: false, startup: 4, active: 2, recovery: 24, damage: 112, knockdown: true, kb: [14, 14], hitstop: 14, hitbox: { x: 10, y: 60, w: 74, h: 124 } },
+      // Gravity Well: a ring of starlight that holds at mid-range for a moment.
+      special: {
+        name: 'Gravity Well', kind: Kind.Special, startup: 16, active: 1, recovery: 28,
+        projectile: { x: 150, y: 0, w: 140, h: 170, speed: 0, life: 18, damage: 80, chip: 10, hitstun: 24, blockstun: 14, kb: [10, 14], knockdown: true, hitstop: 12 },
+      },
+      // Star Orb: a quick violet orb.
+      projectile: {
+        name: 'Star Orb', kind: Kind.Special, startup: 12, active: 1, recovery: 27,
+        projectile: { x: 60, y: 130, w: 56, h: 56, speed: 12, life: 90, damage: 58, chip: 9, hitstun: 19, blockstun: 13, kb: [8, 0], hitstop: 8 },
+      },
+      rising: { name: 'Moonrise', kind: Kind.Special, juggle: 1, cancel: Cancel.Super, startup: 6, active: 9, recovery: 31, invuln: 7, damage: 116, chip: 16, hitstun: 30, blockstun: 20, kb: [6, 22], knockdown: true, hitstop: 12, hitbox: { x: 0, y: 100, w: 92, h: 180 } },
+      super: { name: 'Starfall', kind: Kind.Super, juggle: 1, meterCost: 1000, startup: 7, active: 30, recovery: 28, hits: 6, rehit: 5, invuln: 18, damage: 56, chip: 20, hitstun: 32, blockstun: 20, kb: [4, 22], knockdown: true, hitstop: 8, hitbox: { x: -40, y: 0, w: 330, h: 260 } },
+    },
+  }),
 ];
 
 for (const h of heroes) {

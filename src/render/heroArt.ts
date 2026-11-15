@@ -55,7 +55,7 @@ interface AttackArt {
 }
 
 /** How a projectile is drawn. */
-export type ProjStyle = 'bolt' | 'disc' | 'cards' | 'golden' | 'quake' | 'crew' | 'tracer' | 'squad' | 'emblem';
+export type ProjStyle = 'bolt' | 'disc' | 'cards' | 'golden' | 'quake' | 'crew' | 'tracer' | 'squad' | 'emblem' | 'fire' | 'star' | 'well';
 
 export interface HeroArt {
   key: string;

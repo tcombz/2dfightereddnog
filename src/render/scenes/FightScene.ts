@@ -758,7 +758,7 @@ export class FightScene extends Phaser.Scene {
     // A super that ends the round gets its own call.
     const finisher = winner === Result.P1 || winner === Result.P2 ? s.fighters[winner] : null;
     if (ko && finisher && finisher.state === FS.Attack && finisher.moveId === Move.Super) {
-      sub = sub ? `SUPER FINISH · ${sub}` : 'SUPER FINISH';
+      sub = sub ? `HYPER COMBO FINISH · ${sub}` : 'HYPER COMBO FINISH';
       this.cameras.main.flash(420, 255, 220, 120);
     }
     if (ko) {
@@ -1007,6 +1007,17 @@ export class FightScene extends Phaser.Scene {
           if (this.clock % 5 === 0) this.fx.spike(cx - dir * 30, GROUND_Y, dir);
           glowAlpha = 0.25;
           trail = false;
+        } else if (style === 'fire' || style === 'star') {
+          // Ignar's dragon breath and Vesper's star orb: looping PixelLab effects.
+          const key = style === 'fire' ? 'px_dragon_fire' : 'px_star_orb';
+          play(view.img, key);
+          view.img.setScale(style === 'fire' ? 1.6 : 1.3);
+          glowScale = style === 'fire' ? 1.3 : 1.0;
+        } else if (style === 'well') {
+          // Vesper's Gravity Well: a big slow star orb that holds in place.
+          play(view.img, 'px_star_orb');
+          view.img.setScale(2.4 + 0.15 * Math.sin(this.clock * 0.3));
+          glowScale = 1.8;
         } else if (style === 'emblem') {
           // Quincy's Emblem Toss: a rank emblem spinning like a frisbee.
           if (view.img.anims.isPlaying) view.img.anims.stop();

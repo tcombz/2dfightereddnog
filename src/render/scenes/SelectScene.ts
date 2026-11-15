@@ -14,7 +14,7 @@ import { menuHint } from '../prompts';
 import { body, display, fitText, goTo, goldFill, stripes } from '../ui';
 
 const TILE_W = 110;
-const TILE_H = 52;
+const TILE_H = 44;
 /** How far each tile's top edge leans over its bottom edge. */
 const SKEW = 12;
 const RATING_NAMES: Array<[keyof ReturnType<typeof heroInfo>['ratings'], string]> = [
@@ -465,9 +465,9 @@ export class SelectScene extends Phaser.Scene {
 
   /** Centre of portrait tile `k` in a player's column: the columns lean in towards a V. */
   private tilePos(col: number, k: number): { x: number; y: number } {
-    const step = TILE_H + 8;
-    const top = (VIEW_H - (this.slots * step - 8)) / 2 + TILE_H / 2 - 6;
-    const x = 318 + k * 15;
+    const step = TILE_H + 5;
+    const top = (VIEW_H - (this.slots * step - 5)) / 2 + TILE_H / 2 - 6;
+    const x = 318 + k * Math.min(15, Math.floor(90 / Math.max(1, this.slots - 1)));
     return { x: col === 0 ? x : VIEW_W - x, y: top + k * step };
   }
 
