@@ -17,7 +17,9 @@
 5. **Inputs are a bitmask per tick:** left=1, right=2, up=4, down=8, light=16, heavy=32,
    special=64, block=128 (see `src/sim/input.ts`). Everything else is read from these bits:
    kick is forward + heavy, sweep is down + heavy, throw is light + heavy, super is heavy + special,
-   Heat Burst / Heat Smash is light + special,
+   the Level 3 hyper (`ultimate`, all three meter levels: `METER_MAX` 3000) is down + heavy + special,
+   Heat Burst / Heat Smash is light + special; tag teams: block + light = assist, block + special = tag,
+   block + heavy = launcher (up after it lands = super jump), light in the air = air jab,
    specials use motions read from the per-fighter input history (`hist`).
 6. **Fighters are data driven.** Each hero is one JSON file in `src/heroes/`: stats plus per-move
    frame data (startup, active, recovery, damage, hitstun, blockstun, knockback, guard, cancels,
@@ -56,7 +58,8 @@
   (Gameplay, Audio, Display, Keyboard P1/P2, Controllers; pad remapping in `scenes/ControllerScene.ts`)
 - `src/ai/cpu.ts` computer opponent (easy, normal, hard) and the training dummy's auto-guard
 - `assets/heroes/<id>/` sprite frames, `atlas.png`, `atlas.json`, `art.json` and
-  `art-overrides.json`. Heroes are PixelLab characters (about 150-165 px tall standing). Import a
+  `art-overrides.json`, plus `sheet_portrait.png` and `super_art.png` (made from one sprite with
+  `python3 -I scripts/make-hero-art.py <sprite> <id> <accent> <dark>`). Heroes are PixelLab characters (about 150-165 px tall standing). Import a
   character download with `python3 -I scripts/import-hero.py <unzipped dir> <id> <world height>`
   (feet-aligned frames, the east base, and `art.json`: draw scale, cell, feet anchor, face box and
   which frames play for each state and attack, measured from the frames), then repack with
@@ -77,8 +80,10 @@
 - Rects in hero JSON are fighter-local: `x` = forward offset of the near edge (mirrored by
   facing), `y` = bottom edge above the feet, `w`, `h`.
 - Every hero has the moves in `MOVE_KEYS`: light, heavy, kick, crouchLight, sweep, jumpAttack,
-  throw, special, projectile, rising, super, heatBurst, heatSmash (the two Heat moves are generated for
-  every hero by `heatMoves()` in gen-heroes; their art falls back to the power-up and super clips).
+  throw, special, projectile, rising, super, heatBurst, heatSmash, launcher, airLight, ultimate (the shared
+  moves are generated for every hero by `heatMoves()` and `ultimate()` in gen-heroes; their art falls back to
+  the power-up, super, rising and jump-attack clips).
+- Tag teams: `GameState.team` and `bench` (each side's partner; health 0 when there is none). One round.
 - `frames.length` of a move must equal `startup + active + recovery`; hitboxes only on active
   frames (projectile moves have none: the projectile hits).
 - Any new field on the state must be added to `hashState` (`FIGHTER_KEYS` / `GAME_KEYS`); a test

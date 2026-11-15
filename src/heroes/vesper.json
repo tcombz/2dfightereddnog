@@ -3,7 +3,7 @@
  "name": "Vesper",
  "color": "#6a4cff",
  "stats": {
-  "maxHealth": 920,
+  "maxHealth": 960,
   "walkSpeed": 5,
   "backWalkSpeed": 5,
   "jumpVelocity": 22,

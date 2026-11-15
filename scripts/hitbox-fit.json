@@ -1,18 +1,18 @@
 {
  "rogue": {
-  "height": 208,
-  "crouchHeight": 155,
+  "height": 214,
+  "crouchHeight": 176,
   "moves": {
    "light": {
-    "w": 96,
-    "y": 128,
-    "h": 52
+    "w": 98,
+    "y": 105,
+    "h": 80
    },
    "heavy": {
-    "w": 127
+    "w": 117
    },
    "kick": {
-    "w": 112
+    "w": 118
    },
    "crouchLight": {
     "w": 88
@@ -23,42 +23,45 @@
   }
  },
  "jetsetter": {
-  "height": 216,
-  "crouchHeight": 162,
+  "height": 218,
+  "crouchHeight": 199,
   "moves": {
    "light": {
     "w": 103,
-    "y": 128,
-    "h": 56
+    "y": 105,
+    "h": 105
    },
    "heavy": {
-    "w": 110
+    "w": 145
    },
    "kick": {
-    "w": 96
+    "w": 114
    },
    "crouchLight": {
-    "w": 70
+    "w": 73
    },
    "sweep": {
-    "w": 115
+    "w": 122
    }
   }
  },
  "chris": {
-  "height": 209,
-  "crouchHeight": 156,
+  "height": 214,
+  "crouchHeight": 175,
   "moves": {
    "light": {
     "w": 102,
-    "y": 121,
-    "h": 56
+    "y": 105,
+    "h": 55
    },
    "heavy": {
-    "w": 114
+    "w": 132
+   },
+   "kick": {
+    "w": 108
    },
    "crouchLight": {
-    "w": 101
+    "w": 86
    },
    "sweep": {
     "w": 112
@@ -66,45 +69,45 @@
   }
  },
  "leader": {
-  "height": 236,
-  "crouchHeight": 184,
+  "height": 230,
+  "crouchHeight": 190,
   "moves": {
    "light": {
     "w": 108,
-    "y": 115,
-    "h": 86
+    "y": 105,
+    "h": 94
    },
    "heavy": {
-    "w": 142
+    "w": 135
    },
    "kick": {
-    "w": 119
+    "w": 108
    },
    "crouchLight": {
-    "w": 101
+    "w": 78
    },
    "sweep": {
-    "w": 138
+    "w": 118
    }
   }
  },
  "eddnog": {
-  "height": 237,
-  "crouchHeight": 193,
+  "height": 241,
+  "crouchHeight": 196,
   "moves": {
    "light": {
     "w": 112,
-    "y": 104,
-    "h": 120
+    "y": 105,
+    "h": 101
    },
    "heavy": {
     "w": 144
    },
    "kick": {
-    "w": 122
+    "w": 105
    },
    "crouchLight": {
-    "w": 120
+    "w": 80
    },
    "sweep": {
     "w": 122
@@ -112,22 +115,22 @@
   }
  },
  "malcolm": {
-  "height": 235,
-  "crouchHeight": 176,
+  "height": 230,
+  "crouchHeight": 192,
   "moves": {
    "light": {
     "w": 110,
-    "y": 128,
-    "h": 74
+    "y": 104,
+    "h": 94
    },
    "heavy": {
-    "w": 121
+    "w": 138
    },
    "kick": {
-    "w": 104
+    "w": 132
    },
    "crouchLight": {
-    "w": 80
+    "w": 79
    },
    "sweep": {
     "w": 132
@@ -135,19 +138,22 @@
   }
  },
  "quincy": {
-  "height": 216,
-  "crouchHeight": 166,
+  "height": 218,
+  "crouchHeight": 182,
   "moves": {
    "light": {
-    "w": 98,
-    "y": 116,
-    "h": 47
+    "w": 112,
+    "y": 104,
+    "h": 83
    },
    "heavy": {
-    "w": 140
+    "w": 129
    },
    "kick": {
-    "w": 108
+    "w": 111
+   },
+   "crouchLight": {
+    "w": 80
    },
    "sweep": {
     "w": 128
@@ -160,8 +166,8 @@
   "moves": {
    "light": {
     "w": 112,
-    "y": 128,
-    "h": 45
+    "y": 141,
+    "h": 32
    },
    "heavy": {
     "w": 118

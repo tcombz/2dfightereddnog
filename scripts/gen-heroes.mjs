@@ -168,7 +168,7 @@ const heroes = [
     name: 'The Rogue',
     color: '#2f7bff',
     stats: {
-      maxHealth: 900, walkSpeed: 6, backWalkSpeed: 5, jumpVelocity: 22, jumpSpeedX: 7, gravity: 1,
+      maxHealth: 830, walkSpeed: 6, backWalkSpeed: 5, jumpVelocity: 22, jumpSpeedX: 7, gravity: 1,
       width: 70, height: 228, crouchHeight: 150, dashSpeed: 14, dashTicks: 14, backdashSpeed: 12, backdashTicks: 16,
     },
     bodies: {
@@ -200,7 +200,7 @@ const heroes = [
     name: 'The Jetsetter',
     color: '#e0b030',
     stats: {
-      maxHealth: 1100, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 21, jumpSpeedX: 7, gravity: 1,
+      maxHealth: 1010, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 21, jumpSpeedX: 7, gravity: 1,
       width: 72, height: 232, crouchHeight: 150, dashSpeed: 15, dashTicks: 13, backdashSpeed: 12, backdashTicks: 15,
     },
     bodies: {
@@ -233,7 +233,7 @@ const heroes = [
     color: '#b8323f',
     // Short in stature: a smaller body, so some high attacks sail over him.
     stats: {
-      maxHealth: 1040, walkSpeed: 6, backWalkSpeed: 5, jumpVelocity: 21, jumpSpeedX: 6, gravity: 1,
+      maxHealth: 970, walkSpeed: 6, backWalkSpeed: 5, jumpVelocity: 21, jumpSpeedX: 6, gravity: 1,
       width: 64, height: 208, crouchHeight: 138, dashSpeed: 13, dashTicks: 15, backdashSpeed: 11, backdashTicks: 16,
     },
     bodies: {
@@ -266,7 +266,7 @@ const heroes = [
     name: 'The Leader',
     color: '#d4a017',
     stats: {
-      maxHealth: 880, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 21, jumpSpeedX: 6, gravity: 1,
+      maxHealth: 960, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 21, jumpSpeedX: 6, gravity: 1,
       width: 76, height: 236, crouchHeight: 152, dashSpeed: 12, dashTicks: 15, backdashSpeed: 10, backdashTicks: 18,
     },
     bodies: {
@@ -303,7 +303,7 @@ const heroes = [
     name: 'Eddnog',
     color: '#e0a526',
     stats: {
-      maxHealth: 1070, walkSpeed: 4, backWalkSpeed: 3, jumpVelocity: 20, jumpSpeedX: 5, gravity: 1,
+      maxHealth: 1090, walkSpeed: 4, backWalkSpeed: 3, jumpVelocity: 20, jumpSpeedX: 5, gravity: 1,
       width: 86, height: 246, crouchHeight: 160, dashSpeed: 11, dashTicks: 15, backdashSpeed: 9, backdashTicks: 17,
     },
     bodies: {
@@ -375,7 +375,7 @@ const heroes = [
     name: 'Quincy',
     color: '#8a3dff',
     stats: {
-      maxHealth: 1060, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 21, jumpSpeedX: 6, gravity: 1,
+      maxHealth: 1210, walkSpeed: 5, backWalkSpeed: 4, jumpVelocity: 21, jumpSpeedX: 6, gravity: 1,
       width: 78, height: 214, crouchHeight: 150, dashSpeed: 13, dashTicks: 14, backdashSpeed: 11, backdashTicks: 16,
     },
     bodies: {
@@ -408,7 +408,7 @@ const heroes = [
     name: 'Ignar',
     color: '#e0402a',
     stats: {
-      maxHealth: 1000, walkSpeed: 6, backWalkSpeed: 5, jumpVelocity: 21, jumpSpeedX: 7, gravity: 1,
+      maxHealth: 1060, walkSpeed: 6, backWalkSpeed: 5, jumpVelocity: 21, jumpSpeedX: 7, gravity: 1,
       width: 76, height: 214, crouchHeight: 150, dashSpeed: 15, dashTicks: 13, backdashSpeed: 12, backdashTicks: 15,
     },
     bodies: {
@@ -441,7 +441,7 @@ const heroes = [
     name: 'Vesper',
     color: '#6a4cff',
     stats: {
-      maxHealth: 920, walkSpeed: 5, backWalkSpeed: 5, jumpVelocity: 22, jumpSpeedX: 7, gravity: 1,
+      maxHealth: 960, walkSpeed: 5, backWalkSpeed: 5, jumpVelocity: 22, jumpSpeedX: 7, gravity: 1,
       width: 66, height: 214, crouchHeight: 150, dashSpeed: 13, dashTicks: 14, backdashSpeed: 13, backdashTicks: 16,
     },
     bodies: {

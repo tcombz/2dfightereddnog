@@ -123,7 +123,7 @@ describe('determinism', () => {
     expect(h2).toBe(h1);
     expect(h3).toBe(h1);
     // Golden value: pins the result across runs, machines and refactors.
-    expect(h1).toMatchInlineSnapshot(`"aaa212a0"`);
+    expect(h1).toMatchInlineSnapshot(`"a158a7b3"`);
   });
 
   it('resuming from a serialized mid-run state gives the same hash', () => {
@@ -595,11 +595,11 @@ describe('armor and teleports', () => {
 describe('punish counters and chip KOs', () => {
   it('hitting an attack while it recovers is a punish: bonus damage and stun', () => {
     // The Jetsetter whiffs a heavy from range; the Rogue walks in and jabs its recovery.
-    let s = fight(ROGUE, JET, 190);
+    let s = fight(ROGUE, JET, 215);
     s = step(s, 0, Heavy);
     const heavy = getMove(JET, Move.Heavy);
     for (let t = 1; t < heavy.startup + heavy.active; t += 1) s = step(s, 0, 0);
-    for (let t = 0; t < 10; t += 1) s = step(s, R, 0);
+    for (let t = 0; t < 14; t += 1) s = step(s, R, 0);
     expect(s.fighters[1].state).toBe(FS.Attack);
     const fx: number[] = [];
     for (let t = 0; t < 12; t += 1) {
