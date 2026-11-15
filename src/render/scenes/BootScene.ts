@@ -49,7 +49,19 @@ export class BootScene extends Phaser.Scene {
       this.registry.set('simple', false);
     }
     // An invite link (?join=CODE) goes straight into that friend's match.
-    const join = new URLSearchParams(location.search).get('join');
+    const params = new URLSearchParams(location.search);
+    const join = params.get('join');
+    if (join) {
+      // Use the code once: take it out of the address bar, so a refresh or a later visit does not
+      // try to join that old match again.
+      params.delete('join');
+      const rest = params.toString();
+      try {
+        history.replaceState(null, '', `${location.pathname}${rest ? `?${rest}` : ''}${location.hash}`);
+      } catch {
+        // Some embeds forbid it; the code is still used just once per load.
+      }
+    }
     if (join) this.scene.start('online', { join });
     else this.scene.start('title');
   }
