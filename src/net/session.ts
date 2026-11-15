@@ -10,11 +10,16 @@ export interface StartMsg {
   stage: number;
   s1: boolean;
   s2: boolean;
+  /** Tag teams: each side's partner. */
+  b1?: number;
+  b2?: number;
 }
 
 /** One side's presence: lobby picks, the start order (host), and in a fight the latest inputs. */
 export interface Lobby extends Presence {
   hero: number;
+  /** Tag-team partner. */
+  partner?: number;
   simple: boolean;
   ready: boolean;
   stage: number;

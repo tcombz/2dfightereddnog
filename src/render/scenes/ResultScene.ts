@@ -98,6 +98,7 @@ export class ResultScene extends Phaser.Scene {
                 mode: 'replay',
                 p1: setup.p1,
                 p2: setup.p2,
+                partners: setup.partners,
                 stage: setup.stage,
                 cpuLevel: setup.cpuLevel,
                 simple: data.simple,

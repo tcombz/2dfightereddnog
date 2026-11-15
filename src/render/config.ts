@@ -53,6 +53,8 @@ export interface MatchSetup {
   party?: PartyState;
   /** Per-player simple specials (one direction + special), chosen at character select. */
   simple?: [boolean, boolean];
+  /** Tag teams: each side's partner (no partners: one on one). */
+  partners?: [number, number];
   /** Online: which player this side plays, and the match number shared with the other side. */
   online?: { me: 0 | 1; match: number };
   /** Replay: the recorded inputs to play back, and where to go when it ends. */
@@ -81,6 +83,8 @@ export interface ArcadeRun {
   fight: number;
   continues: number;
   base: number;
+  /** Tag teams: the player's partner for the whole run. */
+  partner?: number;
 }
 
 export const CPU_LEVELS = ['EASY', 'NORMAL', 'HARD'];

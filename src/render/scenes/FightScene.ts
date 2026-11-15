@@ -76,6 +76,8 @@ export class FightScene extends Phaser.Scene {
   private promptStamp = -1;
   private lastSmear = [-1, -1];
   private lastArc = [-1, -1];
+  private benchSprites: Phaser.GameObjects.Image[] = [];
+  private benchProj: ProjectileView[] = [];
   /** Quincy's cat (one per fighter who has a companion), and each fighter's state last frame. */
   private pets: Array<Companion | null> = [null, null];
   private petPrev = [-1, -1];
@@ -154,7 +156,7 @@ export class FightScene extends Phaser.Scene {
     const simple = (this.registry.get('simple') as boolean | undefined) ?? false;
     const twoHumans = setup.mode === 'versus' || setup.mode === 'online' || setup.mode === 'replay';
     this.simpleFlags = setup.simple ? [setup.simple[0], setup.simple[1] && twoHumans] : [simple, simple && setup.mode === 'versus'];
-    this.state = createInitialState(setup.p1, setup.p2, { training: setup.mode === 'training', simple: this.simpleFlags });
+    this.state = createInitialState(setup.p1, setup.p2, { training: setup.mode === 'training', simple: this.simpleFlags, partners: setup.partners });
     this.initState = this.state;
     this.log = [];
     this.frames = 0;
@@ -231,7 +233,17 @@ export class FightScene extends Phaser.Scene {
         extra: [0, 1].map(() => this.add.sprite(0, 0, 'px_card').setVisible(false).setDepth(45)),
       });
     });
-    this.world.add([...this.heatAura, ...this.rallyGlow, ...this.shadows, ...this.sprites, ...this.projViews.flatMap((p) => [p.glow, p.img, ...p.extra])]);
+    // Tag teams: each side's partner, drawn when it comes in for an assist, with its own projectile.
+    this.benchSprites = this.state.bench.map((b, i) => {
+      const art = artFor(b.hero);
+      return this.add.image(b.x, GROUND_Y, art.key).setScale(art.scale).setDepth(29 - i).setVisible(false);
+    });
+    this.benchProj = this.state.bench.map(() => ({
+      glow: this.add.image(0, 0, 'fx_glow').setBlendMode(Phaser.BlendModes.ADD).setVisible(false).setDepth(44),
+      img: this.add.sprite(0, 0, 'px_record').setVisible(false).setDepth(45),
+      extra: [0, 1].map(() => this.add.sprite(0, 0, 'px_card').setVisible(false).setDepth(45)),
+    }));
+    this.world.add([...this.heatAura, ...this.rallyGlow, ...this.shadows, ...this.sprites, ...this.benchSprites, ...[...this.projViews, ...this.benchProj].flatMap((p) => [p.glow, p.img, ...p.extra])]);
     // Quincy's cat watches from the back of the floor on his side of the stage.
     this.pets = this.state.fighters.map((f, i) => {
       if (!artFor(f.hero).companion) return null;
@@ -529,7 +541,7 @@ export class FightScene extends Phaser.Scene {
     const frames = this.koFrame > 0 ? this.koFrame : this.frames;
     const inputs = setup.mode === 'training' ? '' : encodeInputs(this.rb ? this.rb.log : this.log, frames);
     if (inputs) {
-      saveReplay({ at: Date.now(), p1: setup.p1, p2: setup.p2, stage: setup.stage, simple: this.simpleFlags, winner: s.matchResult, wins, mode: setup.mode, inputs });
+      saveReplay({ at: Date.now(), p1: setup.p1, p2: setup.p2, partners: setup.partners, stage: setup.stage, simple: this.simpleFlags, winner: s.matchResult, wins, mode: setup.mode, inputs });
     }
     const o = online();
     if (setup.mode === 'online' && o) {
@@ -547,6 +559,20 @@ export class FightScene extends Phaser.Scene {
   }
 
   private simEvents(prev: GameState, next: GameState): void {
+    if (next.team) {
+      for (let i = 0; i < 2; i += 1) {
+        const f = next.fighters[i];
+        const y = GROUND_Y - 260;
+        if (next.bench[i].out === 1 && prev.bench[i].out === 0) {
+          sfx(this, 'whoosh_heavy', 0.8);
+          this.fx.popText(next.bench[i].x, y, 'ASSIST!', i === 0 ? CSS.p1 : CSS.p2);
+        }
+        if (f.hero !== prev.fighters[i].hero) {
+          sfx(this, 'dash', 0.9);
+          this.fx.popText(f.x, y, prev.fighters[i].health > 0 ? 'TAG IN!' : `${heroInfo(HEROES[f.hero].id).name} IN!`, i === 0 ? CSS.p1 : CSS.p2);
+        }
+      }
+    }
     if (this.trialOn) {
       this.trialWatch.update(prev, next);
       const t = TRIALS[this.trialIndex];
@@ -846,7 +872,7 @@ export class FightScene extends Phaser.Scene {
       // Motion on top of the frames: wind-up, lunge and follow-through on attacks, recoil when hit.
       const mo = this.motion(f);
       sprite
-        .setFrame(pose.frame)
+        .setTexture(art.key, pose.frame)
         .setOrigin(...feetOrigin(art, f.facing !== 1))
         .setFlipX(f.facing !== 1)
         .setPosition(f.x + jitter + mo.dx, GROUND_Y - f.y)
@@ -895,8 +921,53 @@ export class FightScene extends Phaser.Scene {
         this.fx.afterimage(sprite, heroInfo(HEROES[f.hero].id).accent, 0.3, 160);
       }
 
-      // Projectile.
-      const view = this.projViews[i];
+      this.drawProjectile(f, this.projViews[i]);
+      if (superActive && s.hitstop === 0) this.superFx.active(heroInfo(HEROES[f.hero].id), f.x, GROUND_Y - f.y, f.facing, this.clock);
+    });
+
+    this.drawBench(s);
+    this.ambient(delta);
+    this.hud.update(s, delta);
+    if (this.trainingText) {
+      const def = s.fighters[1];
+      this.trainingText.setText(
+        `TRAINING  ·  DUMMY: ${DUMMY_MODES[this.dummy]} (F1)  ·  HITBOXES (F2)  ·  RESET (F3)  ·  TRIALS (F4)  ·  LAST COMBO: ${def.comboDamage} DMG`,
+      );
+    }
+    if (this.trialOn && this.trialChips.length > 0) {
+      // Light up the steps of the route the current combo has done so far.
+      const t = TRIALS[this.trialIndex];
+      const n = this.trialLocked ? t.steps.length : this.trialWatch.progress(t);
+      this.trialChips.forEach((c, k) => c.setColor(k < n ? (this.trialLocked ? '#7dff9a' : CSS.gold) : CSS.ink));
+    }
+    this.drawDebug();
+  }
+
+  /** Tag teams: a partner on screen for its assist (slightly dimmed), and any projectile it threw. */
+  private drawBench(s: GameState): void {
+    s.bench.forEach((b, i) => {
+      const sprite = this.benchSprites[i];
+      const art = artFor(b.hero);
+      if (b.out === 1) {
+        const pose = poseFor(art, b, this.clock, false, 0);
+        if (sprite.texture.key !== art.key) sprite.setTexture(art.key);
+        sprite
+          .setVisible(true)
+          .setFrame(pose.frame)
+          .setScale(art.scale)
+          .setOrigin(...feetOrigin(art, b.facing !== 1))
+          .setFlipX(b.facing !== 1)
+          .setPosition(b.x, GROUND_Y - b.y)
+          .setTint(0xd8dcff)
+          .setAlpha(0.92);
+      } else sprite.setVisible(false);
+      this.drawProjectile(b, this.benchProj[i]);
+    });
+  }
+
+  /** A fighter's projectile (point or partner), drawn with that fighter's style. */
+  private drawProjectile(f: FighterState, view: ProjectileView): void {
+    const art = artFor(f.hero);
       const r = getProjectile(f);
       if (r) {
         const cx = r.x + r.w / 2;
@@ -983,24 +1054,6 @@ export class FightScene extends Phaser.Scene {
         view.glow.setVisible(false);
         view.extra.forEach((e) => e.setVisible(false).anims.stop());
       }
-      if (superActive && s.hitstop === 0) this.superFx.active(heroInfo(HEROES[f.hero].id), f.x, GROUND_Y - f.y, f.facing, this.clock);
-    });
-
-    this.ambient(delta);
-    this.hud.update(s, delta);
-    if (this.trainingText) {
-      const def = s.fighters[1];
-      this.trainingText.setText(
-        `TRAINING  ·  DUMMY: ${DUMMY_MODES[this.dummy]} (F1)  ·  HITBOXES (F2)  ·  RESET (F3)  ·  TRIALS (F4)  ·  LAST COMBO: ${def.comboDamage} DMG`,
-      );
-    }
-    if (this.trialOn && this.trialChips.length > 0) {
-      // Light up the steps of the route the current combo has done so far.
-      const t = TRIALS[this.trialIndex];
-      const n = this.trialLocked ? t.steps.length : this.trialWatch.progress(t);
-      this.trialChips.forEach((c, k) => c.setColor(k < n ? (this.trialLocked ? '#7dff9a' : CSS.gold) : CSS.ink));
-    }
-    this.drawDebug();
   }
 
   /**

@@ -16,7 +16,20 @@ export const ROUND_END_TICKS = 240;
 export const KNOCKDOWN_TICKS = 50;
 export const LAUNCH_MIN_VY = 8;
 
-export const METER_MAX = 1000;
+/** The hyper meter holds three levels; a super costs one (1000). */
+export const METER_MAX = 3000;
+export const METER_LEVEL = 1000;
+
+/** Tag teams: ticks between assists and between tags, where an assist appears, how fast a benched
+ *  partner recovers red health (one point every this many ticks, a power of two), and how long a
+ *  knocked-out point fighter lies there before the partner comes in. */
+export const ASSIST_COOLDOWN = 240;
+export const TAG_COOLDOWN = 90;
+export const ASSIST_OFFSET = 70;
+export const RED_RECOVER_MASK = 3;
+export const KO_SWAP_TICKS = 80;
+/** Extra lift on the super jump out of a launcher. */
+export const SUPER_JUMP_BONUS = 6;
 
 /** Whole-game freezes, in ticks. */
 export const SUPER_FREEZE = 45;

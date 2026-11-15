@@ -1,4 +1,10 @@
 import {
+  ASSIST_COOLDOWN,
+  ASSIST_OFFSET,
+  KO_SWAP_TICKS,
+  RED_RECOVER_MASK,
+  SUPER_JUMP_BONUS,
+  TAG_COOLDOWN,
   BUFFER_TICKS,
   COMBO_SCALE,
   DASH_WINDOW,
@@ -73,6 +79,9 @@ function createFighter(hero: number, slot: number): FighterState {
     fxX: 0,
     fxY: 0,
     fxPower: 0,
+    out: 0,
+    cd: 0,
+    red: 0,
   };
 }
 
@@ -81,6 +90,8 @@ export interface MatchOptions {
   training?: boolean;
   /** Simple specials per player (accessibility): direction + special instead of motions. */
   simple?: [boolean, boolean];
+  /** Tag teams: each side's partner. Without it the match is one on one. */
+  partners?: [number, number];
 }
 
 export function createInitialState(p1Hero: number, p2Hero: number, options: MatchOptions = {}): GameState {
@@ -96,10 +107,15 @@ export function createInitialState(p1Hero: number, p2Hero: number, options: Matc
     hitstop: 0,
     freezeSlot: -1,
     training: options.training ? 1 : 0,
+    team: options.partners ? 1 : 0,
     fighters: [createFighter(p1Hero, 0), createFighter(p2Hero, 1)],
+    bench: [createFighter(options.partners?.[0] ?? p1Hero, 0), createFighter(options.partners?.[1] ?? p2Hero, 1)],
   };
+  // No partner: an empty bench.
+  if (!options.partners) for (const b of s.bench) b.health = 0;
   s.fighters.forEach((f, i) => {
     f.simple = options.simple?.[i] ? 1 : 0;
+    s.bench[i].simple = f.simple;
   });
   if (s.training) {
     s.phase = Phase.Fight;
@@ -118,6 +134,7 @@ export function cloneState(s: GameState): GameState {
     ...s,
     wins: [s.wins[0], s.wins[1]],
     fighters: [cloneFighter(s.fighters[0]), cloneFighter(s.fighters[1])],
+    bench: [cloneFighter(s.bench[0]), cloneFighter(s.bench[1])],
   };
 }
 
@@ -322,7 +339,9 @@ function chooseMove(f: FighterState, input: number, pressed: number, tick: numbe
   const heavy = (pressed & Input.Heavy) !== 0;
   const special = (pressed & Input.Special) !== 0;
   if (!light && !heavy && !special) return -1;
-  if (f.y > 0 || f.state === FS.Jump) return light || heavy ? Move.JumpAttack : -1;
+  if (f.y > 0 || f.state === FS.Jump) return heavy ? Move.JumpAttack : light ? Move.AirLight : -1;
+  // Block + Heavy: the launcher.
+  if (heavy && (input & Input.Block) !== 0) return Move.Launcher;
 
   // A buffered press counts as held, so two-button moves still work when pressed early.
   const holdLight = ((input | pressed) & Input.Light) !== 0;
@@ -389,7 +408,11 @@ function tryCancel(s: GameState, f: FighterState, slot: number, input: number): 
   const pressed = f.buf;
   if (pressed === 0) return;
   const m = getMove(f.hero, f.moveId);
-  if (m.air) return;
+  if (m.air) {
+    // Air combo: the air jab chains into the jumping heavy once it connects.
+    if (f.moveId === Move.AirLight && f.moveHits > 0 && (pressed & Input.Heavy) !== 0) startMove(s, f, slot, Move.JumpAttack);
+    return;
+  }
   const next = chooseMove(f, input, pressed, s.tick);
   if (next < 0) return;
   // The second button of a throw, super or Heat pressed a few ticks late still counts (before the normal lands).
@@ -399,6 +422,11 @@ function tryCancel(s: GameState, f: FighterState, slot: number, input: number): 
     return;
   }
   if (f.moveHits === 0) return;
+  // Any normal that connects can be cancelled into the launcher (the "magic series" ends in it).
+  if (next === Move.Launcher && m.kind === Kind.Normal && f.moveId !== Move.Launcher) {
+    startMove(s, f, slot, next);
+    return;
+  }
   const target = getMove(f.hero, next);
   if (target.air || (m.cancel & cancelBit(target.kind)) === 0) return;
   startMove(s, f, slot, next);
@@ -588,7 +616,15 @@ function updateFighter(s: GameState, f: FighterState, slot: number, opp: Fighter
   }
 
   if (f.state === FS.Jump && (f.buf & (Input.Light | Input.Heavy)) !== 0) {
-    startMove(s, f, slot, Move.JumpAttack);
+    startMove(s, f, slot, (f.buf & Input.Heavy) !== 0 ? Move.JumpAttack : Move.AirLight);
+  }
+  // Super jump: up after a launcher connects sends the fighter up after them.
+  if (f.state === FS.Attack && f.moveId === Move.Launcher && f.moveHits > 0 && (input & Input.Up) !== 0) {
+    const st = HEROES[f.hero].stats;
+    setState(f, FS.Jump);
+    f.low = 0;
+    f.vy = st.jumpVelocity + SUPER_JUMP_BONUS;
+    f.vx = f.facing * 2;
   }
   if (f.state === FS.Attack) tryCancel(s, f, slot, input);
   if (isActionable(f)) {
@@ -817,6 +853,8 @@ function applyHit(s: GameState, att: FighterState, def: FighterState, c: Contact
   dmg = Math.max(1, dmg);
   def.health -= dmg;
   def.comboDamage += dmg;
+  // Tag teams: half of every hit is "red" health a benched partner slowly gets back.
+  if (s.team) def.red = Math.min(def.red + (dmg >> 1), Math.max(0, HEROES[def.hero].stats.maxHealth - Math.max(0, def.health)));
   if (s.training && def.health < 1) def.health = 1;
 
   const ko = def.health <= 0;
@@ -893,20 +931,145 @@ function resolveHits(s: GameState): void {
     applyHit(s, b, a, projB);
     b.projLife = 0;
   }
+  if (s.team) {
+    benchHits(s, 0);
+    benchHits(s, 1);
+  }
+}
+
+// ---------- tag teams ----------
+
+/** Bring the partner in from above (a tag, or after the point fighter is knocked out). */
+function swapIn(s: GameState, i: number, input: number): void {
+  const out = s.fighters[i];
+  const inc = s.bench[i];
+  inc.x = out.x - out.facing * 40;
+  clampX(inc);
+  inc.y = 170;
+  inc.vy = 0;
+  inc.vx = out.facing * 3;
+  inc.push = 0;
+  inc.facing = out.facing;
+  setState(inc, FS.Jump);
+  inc.low = 0;
+  inc.out = 0;
+  inc.combo = 0;
+  inc.juggles = 0;
+  inc.buf = 0;
+  inc.prevInput = input; // held buttons are not fresh presses for the newcomer
+  inc.cd = TAG_COOLDOWN;
+  inc.meter = Math.min(METER_MAX, out.meter); // the hyper meter belongs to the team
+  out.meter = 0;
+  out.out = 0;
+  out.vx = 0;
+  out.push = 0;
+  if (out.health > 0) setState(out, FS.Idle);
+  out.cd = TAG_COOLDOWN;
+  s.fighters[i] = inc;
+  s.bench[i] = out;
+}
+
+/** Can this fighter do something right now (not reeling, not down)? */
+function free(f: FighterState): boolean {
+  return f.state !== FS.Hitstun && f.state !== FS.Knockdown && f.state !== FS.KO && !(f.state === FS.Block && f.stunTimer > 0);
+}
+
+/**
+ * Tag-team buttons, read before the fighters move: Block + Light calls the partner's assist,
+ * Block + Special tags them in. Returns the input with any button it used taken out.
+ */
+function teamActions(s: GameState, i: number, input: number, prev: number): number {
+  if ((input & Input.Block) === 0) return input;
+  const f = s.fighters[i];
+  const b = s.bench[i];
+  const fresh = input & ~prev;
+  if ((fresh & Input.Light) !== 0) {
+    if (b.health > 0 && b.out === 0 && b.cd === 0 && free(f)) {
+      // The partner runs in behind the point fighter and throws their projectile.
+      b.out = 1;
+      b.x = f.x - f.facing * ASSIST_OFFSET;
+      clampX(b);
+      b.y = 0;
+      b.vx = 0;
+      b.vy = 0;
+      b.push = 0;
+      b.facing = f.facing;
+      b.combo = 0;
+      startMove(s, b, i, Move.Projectile);
+    }
+    return input & ~Input.Light;
+  }
+  if ((fresh & Input.Special) !== 0) {
+    if (b.health > 0 && b.out === 0 && f.cd === 0 && isActionable(f) && f.y === 0) swapIn(s, i, input);
+    return input & ~Input.Special;
+  }
+  return input;
+}
+
+/** The partner off screen: cooldowns, red health coming back, the assist leaving when it is done. */
+function benchTick(s: GameState, i: number, opp: FighterState): void {
+  const b = s.bench[i];
+  if (b.cd > 0) b.cd -= 1;
+  if (b.out === 1) {
+    updateFighter(s, b, i, opp, 0);
+    if (b.state !== FS.Attack) {
+      b.out = 0;
+      b.cd = ASSIST_COOLDOWN;
+    }
+  } else if (b.health > 0 && b.red > 0 && (s.tick & RED_RECOVER_MASK) === 0) {
+    b.health += 1;
+    b.red -= 1;
+  }
+  updateProjectile(b);
+}
+
+/** Hits involving an assist: its projectile on the opponent, and the opponent hitting it. */
+function benchHits(s: GameState, i: number): void {
+  const b = s.bench[i];
+  const point = s.fighters[i];
+  const opp = s.fighters[1 - i];
+  const shot = findProjectileHit(b, opp);
+  if (shot) {
+    applyHit(s, b, opp, shot);
+    b.projLife = 0;
+    // The meter it earns goes to the team.
+    point.meter = Math.min(METER_MAX, point.meter + b.meter);
+    b.meter = 0;
+  }
+  if (b.out !== 1) return;
+  const hit = findHit(opp, b) ?? findProjectileHit(opp, b);
+  if (hit) {
+    applyHit(s, opp, b, hit);
+    if (hit.projectile) opp.projLife = 0;
+    // Caught: knocked off screen, and a longer wait before it can come back.
+    b.out = 0;
+    b.cd = ASSIST_COOLDOWN * 2;
+    if (b.health > 0) setState(b, FS.Idle);
+    b.vx = 0;
+    b.vy = 0;
+    b.y = 0;
+    b.push = 0;
+  }
 }
 
 // ---------- round and match flow ----------
 
 function checkRoundEnd(s: GameState): void {
   const [a, b] = s.fighters;
-  const koA = a.health <= 0;
-  const koB = b.health <= 0;
+  // In a tag match a side is out only when its partner is down too.
+  const koA = a.health <= 0 && s.bench[0].health <= 0;
+  const koB = b.health <= 0 && s.bench[1].health <= 0;
   if (!koA && !koB && s.timer > 0) return;
 
   let result: number;
   if (koA !== koB) result = koB ? Result.P1 : Result.P2;
   else if (koA) result = Result.Draw;
-  else {
+  else if (s.team) {
+    // Time out in a tag match: the team with more health left wins.
+    const ha = Math.max(0, a.health) + Math.max(0, s.bench[0].health);
+    const hb = Math.max(0, b.health) + Math.max(0, s.bench[1].health);
+    result = ha > hb ? Result.P1 : hb > ha ? Result.P2 : Result.Draw;
+  } else {
     // Time out: compare remaining health as a fraction of each hero's max (cross-multiplied).
     const ha = a.health * HEROES[b.hero].stats.maxHealth;
     const hb = b.health * HEROES[a.hero].stats.maxHealth;
@@ -932,9 +1095,10 @@ function advancePhase(s: GameState): void {
     return;
   }
 
-  // RoundEnd finished.
-  const w0 = s.wins[0] >= ROUNDS_TO_WIN;
-  const w1 = s.wins[1] >= ROUNDS_TO_WIN;
+  // RoundEnd finished. A tag match is a single round.
+  const need = s.team ? 1 : ROUNDS_TO_WIN;
+  const w0 = s.wins[0] >= need;
+  const w1 = s.wins[1] >= need;
   if (w0 || w1) {
     s.matchResult = w0 && w1 ? Result.Draw : w0 ? Result.P1 : Result.P2;
     s.phase = Phase.MatchEnd;
@@ -986,7 +1150,9 @@ export function step(state: GameState, p1Input: number, p2Input: number): GameSt
     // next button of a combo can be pressed while the hit is still landing.
     for (let i = 0; i < 2; i += 1) {
       const f = s.fighters[i];
-      const fresh = inputs[i] & ~f.prevInput & (Input.Light | Input.Heavy | Input.Special);
+      let fresh = inputs[i] & ~f.prevInput & (Input.Light | Input.Heavy | Input.Special);
+      // In a tag match, Block + Light / Special are team buttons, not attacks to buffer.
+      if (s.team && (inputs[i] & Input.Block) !== 0) fresh &= ~(Input.Light | Input.Special);
       if (fresh !== 0) {
         f.buf = fresh;
         f.bufAge = 0;
@@ -999,14 +1165,34 @@ export function step(state: GameState, p1Input: number, p2Input: number): GameSt
     return s;
   }
 
+  // Tag teams: assist and tag buttons, and a knocked-out point fighter making way for the partner.
+  const moveInputs = [inputs[0], inputs[1]];
+  if (s.team) {
+    for (let i = 0; i < 2; i += 1) {
+      const f = s.fighters[i];
+      if (f.cd > 0) f.cd -= 1;
+      if (fighting) moveInputs[i] = teamActions(s, i, inputs[i], f.prevInput);
+      const p = s.fighters[i];
+      if (p.state === FS.KO && p.y === 0 && p.stateTick >= KO_SWAP_TICKS && s.bench[i].health > 0 && s.bench[i].out === 0 && fighting) {
+        swapIn(s, i, inputs[i]);
+      }
+    }
+  }
+
   const [a, b] = s.fighters;
-  const [a0, b0] = state.fighters;
-  updateFighter(s, a, 0, b0, inputs[0]);
-  updateFighter(s, b, 1, a0, inputs[1]);
+  // Each fighter reacts to where the other was at the start of the tick.
+  const a0 = { ...a };
+  const b0 = { ...b };
+  updateFighter(s, a, 0, b0, moveInputs[0]);
+  updateFighter(s, b, 1, a0, moveInputs[1]);
   a.prevInput = inputs[0];
   b.prevInput = inputs[1];
   updateProjectile(a);
   updateProjectile(b);
+  if (s.team) {
+    benchTick(s, 0, b0);
+    benchTick(s, 1, a0);
+  }
 
   resolvePush(a, b);
   enforceSeparation(a, b, a0.x, b0.x);

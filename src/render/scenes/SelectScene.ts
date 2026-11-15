@@ -38,10 +38,16 @@ interface Side {
   /** The fighter's nickname above the big first name. */
   title: Phaser.GameObjects.Text;
   lockedAt: number;
+  /** Tag teams: the first pick (the point fighter), -1 until it is made, and its small card. */
+  first: number;
+  firstPic: Phaser.GameObjects.Image;
+  firstName: Phaser.GameObjects.Text;
 }
 
 export class SelectScene extends Phaser.Scene {
   private setup!: MatchSetup;
+  /** Tag teams: every mode but training picks two fighters a side. */
+  private team = true;
   private sides: Side[] = [];
   private g!: Phaser.GameObjects.Graphics;
   private tiles: Phaser.GameObjects.Image[] = [];
@@ -92,6 +98,7 @@ export class SelectScene extends Phaser.Scene {
     };
     this.phase = 'heroes';
     this.pets = [null, null];
+    this.team = mode !== 'training';
     this.stage = Math.floor(Math.random() * STAGES.length);
     this.cameras.main.fadeIn(250, 5, 6, 12);
     playMusic(this, 'menu');
@@ -199,6 +206,9 @@ export class SelectScene extends Phaser.Scene {
         controls: this.add.text(tx, 160, '', body(12, CSS.ink)).setOrigin(align, 0).setDepth(8),
         title: this.add.text(tx, 440, '', display(15, CSS.gold, 4)).setOrigin(align, 1).setDepth(8),
         lockedAt: 0,
+        first: -1,
+        firstPic: this.add.image(i === 0 ? 46 : VIEW_W - 46, 236, `portrait_${HEROES[0].id}`).setDisplaySize(64, 64).setDepth(8).setVisible(false),
+        firstName: this.add.text(i === 0 ? 82 : VIEW_W - 82, 236, '', display(12, CSS.gold, 3)).setOrigin(i === 0 ? 0 : 1, 0.5).setDepth(8),
       };
     });
 
@@ -305,7 +315,30 @@ export class SelectScene extends Phaser.Scene {
 
   private lock(i: number): void {
     const side = this.sides[i];
-    if (side.cursor >= HEROES.length) side.cursor = Math.floor(Math.random() * HEROES.length);
+    const arcadeFoe = i === 1 && this.arcade;
+    if (side.cursor >= HEROES.length) {
+      // Random: anyone but the fighter already on the team.
+      do side.cursor = Math.floor(Math.random() * HEROES.length);
+      while (side.cursor === side.first);
+    }
+    if (this.team && !arcadeFoe) {
+      if (side.first < 0) {
+        // First pick: the point fighter. Now the partner.
+        side.first = side.cursor;
+        side.firstPic.setTexture(`portrait_${HEROES[side.first].id}`).setDisplaySize(64, 64).setVisible(true);
+        side.firstName.setText(`POINT: ${heroInfo(HEROES[side.first].id).name}\nNOW PICK A PARTNER`);
+        side.cursor = (side.cursor + 1) % HEROES.length;
+        sfx(this, 'ui_confirm');
+        this.refresh();
+        return;
+      }
+      if (side.cursor === side.first) {
+        sfx(this, 'ui_move', 0.6);
+        this.cameras.main.shake(120, 0.004);
+        return;
+      }
+      side.firstName.setText(`POINT: ${heroInfo(HEROES[side.first].id).name}\nPARTNER: ${heroInfo(HEROES[side.cursor].id).name}`);
+    }
     side.locked = true;
     side.lockedAt = this.clock;
     side.ready.setVisible(true).setScale(1.6);
@@ -314,8 +347,9 @@ export class SelectScene extends Phaser.Scene {
     sfx(this, HEROES[side.cursor].id === 'rogue' ? 'zap' : 'scratch', 0.6);
     this.refresh();
     if (this.arcade && i === 0) {
-      const run = newArcadeRun(side.cursor, this.setup.cpuLevel);
-      this.arcadeTimer = this.time.delayedCall(650, () => goTo(this, 'versus', arcadeSetup(side.cursor, run), 300));
+      const point = this.team ? side.first : side.cursor;
+      const run = newArcadeRun(point, this.setup.cpuLevel, this.team ? side.cursor : undefined);
+      this.arcadeTimer = this.time.delayedCall(650, () => goTo(this, 'versus', arcadeSetup(point, run), 300));
       return;
     }
     if (this.sides[0].locked && this.sides[1].locked) this.time.delayedCall(450, () => this.openStages());
@@ -358,6 +392,12 @@ export class SelectScene extends Phaser.Scene {
       side.ready.setVisible(false);
       this.arcadeTimer?.remove();
       this.arcadeTimer = null;
+    } else if (side.first >= 0) {
+      // Undo the point pick.
+      side.cursor = side.first;
+      side.first = -1;
+      side.firstPic.setVisible(false);
+      side.firstName.setText('');
     } else if (i === 1 && this.setup.mode !== 'versus' && this.sides[0].locked) {
       this.sides[0].locked = false;
       this.sides[0].ready.setVisible(false);
@@ -384,8 +424,15 @@ export class SelectScene extends Phaser.Scene {
           sfx(this, 'ui_move', 0.8);
         } else if (e.action === 'confirm') {
           sfx(this, 'ui_confirm');
-          this.setup.p1 = this.sides[0].cursor;
-          this.setup.p2 = this.sides[1].cursor;
+          if (this.team) {
+            this.setup.p1 = this.sides[0].first;
+            this.setup.p2 = this.sides[1].first;
+            this.setup.partners = [this.sides[0].cursor, this.sides[1].cursor];
+          } else {
+            this.setup.p1 = this.sides[0].cursor;
+            this.setup.p2 = this.sides[1].cursor;
+            this.setup.partners = undefined;
+          }
           this.setup.stage = this.stage;
           goTo(this, 'versus', this.setup, 300);
         } else if (e.action === 'back' || e.action === 'pause') this.back(1);

@@ -153,6 +153,9 @@ function withHeat(j: ArtJson): Record<MoveKey, AttackArt> {
       : { ...a.special };
   }
   if (!a.heatSmash) a.heatSmash = { ...a.super, loopActive: false };
+  // The launcher is an upward strike: the rising attack's art. The air jab: the jumping attack's.
+  if (!a.launcher) a.launcher = { ...a.rising };
+  if (!a.airLight) a.airLight = { ...a.jumpAttack };
   return a as Record<MoveKey, AttackArt>;
 }
 

@@ -35,13 +35,14 @@ export class ReplaysScene extends Phaser.Scene {
       const date = `${when.getMonth() + 1}/${when.getDate()} ${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`;
       const won = r.winner === 0 ? '◀' : r.winner === 1 ? '▶' : '=';
       return {
-        label: `${name(r.p1)} ${won} ${name(r.p2)}`,
+        label: r.partners ? `${name(r.p1)}+${name(r.partners[0])} ${won} ${name(r.p2)}+${name(r.partners[1])}` : `${name(r.p1)} ${won} ${name(r.p2)}`,
         value: () => `${MODES[r.mode] ?? ''}  ${r.wins[0]}-${r.wins[1]}  ${date}`,
         onSelect: () => {
           const setup: MatchSetup = {
             mode: 'replay',
             p1: r.p1,
             p2: r.p2,
+            partners: r.partners,
             stage: Math.max(0, Math.min(STAGES.length - 1, r.stage | 0)),
             cpuLevel: 0,
             simple: r.simple,

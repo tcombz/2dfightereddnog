@@ -70,6 +70,10 @@ export function stepLabel(key: MoveKey, simple: boolean): string {
       return 'LIGHT + SPECIAL';
     case 'heatSmash':
       return 'LIGHT + SPECIAL (in Heat)';
+    case 'launcher':
+      return 'BLOCK + HEAVY';
+    case 'airLight':
+      return 'JUMP LIGHT';
   }
 }
 

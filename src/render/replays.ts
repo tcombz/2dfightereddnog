@@ -44,6 +44,8 @@ export interface SavedReplay {
   p2: number;
   stage: number;
   simple: [boolean, boolean];
+  /** Tag teams: each side's partner. */
+  partners?: [number, number];
   winner: number;
   wins: [number, number];
   /** How it was played: 'cpu', 'versus', 'online' ... */

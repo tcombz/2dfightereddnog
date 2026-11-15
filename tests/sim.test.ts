@@ -121,7 +121,7 @@ describe('determinism', () => {
     expect(h2).toBe(h1);
     expect(h3).toBe(h1);
     // Golden value: pins the result across runs, machines and refactors.
-    expect(h1).toMatchInlineSnapshot(`"289a3661"`);
+    expect(h1).toMatchInlineSnapshot(`"aaa212a0"`);
   });
 
   it('resuming from a serialized mid-run state gives the same hash', () => {
@@ -154,7 +154,7 @@ describe('determinism', () => {
   it('the hash covers every state field', () => {
     const s = createInitialState(ROGUE, JET);
     expect(Object.keys(s.fighters[0]).sort()).toEqual([...FIGHTER_KEYS, 'hist'].sort());
-    expect(Object.keys(s).sort()).toEqual([...GAME_KEYS, 'wins', 'fighters'].sort());
+    expect(Object.keys(s).sort()).toEqual([...GAME_KEYS, 'wins', 'fighters', 'bench'].sort());
   });
 });
 
@@ -227,7 +227,7 @@ describe('guarding', () => {
     const vs = (p2: number): { s: GameState; fx: number[] } => {
       const script: InputLog = [[U | R, p2]];
       for (let t = 0; t < 22; t += 1) script.push([0, p2]);
-      script.push([Light, p2]);
+      script.push([Heavy, p2]);
       return play(fight(ROGUE, JET, 230), script, 30, [0, p2]);
     };
     expect(vs(R | D).s.fighters[1].health).toBeLessThan(HEROES[JET].stats.maxHealth);
@@ -276,7 +276,8 @@ describe('special moves', () => {
     s.fighters[0].meter = METER_MAX;
     const withMeter = play(s, [[Heavy | Special, 0]]).s;
     expect(withMeter.fighters[0].moveId).toBe(Move.Super);
-    expect(withMeter.fighters[0].meter).toBe(0);
+    // The meter holds three levels; a super spends one.
+    expect(withMeter.fighters[0].meter).toBe(METER_MAX - 1000);
     expect(withMeter.hitstop).toBe(SUPER_FREEZE);
     expect(withMeter.freezeSlot).toBe(0);
   });
@@ -697,11 +698,11 @@ describe('heat, wall bounces and the rally super', () => {
 
   it('while rallying, the super costs half a bar', () => {
     let s = fight(ROGUE, JET, 110);
-    s.fighters[0].meter = METER_MAX >> 1;
+    s.fighters[0].meter = 500;
     s = step(s, Heavy | Special, 0);
     expect(s.fighters[0].moveId).not.toBe(Move.Super);
     s = fight(ROGUE, JET, 110);
-    s.fighters[0].meter = METER_MAX >> 1;
+    s.fighters[0].meter = 500;
     s.fighters[0].health = HEROES[ROGUE].stats.maxHealth >> 2;
     s = step(s, Heavy | Special, 0);
     expect(s.fighters[0].moveId).toBe(Move.Super);
@@ -817,5 +818,93 @@ describe('sim purity', () => {
       expect(code, file).not.toMatch(/\d\.\d/);
       expect(code, file).not.toMatch(/\//);
     }
+  });
+});
+
+describe('tag teams', () => {
+  /** A tag match in progress: P1 Rogue (partner Chris) at x 700, P2 Jetsetter (partner Eddnog) `gap` to the right. */
+  function teamFight(gap = 140): GameState {
+    const s = createInitialState(ROGUE, JET, { partners: [CHRIS, EDD] });
+    s.phase = Phase.Fight;
+    s.phaseTimer = 0;
+    s.fighters[0].x = 700;
+    s.fighters[1].x = 700 + gap;
+    return s;
+  }
+
+  it('Block + Light calls the partner in to throw their projectile, then they leave and cool down', () => {
+    let s = teamFight(380);
+    s = step(s, Block, 0);
+    s = step(s, Block | Light, 0);
+    expect(s.bench[0].out).toBe(1);
+    expect(s.bench[0].moveId).toBe(Move.Projectile);
+    expect(s.fighters[0].state).not.toBe(FS.Attack); // the point fighter did not jab
+    let hit = false;
+    for (let t = 0; t < 120; t += 1) {
+      s = step(s, 0, 0);
+      if (s.fighters[1].health < HEROES[JET].stats.maxHealth) hit = true;
+    }
+    expect(hit).toBe(true);
+    expect(s.bench[0].out).toBe(0);
+    expect(s.bench[0].cd).toBeGreaterThan(0);
+  });
+
+  it('Block + Special tags the partner in from above, keeping the team meter', () => {
+    let s = teamFight();
+    s.fighters[0].meter = 1500;
+    s = step(s, Block, 0);
+    s = step(s, Block | Special, 0);
+    expect(s.fighters[0].hero).toBe(CHRIS);
+    expect(s.bench[0].hero).toBe(ROGUE);
+    expect(s.fighters[0].y).toBeGreaterThan(0);
+    expect(s.fighters[0].meter).toBe(1500);
+    for (let t = 0; t < 60; t += 1) s = step(s, 0, 0);
+    expect(s.fighters[0].y).toBe(0);
+  });
+
+  it('a benched partner gets red health back', () => {
+    let s = teamFight();
+    s.fighters[0].health = 600;
+    s.fighters[0].red = 200;
+    s = step(s, Block, 0);
+    s = step(s, Block | Special, 0);
+    const before = s.bench[0].health;
+    for (let t = 0; t < 240; t += 1) s = step(s, 0, 0);
+    expect(s.bench[0].health).toBeGreaterThan(before);
+    expect(s.bench[0].health).toBeLessThanOrEqual(800);
+  });
+
+  it('a knocked-out point fighter makes way for the partner; the match ends only when both are down', () => {
+    let s = teamFight();
+    s.fighters[1].health = 1;
+    s = play(s, [[Light, 0]], 10).s;
+    expect(s.fighters[1].state).toBe(FS.KO);
+    expect(s.phase).toBe(Phase.Fight);
+    for (let t = 0; t < 200; t += 1) s = step(s, 0, 0);
+    expect(s.fighters[1].hero).toBe(EDD);
+    expect(s.phase).toBe(Phase.Fight);
+    s.fighters[1].health = 1;
+    s.fighters[1].x = s.fighters[0].x + 120;
+    s = play(s, [[Light, 0]], 30).s;
+    expect([Phase.RoundEnd, Phase.MatchEnd]).toContain(s.phase);
+    expect(s.wins[0]).toBe(1);
+  });
+
+  it('Block + Heavy launches, up super jumps after them, and an air combo lands', () => {
+    let s = fight(ROGUE, JET, 110);
+    s = step(s, Block | Heavy, 0);
+    expect(s.fighters[0].moveId).toBe(Move.Launcher);
+    let launched = false;
+    // The hit freeze holds them for a moment before they fly.
+    for (let t = 0; t < 26 && !launched; t += 1) {
+      s = step(s, Block, 0);
+      if (s.fighters[1].state === FS.Knockdown && s.fighters[1].y > 20) launched = true;
+    }
+    expect(launched).toBe(true);
+    s = step(s, U, 0);
+    expect(s.fighters[0].state).toBe(FS.Jump);
+    const hpBefore = s.fighters[1].health;
+    for (let t = 0; t < 40; t += 1) s = step(s, t === 6 ? Light : t === 14 ? Heavy : 0, 0);
+    expect(s.fighters[1].health).toBeLessThan(hpBefore);
   });
 });

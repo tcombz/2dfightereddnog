@@ -60,9 +60,12 @@ export function inputText(text: string, player: number): string {
   if (!onPad(player)) return text;
   const b = (a: PadAction): string => padButton(a, player);
   return text
-    .replace(/LIGHT \+ HEAVY/g, b('throw'))
+    .replace(/BLOCK \+ LIGHT/g, b('assist'))
+    .replace(/BLOCK \+ SPECIAL/g, b('tag'))
+    .replace(/BLOCK \+ HEAVY/g, `${b('block')} + ${b('heavy')}`)
+    .replace(/LIGHT \+ HEAVY/g, `${b('light')} + ${b('heavy')}`)
     .replace(/HEAVY \+ SPECIAL/g, b('super'))
-    .replace(/LIGHT \+ SPECIAL/g, b('heat'))
+    .replace(/LIGHT \+ SPECIAL/g, `${b('light')} + ${b('special')}`)
     .replace(/\bLIGHT\b/g, b('light'))
     .replace(/\bHEAVY\b/g, b('heavy'))
     .replace(/\bSPECIAL\b/g, b('special'))

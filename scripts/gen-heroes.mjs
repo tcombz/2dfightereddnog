@@ -99,11 +99,25 @@ function heatMoves(stats) {
       damage: 150, chip: 24, hitstun: 30, blockstun: 22, kb: [10, 22], knockdown: true, hitstop: 18,
       hitbox: { x: 0, y: 30, w: 150, h: stats.height },
     },
+  
+    // Launcher (Block + Heavy): an upward strike that knocks them high; press up after it lands to
+    // super jump after them for an air combo.
+    launcher: {
+      name: 'Launcher', startup: 8, active: 4, recovery: 22, damage: 64, blockstun: 14, kb: [2, 27], knockdown: true,
+      juggle: 1, hitstop: 11, hitbox: { x: 5, y: 70, w: 95, h: stats.height + 10 },
+    },
+    // Air jab: quick, chains into the jumping heavy.
+    airLight: {
+      name: 'Air Jab', guard: Guard.High, body: 'air', air: true, juggle: 1, startup: 4, active: 6, recovery: 4, damage: 38,
+      hitstun: 16, blockstun: 10, kb: [3, 0], hitstop: 7, cancel: Cancel.Normal, hitbox: { x: 10, y: 60, w: 95, h: 80 },
+    },
   };
 }
 
 function hero({ id, name, color, stats, bodies, moves }) {
   moves = { ...moves, ...heatMoves(stats) };
+  // Air combos: the jumping heavy can hit a launched opponent too.
+  moves.jumpAttack = { ...moves.jumpAttack, juggle: 1 };
   const fit = FIT[id];
   if (fit) {
     // The body matches the sprite: standing and crouching heights from the art.

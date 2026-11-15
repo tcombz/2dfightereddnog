@@ -127,10 +127,34 @@ export class Cpu {
         else if (!hit && this.chance(L.confirm * 0.3)) this.queue = [0, SPECIAL];
       }
     }
+    // The launcher connected: super jump after them and finish in the air.
+    if (me.state === FS.Attack && me.moveId === Move.Launcher && me.moveHits > 0 && opp.state === FS.Knockdown && this.queue.length === 0) {
+      const key = s.tick - me.stateTick;
+      if (this.lastConfirm !== key) {
+        this.lastConfirm = key;
+        this.queue = [0, 0, 0, 0, Input.Up, 0, 0, 0, 0, 0, 0, LIGHT, 0, 0, 0, 0, 0, 0, 0, 0, HEAVY];
+      }
+    }
     if (this.queue.length > 0) return this.out(this.queue.shift() as number, me);
 
     const actionable =
       me.state === FS.Idle || me.state === FS.Walk || me.state === FS.Crouch || (me.state === FS.Block && me.stunTimer === 0);
+
+    // Tag teams: call the partner's assist now and then, and tag out a badly hurt point fighter.
+    if (s.team) {
+      const partner = s.bench[slot];
+      const assistReady = partner.health > 0 && partner.out === 0 && partner.cd === 0;
+      const free = me.state !== FS.Hitstun && me.state !== FS.Knockdown && me.state !== FS.KO;
+      if (assistReady && free && (dist > 280 || opp.state === FS.Hitstun) && this.chance(0.02 + L.aggression * 0.03)) {
+        this.queue = [Input.Block, Input.Block | Input.Light];
+        return this.out(this.queue.shift() as number, me);
+      }
+      const hurt = me.health * 3 < HEROES[me.hero].stats.maxHealth;
+      if (actionable && me.y === 0 && me.cd === 0 && hurt && partner.health > me.health && partner.out === 0 && this.chance(0.03)) {
+        this.queue = [Input.Block, Input.Block | Input.Special];
+        return this.out(this.queue.shift() as number, me);
+      }
+    }
 
     // Link: back on my feet (a jump-in landed) while they are still reeling, so keep the combo going.
     if (actionable && opp.state === FS.Hitstun && opp.combo > 0 && dist < reach(me, Move.Heavy) + 20) {
@@ -227,6 +251,8 @@ export class Cpu {
         return this.chance(0.4) ? [0, LIGHT] : [0, HEAVY];
       case Move.Heavy:
       case Move.Kick:
+        // Launch them now and then, for an air combo.
+        if (this.chance(0.3)) return [0, Input.Block | HEAVY];
         // In Heat, end on the Heat Smash; otherwise burst into Heat now and then to extend the combo.
         if (me.heat > 0 && this.chance(0.7)) return [0, LIGHT | SPECIAL];
         if (me.heatUsed === 0 && this.chance(0.25)) return [0, LIGHT | SPECIAL];

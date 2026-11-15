@@ -1,4 +1,4 @@
-import { HEROES, METER_MAX } from '../sim';
+import { HEROES } from '../sim';
 import type { MoveKey } from '../sim';
 import { TRIALS, routeText } from './trials';
 
@@ -16,12 +16,14 @@ const INPUTS: Array<[MoveKey, string, string]> = [
   ['kick', '→ + HEAVY', 'Long reach poke.'],
   ['crouchLight', '↓ + LIGHT', 'Hits low.'],
   ['sweep', '↓ + HEAVY', 'Hits low. Knocks down.'],
-  ['jumpAttack', 'LIGHT or HEAVY in the air', 'Overhead: block it standing.'],
+  ['airLight', 'LIGHT in the air', 'Quick. Chains into the jumping HEAVY.'],
+  ['jumpAttack', 'HEAVY in the air', 'Overhead: block it standing.'],
+  ['launcher', 'BLOCK + HEAVY', 'Knocks them high: press ↑ to super jump after them.'],
   ['throw', 'LIGHT + HEAVY up close', 'Beats blocking.'],
   ['special', 'SPECIAL', 'Signature move.'],
   ['projectile', '↓ ↘ → + SPECIAL', 'Projectile.'],
   ['rising', '→ ↓ ↘ + SPECIAL', 'Invincible as it starts. Anti-air.'],
-  ['super', 'HEAVY + SPECIAL', `Needs a full meter (${METER_MAX}).`],
+  ['super', 'HEAVY + SPECIAL', 'Costs one hyper level.'],
   ['heatBurst', 'LIGHT + SPECIAL', 'Once a round: shockwave, then Heat.'],
   ['heatSmash', 'LIGHT + SPECIAL in Heat', 'Spends the Heat on one launching blow.'],
 ];
@@ -52,18 +54,22 @@ export function moveList(hero: number): MoveLine[] {
       text = text[0].toUpperCase() + text.slice(1);
     }
     if (key === 'projectile' && m.projectile && m.projectile.speed >= 14) text = 'Fast, light projectile.';
-    if (key === 'super') text = `${m.hits}-hit super. Needs a full meter.`;
+    if (key === 'super') text = `${m.hits}-hit super. Costs one hyper level.`;
     if (key === 'heavy' && m.armor) text = `Armored (${m.armor} hit). Cancels on hit.`;
     return { key, name: m.name, input, note: text, damage };
   });
 }
 
 export const BASICS: Array<[string, string]> = [
+  ['Tag teams', 'Pick two fighters. One round: knock out both of theirs to win.'],
+  ['Assist', 'BLOCK + LIGHT: your partner jumps in and throws their projectile. They can be hit!'],
+  ['Tag', 'BLOCK + SPECIAL: your partner comes in. The one resting gets red health back.'],
+  ['Air combo', 'Any normal > BLOCK + HEAVY launcher, ↑ to super jump, then LIGHT, HEAVY in the air.'],
+  ['Hyper meter', 'Holds 3 levels. A super costs one.'],
   ['Block', 'Hold away from your opponent. Hold down-away to block low.'],
   ['Highs and lows', 'Block sweeps and low jabs crouching, and jump attacks standing.'],
   ['Throw', 'LIGHT + HEAVY next to a blocking opponent.'],
   ['Combos', 'Lights chain into other normals or specials. Heavies cancel into specials.'],
-  ['Super meter', 'Fills as you attack and take hits. Full meter: HEAVY + SPECIAL.'],
   ['Dash', 'Tap forward twice. Tap back twice to back-dash.'],
   ['Counter hit', 'Hit someone as they start an attack for extra damage.'],
   ['Throw break', 'Press LIGHT + HEAVY as you are grabbed to break the throw.'],

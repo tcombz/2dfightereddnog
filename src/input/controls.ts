@@ -19,7 +19,7 @@ export interface MenuEvent {
 type Binding = Record<string, number>;
 
 /** What a keyboard key can be bound to: the eight sim buttons, plus one-key throw, super and Heat. */
-export type KeyAction = 'up' | 'down' | 'left' | 'right' | 'light' | 'heavy' | 'special' | 'block' | 'throw' | 'super' | 'heat';
+export type KeyAction = 'up' | 'down' | 'left' | 'right' | 'light' | 'heavy' | 'special' | 'block' | 'throw' | 'super' | 'heat' | 'assist' | 'tag' | 'launcher';
 export type KeyMap = Record<KeyAction, string[]>;
 
 /** The actions the key settings list, in order, with their labels. */
@@ -35,6 +35,9 @@ export const KEY_ACTIONS: Array<[KeyAction, string]> = [
   ['throw', 'THROW (LIGHT + HEAVY)'],
   ['super', 'SUPER (HEAVY + SPECIAL)'],
   ['heat', 'HEAT (LIGHT + SPECIAL)'],
+  ['assist', 'ASSIST (BLOCK + LIGHT)'],
+  ['tag', 'TAG (BLOCK + SPECIAL)'],
+  ['launcher', 'LAUNCHER (BLOCK + HEAVY)'],
 ];
 
 const KEY_BIT: Record<KeyAction, number> = {
@@ -49,6 +52,9 @@ const KEY_BIT: Record<KeyAction, number> = {
   throw: Input.Light | Input.Heavy,
   super: Input.Heavy | Input.Special,
   heat: Input.Light | Input.Special,
+  assist: Input.Block | Input.Light,
+  tag: Input.Block | Input.Special,
+  launcher: Input.Block | Input.Heavy,
 };
 
 /** Keys the menus own: never bindable. */
@@ -68,6 +74,9 @@ export const DEFAULT_KEYS: [KeyMap, KeyMap] = [
     throw: [],
     super: [],
     heat: [],
+    assist: ['KeyE'],
+    tag: ['KeyQ'],
+    launcher: ['KeyT'],
   },
   {
     up: ['ArrowUp'],
@@ -81,6 +90,9 @@ export const DEFAULT_KEYS: [KeyMap, KeyMap] = [
     throw: [],
     super: [],
     heat: [],
+    assist: ['BracketLeft', 'Numpad4'],
+    tag: ['BracketRight', 'Numpad5'],
+    launcher: ['Quote', 'Numpad6'],
   },
 ];
 
@@ -163,7 +175,7 @@ const MENU_FROM_BITS: Array<[number, MenuAction]> = [
 // ---------- gamepad mapping ----------
 
 /** Everything a pad can be asked to do. */
-export type PadAction = 'up' | 'down' | 'left' | 'right' | 'light' | 'heavy' | 'special' | 'block' | 'throw' | 'super' | 'heat' | 'start';
+export type PadAction = 'up' | 'down' | 'left' | 'right' | 'light' | 'heavy' | 'special' | 'block' | 'throw' | 'super' | 'heat' | 'assist' | 'tag' | 'start';
 
 /** Where an action comes from on a pad: a button, one direction of an axis, or a hat-switch direction. */
 export type PadSource =
@@ -182,6 +194,8 @@ export const REMAP_STEPS: Array<[PadAction, string]> = [
   ['throw', 'THROW (light + heavy)'],
   ['super', 'SUPER (heavy + special)'],
   ['heat', 'HEAT (light + special)'],
+  ['assist', 'ASSIST (call your partner)'],
+  ['tag', 'TAG (swap in your partner)'],
   ['start', 'START / pause'],
   ['up', 'UP on the d-pad'],
   ['down', 'DOWN on the d-pad'],
@@ -201,6 +215,8 @@ const BIT: Record<PadAction, number> = {
   throw: Input.Light | Input.Heavy,
   super: Input.Heavy | Input.Special,
   heat: Input.Light | Input.Special,
+  assist: Input.Block | Input.Light,
+  tag: Input.Block | Input.Special,
   start: 0,
 };
 
@@ -222,7 +238,8 @@ function hatBits(v: number): number {
 
 /**
  * The browser's standard layout: A/Cross light, X/Square light, Y/Triangle heavy, B/Circle special,
- * LB/L1 block, LT/L2 Heat, RB/R1 throw, RT/R2 super, Start pause, d-pad and left stick to move.
+ * LB/L1 block, RB/R1 assist, LT/L2 tag, RT/R2 super, Start pause, d-pad and left stick to move.
+ * Throw is light + heavy, Heat light + special, the launcher block + heavy.
  */
 const STANDARD: PadMap = {
   up: [btn(12), axis(1, -1)],
@@ -233,8 +250,8 @@ const STANDARD: PadMap = {
   heavy: [btn(3)],
   special: [btn(1)],
   block: [btn(4)],
-  heat: [btn(6)],
-  throw: [btn(5)],
+  assist: [btn(5)],
+  tag: [btn(6)],
   super: [btn(7)],
   start: [btn(9)],
 };
@@ -250,8 +267,8 @@ function guessMap(p: Gamepad): PadMap {
     heavy: [btn(3)],
     special: [btn(1)],
     block: [btn(4)],
-    heat: [btn(6)],
-    throw: [btn(5)],
+    assist: [btn(5)],
+    tag: [btn(6)],
     super: [btn(7)],
     start: [btn(9)],
   };

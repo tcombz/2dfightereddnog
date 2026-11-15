@@ -20,9 +20,12 @@ function controlsTable(): Array<[string, string, string, string]> {
     ['Heavy', k(0, 'heavy'), k(1, 'heavy'), 'Y / △'],
     ['Special', k(0, 'special'), k(1, 'special'), 'B / ○'],
     ['Block', `Hold back (or ${k(0, 'block')})`, `Hold back (or ${k(1, 'block')})`, 'Hold back, LB / L1'],
-    ['Throw', combo(0, 'throw', 'Light + Heavy'), combo(1, 'throw', 'Light + Heavy'), 'RB / R1'],
+    ['Throw', combo(0, 'throw', 'Light + Heavy'), combo(1, 'throw', 'Light + Heavy'), 'A + Y / ✕ + △'],
     ['Super', combo(0, 'super', 'Heavy + Special'), combo(1, 'super', 'Heavy + Special'), 'RT / R2'],
-    ['Heat', combo(0, 'heat', 'Light + Special'), combo(1, 'heat', 'Light + Special'), 'LT / L2'],
+    ['Heat', combo(0, 'heat', 'Light + Special'), combo(1, 'heat', 'Light + Special'), 'A + B / ✕ + ○'],
+    ['Assist', combo(0, 'assist', 'Block + Light'), combo(1, 'assist', 'Block + Light'), 'RB / R1'],
+    ['Tag', combo(0, 'tag', 'Block + Special'), combo(1, 'tag', 'Block + Special'), 'LT / L2'],
+    ['Launcher', combo(0, 'launcher', 'Block + Heavy'), combo(1, 'launcher', 'Block + Heavy'), 'LB + Y / L1 + △'],
     ['Pause', 'Esc', 'Esc', 'Start / Options'],
   ];
 }
@@ -65,10 +68,13 @@ export class HowToScene extends Phaser.Scene {
     rows[3][3] = pad('heavy');
     rows[4][3] = pad('special');
     rows[5][3] = `Hold back, or ${pad('block')}`;
-    rows[6][3] = pad('throw');
+    rows[6][3] = `${pad('light')} + ${pad('heavy')}`;
     rows[7][3] = pad('super');
-    rows[8][3] = pad('heat');
-    rows[9][3] = pad('start');
+    rows[8][3] = `${pad('light')} + ${pad('special')}`;
+    rows[9][3] = pad('assist');
+    rows[10][3] = pad('tag');
+    rows[11][3] = `${pad('block')} + ${pad('heavy')}`;
+    rows[12][3] = pad('start');
     return rows;
   }
 
@@ -89,14 +95,14 @@ export class HowToScene extends Phaser.Scene {
 
     if (this.page === 0) {
       this.controlsTable().forEach((row, r) => {
-        const y = 120 + r * 35;
+        const y = 112 + r * 27;
         row.forEach((cell, c) => {
           const x = [70, 220, 470, 690][c];
-          const style = r === 0 ? display(15, CSS.gold, 4) : c === 0 ? display(15, CSS.ink, 4) : body(16, CSS.ink);
+          const style = r === 0 ? display(14, CSS.gold, 4) : c === 0 ? display(14, CSS.ink, 4) : body(15, CSS.ink);
           add(this.add.text(x, y, cell, style));
         });
       });
-      add(this.add.text(70, 476, 'Any controller works, plugged in or Bluetooth. Title screen > Controllers to test, remap or swap pads.', body(14, CSS.muted)));
+      add(this.add.text(70, 476, 'Any controller works. Settings > Keyboard to change keys, Settings > Controllers to remap a pad.', body(14, CSS.muted)));
     } else if (this.page === 2) {
       add(this.add.text(70, 112, 'Every fighter shares these routes. "," chains a normal into the next; ">" cancels into a special or super.', body(14, CSS.muted)).setWordWrapWidth(820));
       COMBOS.forEach(([name, route], r) => {
@@ -106,18 +112,18 @@ export class HowToScene extends Phaser.Scene {
       });
     } else if (this.page === 1) {
       BASICS.forEach(([name, text], r) => {
-        const y = 104 + r * 28;
-        add(this.add.text(70, y, name.toUpperCase(), display(16, CSS.gold, 4)));
-        add(this.add.text(290, y, inputText(text, -1), body(15, CSS.ink)).setWordWrapWidth(620));
+        const y = 104 + r * 21;
+        add(this.add.text(70, y, name.toUpperCase(), display(13, CSS.gold, 3)));
+        add(this.add.text(250, y, inputText(text, -1), body(13, CSS.ink)).setWordWrapWidth(660));
       });
     } else {
       const hero = this.page - 3;
       const info = heroInfo(HEROES[hero].id);
       add(this.add.text(70, 108, `${info.archetype}  ·  ${info.plan}`, body(14, CSS.muted)));
       moveList(hero).forEach((m, r) => {
-        const y = 132 + r * 27;
-        add(this.add.text(70, y, m.name, display(15, CSS.ink, 4)));
-        add(this.add.text(290, y, inputText(m.input, -1), body(16, CSS.gold)));
+        const y = 130 + r * 24;
+        add(this.add.text(70, y, m.name, display(14, CSS.ink, 4)));
+        add(this.add.text(290, y, inputText(m.input, -1), body(15, CSS.gold)));
         add(this.add.text(560, y + 1, m.note, body(13, CSS.muted)));
         add(this.add.text(VIEW_W - 70, y, String(m.damage), body(14, CSS.ink)).setOrigin(1, 0));
       });

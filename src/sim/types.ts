@@ -100,6 +100,8 @@ export const MOVE_KEYS = [
   'super',
   'heatBurst',
   'heatSmash',
+  'launcher',
+  'airLight',
 ] as const;
 export type MoveKey = (typeof MOVE_KEYS)[number];
 
@@ -117,6 +119,10 @@ export const Move = {
   Super: 10,
   HeatBurst: 11,
   HeatSmash: 12,
+  /** Block + Heavy: knocks them high, and a super jump (up) follows for an air combo. */
+  Launcher: 13,
+  /** Light in the air: chains into the jumping heavy. */
+  AirLight: 14,
 } as const;
 
 export interface HeroStats {
@@ -223,6 +229,12 @@ export interface FighterState {
   fxX: number;
   fxY: number;
   fxPower: number;
+  /** Tag teams. On a benched partner: 1 while it is on screen doing its assist. */
+  out: number;
+  /** Ticks before this fighter can tag out (point) or assist again (bench). */
+  cd: number;
+  /** Recoverable ("red") health: a benched partner slowly gets this much back. */
+  red: number;
 }
 
 export interface GameState {
@@ -240,5 +252,10 @@ export interface GameState {
   freezeSlot: number;
   /** 1 in training mode: no timer, health refills after each combo, full meter. */
   training: number;
+  /** 1 for a tag-team match: each side has a benched partner; one round, knock out both to win. */
+  team: number;
+  /** The point fighters (on screen). */
   fighters: [FighterState, FighterState];
+  /** Each side's partner (health 0 when there is none). */
+  bench: [FighterState, FighterState];
 }

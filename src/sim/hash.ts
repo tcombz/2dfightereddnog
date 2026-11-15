@@ -39,6 +39,9 @@ export const FIGHTER_KEYS = [
   'fxX',
   'fxY',
   'fxPower',
+  'out',
+  'cd',
+  'red',
 ] as const satisfies ReadonlyArray<keyof FighterState>;
 
 /** Every GameState field the hash covers, in order (wins and fighters are hashed separately). */
@@ -53,6 +56,7 @@ export const GAME_KEYS = [
   'hitstop',
   'freezeSlot',
   'training',
+  'team',
 ] as const satisfies ReadonlyArray<keyof GameState>;
 
 /** FNV-1a (32 bit) over every state field in a fixed order. Returns 8 hex chars. */
@@ -67,7 +71,7 @@ export function hashState(s: GameState): string {
   for (const k of GAME_KEYS) add(s[k]);
   add(s.wins[0]);
   add(s.wins[1]);
-  for (const f of s.fighters) {
+  for (const f of [...s.fighters, ...s.bench]) {
     for (const k of FIGHTER_KEYS) add(f[k]);
     add(f.hist.length);
     for (const d of f.hist) add(d);

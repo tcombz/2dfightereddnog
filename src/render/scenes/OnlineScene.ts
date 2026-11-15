@@ -11,9 +11,12 @@ import { artFor, feetOrigin, frameName, menuScale } from '../heroArt';
 import { heroInfo } from '../heroInfo';
 import { menuHint } from '../prompts';
 import { STAGES } from '../stages';
+import { homeStage } from '../arcade';
 import { Menu, backdrop, body, display, goTo, goldFill } from '../ui';
 
 type Mode = 'menu' | 'join' | 'connecting' | 'lobby';
+
+const valid = (h: number | undefined): boolean => typeof h === 'number' && h >= 0 && h < HEROES.length;
 
 /** The GitHub Pages copy of the game: online play there needs no Claude account. */
 const PAGES_URL = 'tcombz.github.io/2dfightereddnog';
@@ -109,7 +112,7 @@ export class OnlineScene extends Phaser.Scene {
   /** Connected: set up the session and open the lobby. */
   private begin2(link: Awaited<ReturnType<typeof openLink>>, code: string, host: boolean): void {
     const simple = (this.registry.get('simple') as boolean | undefined) ?? false;
-    const mine: Lobby = { hero: host ? 0 : 1, simple, ready: false, stage: 0, start: null, g: null, wins: [0, 0] };
+    const mine: Lobby = { hero: host ? 0 : 1, partner: host ? 2 : 3, simple, ready: false, stage: 0, start: null, g: null, wins: [0, 0] };
     setOnline({ link, code, host, me: host ? 0 : 1, mine, played: 0 });
     sendMine();
     this.copied = false;
@@ -291,7 +294,10 @@ export class OnlineScene extends Phaser.Scene {
       sendMine({ hero: (m.hero + (action === 'left' ? -1 : 1) + HEROES.length) % HEROES.length });
       sfx(this, 'ui_move', 0.7);
     } else if ((action === 'up' || action === 'down') && o.host) {
-      sendMine({ stage: (m.stage + (action === 'up' ? -1 : 1) + STAGES.length) % STAGES.length });
+      // Up and down pick the tag partner (never the same fighter as the point).
+      let b = ((m.partner ?? 0) + (action === 'up' ? -1 : 1) + HEROES.length) % HEROES.length;
+      if (b === m.hero) b = (b + (action === 'up' ? -1 : 1) + HEROES.length) % HEROES.length;
+      sendMine({ partner: b });
       sfx(this, 'ui_move', 0.7);
     } else if (action === 'confirm') {
       sendMine({ ready: !m.ready });
@@ -307,8 +313,8 @@ export class OnlineScene extends Phaser.Scene {
     this.lobbyStatus(here);
     this.help.setText(
       o.last
-        ? 'CONFIRM  rematch\n◀ ▶  change fighter\n▲ ▼  stage (host)\nBACK  leave'
-        : '◀ ▶  fighter\n▲ ▼  stage (host)\nCONFIRM  ready\nBACK  leave\n\nKeyboard or controller:\nyour keys from Settings',
+        ? 'CONFIRM  rematch\n◀ ▶  change fighter\n▲ ▼  change partner\nBACK  leave'
+        : '◀ ▶  point fighter\n▲ ▼  tag partner\nCONFIRM  ready\nBACK  leave\n\nKeyboard or controller:\nyour keys from Settings',
     );
     const bySlot: Array<Partial<Lobby> | null> = o.me === 0 ? [o.mine, here ? t : null] : [here ? t : null, o.mine];
     bySlot.forEach((p, i) => {
@@ -328,17 +334,22 @@ export class OnlineScene extends Phaser.Scene {
         .setTexture(art.key, frameName('idle', art.idle[Math.floor(this.clock / 150) % n]))
         .setOrigin(...feetOrigin(art, i === 1))
         .setScale(menuScale(art, 1.5));
-      v.name.setText(heroInfo(HEROES[p.hero].id).title);
+      const pb = typeof p.partner === 'number' && p.partner >= 0 && p.partner < HEROES.length ? p.partner : -1;
+      v.name.setText(pb >= 0 ? `${heroInfo(HEROES[p.hero].id).name}  +  ${heroInfo(HEROES[pb].id).name}` : heroInfo(HEROES[p.hero].id).title);
       const after = !!o.last;
       v.ready.setText(p.ready ? (after ? '✔ WANTS A REMATCH' : '✔ READY') : after ? (mine ? 'CONFIRM: REMATCH' : 'DECIDING…') : '');
     });
-    const stage = o.host ? o.mine.stage : (t?.stage ?? 0);
-    this.stageText.setText(`STAGE: ${STAGES[Math.max(0, Math.min(STAGES.length - 1, stage | 0))].name.toUpperCase()}`);
+    // The stage is the host's point fighter's home.
+    const hostHero = o.host ? o.mine.hero : typeof t?.hero === 'number' ? t.hero : 0;
+    const stage = Math.max(0, STAGES.findIndex((st) => st.id === homeStage(HEROES[hostHero]?.id ?? '')));
+    this.stageText.setText(`STAGE: ${STAGES[stage].name.toUpperCase()}`);
 
     // Start: the host gives the order once both are ready; the guest follows it.
     const next = o.played + 1;
     if (o.host && here && o.mine.ready && t?.ready && !o.mine.start) {
-      sendMine({ start: { m: next, p1: o.mine.hero, p2: t.hero as number, stage: o.mine.stage, s1: o.mine.simple, s2: !!t.simple } });
+      const b1 = o.mine.partner ?? -1;
+      const b2 = typeof t.partner === 'number' ? t.partner : -1;
+      sendMine({ start: { m: next, p1: o.mine.hero, p2: t.hero as number, stage, s1: o.mine.simple, s2: !!t.simple, b1, b2 } });
     }
     const start = o.host ? o.mine.start : here && o.mine.ready ? t?.start : null;
     if (start && start.m === next) this.begin(start);
@@ -355,6 +366,7 @@ export class OnlineScene extends Phaser.Scene {
       stage: Math.max(0, Math.min(STAGES.length - 1, start.stage | 0)),
       cpuLevel: 0,
       simple: [!!start.s1, !!start.s2],
+      partners: valid(start.b1) && valid(start.b2) ? [start.b1!, start.b2!] : undefined,
       online: { me: o.me, match: start.m },
     };
     goTo(this, 'versus', setup, 300);
