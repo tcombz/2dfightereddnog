@@ -114,10 +114,55 @@ export function setSfxVolume(v: number): void {
   saveSettings();
 }
 
+/** When each sound last started, and how many copies are playing, so a combo doesn't stack noise. */
+const lastPlayed = new Map<string, number>();
+const playing = new Map<string, number>();
+/** Sounds that vary their pitch a little each time, so repeated hits don't sound like a machine gun. */
+const VARY = /^(hit_|whoosh_|block|dash|fall|throw)/;
+let mastered = false;
+
+/**
+ * Put a compressor on the game's master output once: many sounds at once (a hyper combo) get
+ * evened out instead of clipping.
+ */
+function master(scene: Phaser.Scene): void {
+  if (mastered) return;
+  mastered = true;
+  const mgr = scene.sound as Phaser.Sound.WebAudioSoundManager;
+  const ctx = mgr.context;
+  const out = (mgr as unknown as { masterVolumeNode?: GainNode }).masterVolumeNode;
+  if (!ctx || !out) return;
+  try {
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -12;
+    comp.knee.value = 8;
+    comp.ratio.value = 4;
+    comp.attack.value = 0.003;
+    comp.release.value = 0.15;
+    out.disconnect();
+    out.connect(comp);
+    comp.connect(ctx.destination);
+  } catch {
+    // Older audio stack: play without it.
+  }
+}
+
 export function sfx(scene: Phaser.Scene, name: string, volume = 1, detune = 0): void {
   const key = `sfx_${name}`;
   if (settings.sfx <= 0 || !scene.cache.audio.exists(key)) return;
-  scene.sound.play(key, { volume: settings.sfx * volume, detune });
+  master(scene);
+  const now = performance.now();
+  // The same sound twice within 40 ms is one sound (two hits landing on the same frame).
+  if (now - (lastPlayed.get(key) ?? -1e9) < 40) return;
+  if ((playing.get(key) ?? 0) >= 3) return;
+  lastPlayed.set(key, now);
+  const vary = detune === 0 && VARY.test(name) ? (Math.random() - 0.5) * 120 : 0;
+  const snd = scene.sound.add(key, { volume: settings.sfx * volume, detune: detune + vary });
+  playing.set(key, (playing.get(key) ?? 0) + 1);
+  // Finished (or the scene went away): free the voice.
+  snd.once(Phaser.Sound.Events.COMPLETE, () => snd.destroy());
+  snd.once(Phaser.Sound.Events.DESTROY, () => playing.set(key, Math.max(0, (playing.get(key) ?? 1) - 1)));
+  snd.play();
 }
 
 export function setVoice(on: boolean): void {
@@ -151,8 +196,9 @@ export function announce(text: string, urgent = true): void {
     if (urgent) synth.cancel();
     const u = new SpeechSynthesisUtterance(text);
     if (voice) u.voice = voice;
-    u.rate = 1.0;
-    u.pitch = 0.5;
+    // A touch slower and lower than normal speech; much lower than this garbles most voices.
+    u.rate = 0.95;
+    u.pitch = 0.75;
     u.volume = Math.min(1, settings.sfx * 1.15);
     synth.speak(u);
   } catch {

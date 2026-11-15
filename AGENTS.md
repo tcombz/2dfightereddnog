@@ -67,7 +67,16 @@
   clean, recolor, or any `art.json` key), never in `art.json`, which the import overwrites. The
   draw scale keeps each hero's world height matched to his hurtbox; the fight camera zooms to
   1.28x when the fighters are close.
-- `assets/stages/` stage art (768x320, drawn at 2x); `assets/audio/` sound effects and music loops
+- `assets/stages/` stage art (768x320, drawn at 2x); `assets/audio/` music loops and sound effects.
+  Sound effects are built by `python3 -I scripts/make-sfx.py` (numpy, scipy) from `assets/audio/sfx-src/`
+  into `assets/audio/sfx/`: cleaned, levelled, layered with synthesized transients, plus synthesized
+  power sounds. Edit the script, not the output. `audio.ts` puts a compressor on the master output and
+  throttles repeats.
+- Animation smoothness comes from the renderer, not more frames: FightScene blends each frame change
+  over ~70 ms (`blend`), adds breathing, jump stretch and blockstun shove (`bodyMotion`), and wind-up /
+  lunge / follow-through on attacks (`motion`); `pingpong` idles in `heroArt.ts`.
+- Menu events: up, down, left, right, confirm, back, pause and `alt` (Special on the keyboard, Heavy /
+  X on a pad), which the select screen uses to switch Classic / Simple controls.
 - `tests/net.test.ts` rollback under lag and dropped messages, replay encoding
 - `tests/sim.test.ts` determinism, match flow, guarding, specials, combos (every trial route for every
   pair of fighters), movement, training and data tests

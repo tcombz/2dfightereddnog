@@ -8,7 +8,8 @@
 // Remaps are saved per controller name in this browser.
 import { Input } from '../sim';
 
-export type MenuAction = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back' | 'pause';
+/** `alt`: a second button for a screen's extra option (Special on the keyboard, X / Square on a pad). */
+export type MenuAction = 'up' | 'down' | 'left' | 'right' | 'confirm' | 'back' | 'pause' | 'alt';
 
 export interface MenuEvent {
   /** 0 or 1 for a player's own keys or pad, -1 for shared keys (Enter, Escape). */
@@ -170,6 +171,7 @@ const MENU_FROM_BITS: Array<[number, MenuAction]> = [
   [Input.Right, 'right'],
   [Input.Light, 'confirm'],
   [Input.Heavy, 'back'],
+  [Input.Special, 'alt'],
 ];
 
 // ---------- gamepad mapping ----------
@@ -330,7 +332,7 @@ export class Controls {
   /** Gamepad index in each player slot (null: no pad). */
   readonly slots: [number | null, number | null] = [null, null];
   private padPrev: [number, number] = [0, 0];
-  private menuPrev: [boolean[], boolean[]] = [[false, false, false], [false, false, false]];
+  private menuPrev: [boolean[], boolean[]] = [[false, false, false, false], [false, false, false, false]];
   private padBitsNow: [number, number] = [0, 0];
   private maps: Record<string, PadMap> = loadMaps();
   /** While the Controllers screen listens for a button, pads do not drive menus. */
@@ -516,8 +518,8 @@ export class Controls {
         const fresh = bits & ~this.padPrev[i] & (Input.Left | Input.Right | Input.Up | Input.Down);
         this.pushFromBits(i, fresh);
         const map = pad ? this.mapFor(pad) : {};
-        const now = pad ? (['light', 'special', 'start'] as PadAction[]).map((a) => this.actionOn(pad, map, a)) : [false, false, false];
-        const actions: MenuAction[] = ['confirm', 'back', 'pause'];
+        const now = pad ? (['light', 'special', 'start', 'heavy'] as PadAction[]).map((a) => this.actionOn(pad, map, a)) : [false, false, false, false];
+        const actions: MenuAction[] = ['confirm', 'back', 'pause', 'alt'];
         now.forEach((down, k) => {
           if (down && !this.menuPrev[i][k]) this.events.push({ player: i, action: actions[k] });
         });

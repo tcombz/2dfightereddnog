@@ -99,6 +99,15 @@ export class FightScene extends Phaser.Scene {
   /** Render-only settle poses: the sim tick a fighter landed or stood up from a crouch (-99 none). */
   private landedAt = [-99, -99];
   private stoodAt = [-99, -99];
+  /**
+   * Frame blending: when a fighter's frame changes, the old frame stays on top and dissolves over a
+   * few render frames, so poses flow into each other instead of popping.
+   */
+  private ghosts: Phaser.GameObjects.Image[] = [];
+  private lastFrame: string[] = ['', ''];
+  private ghostMs = [0, 0];
+  /** Render time in ms, for motion that runs between sim ticks (breathing). */
+  private renderMs = 0;
   private matchOverTicks = 0;
   /** Camera: eased zoom and centre, and the extra punch-in a super flash adds. */
   private camZoom = 1;
@@ -219,6 +228,9 @@ export class FightScene extends Phaser.Scene {
     this.world.add(this.darken);
 
     this.sprites = [];
+    this.ghosts = [];
+    this.lastFrame = ['', ''];
+    this.ghostMs = [0, 0];
     this.shadows = [];
     this.rallyGlow = [];
     this.heatAura = [];
@@ -228,6 +240,7 @@ export class FightScene extends Phaser.Scene {
       this.heatAura.push(this.add.sprite(f.x, GROUND_Y, 'px_heat_aura').setOrigin(0.5, 0.94).setBlendMode(Phaser.BlendModes.ADD).setDepth(28).setVisible(false).play('px_heat_aura'));
       this.shadows.push(this.add.image(f.x, GROUND_Y + 2, 'fx_shadow').setDepth(12).setAlpha(0.8));
       this.sprites.push(this.add.image(f.x, GROUND_Y, art.key).setScale(art.scale).setDepth(30 + i));
+      this.ghosts.push(this.add.image(f.x, GROUND_Y, art.key).setScale(art.scale).setDepth(30.5 + i).setVisible(false));
       this.projViews.push({
         glow: this.add.image(0, 0, 'fx_glow').setBlendMode(Phaser.BlendModes.ADD).setVisible(false).setDepth(44),
         img: this.add.sprite(0, 0, 'px_record').setVisible(false).setDepth(45),
@@ -827,6 +840,7 @@ export class FightScene extends Phaser.Scene {
 
   private draw(delta: number): void {
     const s = this.state;
+    this.renderMs += delta;
     this.centerCamera(false);
     const frozenFor = s.freezeSlot;
 
@@ -885,8 +899,11 @@ export class FightScene extends Phaser.Scene {
         .setDepth(f.state === FS.Attack ? 32 : 30 + i);
       // Weight: squash for a moment on landing, stretch a touch on take-off.
       const sinceLanding = s.tick - this.landedAt[i];
-      const squash = sinceLanding >= 0 && sinceLanding < 5 ? (5 - sinceLanding) * 0.012 : f.state === FS.Jump && f.stateTick < 5 ? -(5 - f.stateTick) * 0.008 : 0;
-      sprite.setScale(art.scale * (1 + squash) * mo.sx, art.scale * (1 - squash) * mo.sy);
+      const squash = sinceLanding >= 0 && sinceLanding < 6 ? (6 - sinceLanding) * 0.014 : f.state === FS.Jump && f.stateTick < 5 ? -(5 - f.stateTick) * 0.01 : 0;
+      const bd = this.bodyMotion(f, i);
+      sprite.setScale(art.scale * (1 + squash) * mo.sx * bd.sx, art.scale * (1 - squash) * mo.sy * bd.sy);
+      sprite.setRotation(sprite.rotation + bd.rot);
+      this.blend(i, sprite, art.key, pose.frame, delta, s.hitstop > 0);
       this.swingArc(f, i);
       const pet = this.pets[i];
       if (pet) {
@@ -1086,6 +1103,61 @@ export class FightScene extends Phaser.Scene {
    * follow-through that eases home with a small overshoot. Heavier moves (more damage) move more.
    * Getting hit snaps the body back and lets it ease upright over the hitstun.
    */
+  /**
+   * Life between the drawn frames: a breath in the stance, stretch on the way up and down a jump
+   * and a tuck at its peak, and a shove back through blockstun.
+   */
+  private bodyMotion(f: FighterState, i: number): { sx: number; sy: number; rot: number } {
+    if (f.state === FS.Idle || f.state === FS.Crouch || (f.state === FS.Block && f.stunTimer === 0)) {
+      const b = Math.sin(this.renderMs * 0.0042 + i * 1.7);
+      return { sx: 1 - 0.006 * b, sy: 1 + 0.014 * b, rot: 0 };
+    }
+    if (f.state === FS.Walk) {
+      // A bob on each step.
+      const b = Math.abs(Math.sin(this.renderMs * 0.011 + i));
+      return { sx: 1 + 0.01 * b, sy: 1 - 0.018 * b, rot: f.facing * 0.02 * (f.vx * f.facing > 0 ? 1 : -1) };
+    }
+    if (f.state === FS.Jump || (f.state === FS.Attack && f.y > 0)) {
+      // Fast = stretched along the motion, slow (the peak) = tucked.
+      const v = Math.min(1, Math.abs(f.vy) / 20);
+      const tuck = 1 - v;
+      const rot = f.vx !== 0 ? f.facing * 0.06 * Math.sign(f.vx * f.facing) * (f.vy > 0 ? 1 : 0.4) : 0;
+      return { sx: 1 - 0.05 * v + 0.03 * tuck, sy: 1 + 0.07 * v - 0.04 * tuck, rot };
+    }
+    if (f.state === FS.Block && f.stunTimer > 0) {
+      const k = Math.min(1, f.stunTimer / 12);
+      return { sx: 1 + 0.025 * k, sy: 1 - 0.03 * k, rot: -f.facing * 0.05 * k };
+    }
+    return { sx: 1, sy: 1, rot: 0 };
+  }
+
+  /** Dissolve from the last frame into the new one (skipped during hit freezes, which should snap). */
+  private blend(i: number, sprite: Phaser.GameObjects.Image, key: string, frame: string, delta: number, frozen: boolean): void {
+    const ghost = this.ghosts[i];
+    const id = `${key}|${frame}`;
+    const prev = this.lastFrame[i];
+    if (prev && prev !== id && !frozen && !sprite.tintFill) {
+      const [pk, pf] = prev.split('|');
+      ghost.setTexture(pk, pf);
+      this.ghostMs[i] = 70;
+    }
+    this.lastFrame[i] = id;
+    this.ghostMs[i] = Math.max(0, this.ghostMs[i] - delta);
+    const a = this.ghostMs[i] / 70;
+    ghost.setVisible(a > 0 && sprite.visible);
+    if (a <= 0) return;
+    ghost
+      .setOrigin(sprite.originX, sprite.originY)
+      .setFlipX(sprite.flipX)
+      .setPosition(sprite.x, sprite.y)
+      .setRotation(sprite.rotation)
+      .setScale(sprite.scaleX, sprite.scaleY)
+      .setDepth(sprite.depth + 0.5)
+      .setAlpha(0.6 * a);
+    if (sprite.isTinted && !sprite.tintFill) ghost.setTint(sprite.tintTopLeft);
+    else ghost.clearTint();
+  }
+
   private motion(f: FighterState): { dx: number; rot: number; sx: number; sy: number } {
     const dir = f.facing;
     if (f.state === FS.Hitstun && f.y === 0) {
@@ -1102,12 +1174,13 @@ export class FightScene extends Phaser.Scene {
     if (t < m.startup) {
       const p = (t + 1) / m.startup;
       const e = p * p;
-      return { dx: -dir * 6 * w * e, rot: -dir * 0.06 * w * e, sx: 1 - 0.04 * w * e, sy: 1 + 0.03 * w * e };
+      return { dx: -dir * 8 * w * e, rot: -dir * 0.075 * w * e, sx: 1 - 0.05 * w * e, sy: 1 + 0.04 * w * e };
     }
     const a = t - m.startup;
     if (a < m.active) {
+      // The strike snaps out on its first frame (no easing in) and holds, then starts to settle.
       const k = 1 - (a / Math.max(1, m.active)) * 0.35;
-      return { dx: dir * 10 * w * k, rot: dir * 0.08 * w * k, sx: 1 + 0.07 * w * k, sy: 1 - 0.05 * w * k };
+      return { dx: dir * 13 * w * k, rot: dir * 0.1 * w * k, sx: 1 + 0.09 * w * k, sy: 1 - 0.06 * w * k };
     }
     const r = Math.min(1, (a - m.active) / Math.max(1, m.recovery));
     const v = 0.65 * (1 - r) * (1 - r) - 0.14 * Math.sin(Math.PI * r);

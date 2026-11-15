@@ -304,6 +304,14 @@ function impact(frames: number[], t: number, total: number): number {
 const loop = (frames: number[], t: number, ticksPerFrame: number): number =>
   frames[Math.floor(t / ticksPerFrame) % frames.length];
 
+/** Forward then back (0 1 2 1 0 ...): a short loop with no pop where it wraps round. */
+export const pingpong = (frames: number[], t: number, ticksPerFrame: number): number => {
+  if (frames.length < 3) return loop(frames, t, ticksPerFrame);
+  const n = frames.length * 2 - 2;
+  const k = Math.floor(t / ticksPerFrame) % n;
+  return frames[k < frames.length ? k : n - k];
+};
+
 const hold = (frames: number[], t: number, ticksPerFrame: number): number =>
   frames[Math.min(frames.length - 1, Math.floor(t / ticksPerFrame))];
 
@@ -349,7 +357,10 @@ export function poseFor(art: HeroArt, f: FighterState, clock: number, celebratin
     case FS.Hitstun: {
       const total = f.stateTick + f.stunTimer;
       // Hit in the air (a juggle): tumble with the knockdown fall frames, not a standing flinch.
-      if (f.y > 0) return pose('knockout', art.fall[f.vy > 4 ? 0 : f.vy > -4 ? 1 : 2]);
+      if (f.y > 0) {
+        const tip = Math.max(0, Math.min(1, (20 - f.vy) / 40));
+        return pose('knockout', art.fall[Math.min(art.fall.length - 1, f.vy > 4 ? 0 : f.vy > -4 ? 1 : 2)], -f.facing * 0.4 * tip);
+      }
       if (f.low) {
         return art.hitLow.length ? pose('hit_low', impact(art.hitLow, f.stateTick, total)) : pose('crouch', art.crouch[art.crouch.length - 2]);
       }
@@ -358,8 +369,10 @@ export function poseFor(art: HeroArt, f: FighterState, clock: number, celebratin
     case FS.Knockdown:
     case FS.KO: {
       if (f.y > 0 || f.vy > 0) {
-        const i = f.vy > 6 ? 0 : f.vy > -6 ? 1 : 2;
-        return pose('knockout', art.fall[i]);
+        const i = Math.min(art.fall.length - 1, f.vy > 6 ? 0 : f.vy > -6 ? 1 : 2);
+        // Tumble: the body tips back further the longer it flies, so the fall reads as one motion.
+        const tip = Math.max(0, Math.min(1, (24 - f.vy) / 44));
+        return pose('knockout', art.fall[i], -f.facing * 0.55 * tip);
       }
       if (f.state === FS.Knockdown && f.stunTimer <= GETUP_TICKS) {
         return pose('getup', spread(art.getup, GETUP_TICKS - f.stunTimer, GETUP_TICKS));
@@ -381,6 +394,6 @@ export function poseFor(art: HeroArt, f: FighterState, clock: number, celebratin
     }
     default:
       if (celebrating) return pose('win', hold(art.win, Math.max(0, celebrateTicks - 10), 7));
-      return pose('idle', loop(art.idle, clock, 9));
+      return pose('idle', pingpong(art.idle, clock, 10));
   }
 }
