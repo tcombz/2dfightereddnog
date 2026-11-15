@@ -24,6 +24,7 @@ const INPUTS: Array<[MoveKey, string, string]> = [
   ['projectile', '↓ ↘ → + SPECIAL', 'Projectile.'],
   ['rising', '→ ↓ ↘ + SPECIAL', 'Invincible as it starts. Anti-air.'],
   ['super', 'HEAVY + SPECIAL', 'Costs one hyper level.'],
+  ['ultimate', 'DOWN + HEAVY + SPECIAL', 'Level 3 hyper: costs all three levels.'],
   ['heatBurst', 'LIGHT + SPECIAL', 'Once a round: shockwave, then Heat.'],
   ['heatSmash', 'LIGHT + SPECIAL in Heat', 'Spends the Heat on one launching blow.'],
 ];
@@ -55,6 +56,7 @@ export function moveList(hero: number): MoveLine[] {
     }
     if (key === 'projectile' && m.projectile && m.projectile.speed >= 14) text = 'Fast, light projectile.';
     if (key === 'super') text = `${m.hits}-hit super. Costs one hyper level.`;
+    if (key === 'ultimate') text = `${m.hits}-hit Level 3 hyper. Costs all three hyper levels.`;
     if (key === 'heavy' && m.armor) text = `Armored (${m.armor} hit). Cancels on hit.`;
     return { key, name: m.name, input, note: text, damage };
   });
@@ -65,7 +67,7 @@ export const BASICS: Array<[string, string]> = [
   ['Assist', 'BLOCK + LIGHT: your partner jumps in and throws their projectile. They can be hit!'],
   ['Tag', 'BLOCK + SPECIAL: your partner comes in. The one resting gets red health back.'],
   ['Air combo', 'Any normal > BLOCK + HEAVY launcher, ↑ to super jump, then LIGHT, HEAVY in the air.'],
-  ['Hyper meter', 'Holds 3 levels. A super costs one.'],
+  ['Hyper meter', 'Holds 3 levels. A super costs one. Full meter + ↓ HEAVY + SPECIAL: the Level 3 hyper.'],
   ['Block', 'Hold away from your opponent. Hold down-away to block low.'],
   ['Highs and lows', 'Block sweeps and low jabs crouching, and jump attacks standing.'],
   ['Throw', 'LIGHT + HEAVY next to a blocking opponent.'],

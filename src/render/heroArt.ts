@@ -41,6 +41,18 @@ import rogueArt from '../../assets/heroes/rogue/art.json';
 import rogueBase from '../../assets/heroes/rogue/base/east.png';
 import rogueSheet from '../../assets/heroes/rogue/sheet_portrait.jpg';
 import rogueSuper from '../../assets/heroes/rogue/super_art.jpg';
+import ignarArt from '../../assets/heroes/ignar/art.json';
+import ignarAtlas from '../../assets/heroes/ignar/atlas.json';
+import ignarPng from '../../assets/heroes/ignar/atlas.png';
+import ignarBase from '../../assets/heroes/ignar/base/east.png';
+import ignarSheet from '../../assets/heroes/ignar/sheet_portrait.png';
+import ignarSuper from '../../assets/heroes/ignar/super_art.png';
+import vesperArt from '../../assets/heroes/vesper/art.json';
+import vesperAtlas from '../../assets/heroes/vesper/atlas.json';
+import vesperPng from '../../assets/heroes/vesper/atlas.png';
+import vesperBase from '../../assets/heroes/vesper/base/east.png';
+import vesperSheet from '../../assets/heroes/vesper/sheet_portrait.png';
+import vesperSuper from '../../assets/heroes/vesper/super_art.png';
 import { FS, HEROES, KNOCKDOWN_TICKS, MOVE_KEYS, getMove } from '../sim';
 import type { FighterState, MoveKey } from '../sim';
 
@@ -156,6 +168,8 @@ function withHeat(j: ArtJson): Record<MoveKey, AttackArt> {
   // The launcher is an upward strike: the rising attack's art. The air jab: the jumping attack's.
   if (!a.launcher) a.launcher = { ...a.rising };
   if (!a.airLight) a.airLight = { ...a.jumpAttack };
+  // The Level 3 hyper plays the super's clip, looping its strike for the whole barrage.
+  if (!a.ultimate) a.ultimate = { ...a.super, loopActive: true };
   return a as Record<MoveKey, AttackArt>;
 }
 
@@ -230,6 +244,26 @@ const ART: Record<string, HeroArt> = {
     projectiles: { projectile: 'emblem' },
     companion: true,
     ...fromJson(quincyArt),
+  },
+  ignar: {
+    key: 'ignar',
+    png: ignarPng,
+    atlas: ignarAtlas,
+    base: ignarBase,
+    sheet: ignarSheet,
+    superArt: ignarSuper,
+    projectiles: { projectile: 'fire' },
+    ...fromJson(ignarArt),
+  },
+  vesper: {
+    key: 'vesper',
+    png: vesperPng,
+    atlas: vesperAtlas,
+    base: vesperBase,
+    sheet: vesperSheet,
+    superArt: vesperSuper,
+    projectiles: { special: 'well', projectile: 'star' },
+    ...fromJson(vesperArt),
   },
 };
 

@@ -32,7 +32,7 @@ import {
 } from './constants';
 import { HEROES, getMove } from './heroes';
 import { INPUT_MASK, Input, numpad } from './input';
-import { Cancel, FS, FX, Guard, Kind, Move, Phase, Result } from './types';
+import { Cancel, FS, FX, Guard, Kind, Move, Phase, Result, isHyper } from './types';
 import type { FighterState, GameState, HitData, MoveData, ProjectileData, Rect } from './types';
 
 // ---------- state construction ----------
@@ -213,8 +213,8 @@ export function isActiveTick(m: MoveData, tick: number): boolean {
 // ---------- small helpers ----------
 
 /** The super costs half a bar while rallying: a comeback swing, like a Fatal Blow or a Rage Art. */
-function superCost(f: FighterState): number {
-  const cost = HEROES[f.hero].moves.super.meterCost;
+function superCost(f: FighterState, key: 'super' | 'ultimate' = 'super'): number {
+  const cost = HEROES[f.hero].moves[key].meterCost;
   return rallying(f) ? cost >> 1 : cost;
 }
 
@@ -347,8 +347,10 @@ function chooseMove(f: FighterState, input: number, pressed: number, tick: numbe
   const holdLight = ((input | pressed) & Input.Light) !== 0;
   const holdHeavy = ((input | pressed) & Input.Heavy) !== 0;
   const holdSpecial = ((input | pressed) & Input.Special) !== 0;
-  if ((heavy || special) && holdHeavy && holdSpecial && f.meter >= superCost(f)) {
-    return Move.Super;
+  if ((heavy || special) && holdHeavy && holdSpecial) {
+    // Down held with a full meter: the Level 3 hyper.
+    if ((input & Input.Down) !== 0 && f.meter >= superCost(f, 'ultimate')) return Move.Ultimate;
+    if (f.meter >= superCost(f)) return Move.Super;
   }
   if ((light || heavy) && holdLight && holdHeavy) return Move.Throw;
   // Heat: Light + Special. Burst once a round; while in Heat the same press is the Heat Smash.
@@ -390,7 +392,7 @@ function startMove(s: GameState, f: FighterState, slot: number, moveId: number):
     f.heat = 0;
   }
   if (m.kind === Kind.Super) {
-    f.meter -= superCost(f);
+    f.meter -= superCost(f, moveId === Move.Ultimate ? 'ultimate' : 'super');
     s.hitstop = SUPER_FREEZE;
     s.freezeSlot = slot;
   }
@@ -416,7 +418,7 @@ function tryCancel(s: GameState, f: FighterState, slot: number, input: number): 
   const next = chooseMove(f, input, pressed, s.tick);
   if (next < 0) return;
   // The second button of a throw, super or Heat pressed a few ticks late still counts (before the normal lands).
-  const twoButton = next === Move.Throw || next === Move.Super || next === Move.HeatBurst || next === Move.HeatSmash;
+  const twoButton = next === Move.Throw || isHyper(next) || next === Move.HeatBurst || next === Move.HeatSmash;
   if (m.kind === Kind.Normal && f.moveHits === 0 && f.stateTick <= PRESS_LENIENCY && twoButton) {
     startMove(s, f, slot, next);
     return;

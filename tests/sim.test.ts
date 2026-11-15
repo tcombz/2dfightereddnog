@@ -36,7 +36,9 @@ const LEADER = heroIndex('leader');
 const EDD = heroIndex('eddnog');
 const MAL = heroIndex('malcolm');
 const QUINCY = heroIndex('quincy');
-const ALL_HEROES = [ROGUE, JET, CHRIS, LEADER, EDD, MAL, QUINCY];
+const IGNAR = heroIndex('ignar');
+const VESPER = heroIndex('vesper');
+const ALL_HEROES = [ROGUE, JET, CHRIS, LEADER, EDD, MAL, QUINCY, IGNAR, VESPER];
 const { Left: L, Right: R, Up: U, Down: D, Light, Heavy, Special, Block } = Input;
 
 /** Test-side integer LCG. The sim itself has no randomness. */
@@ -280,6 +282,19 @@ describe('special moves', () => {
     expect(withMeter.fighters[0].meter).toBe(METER_MAX - 1000);
     expect(withMeter.hitstop).toBe(SUPER_FREEZE);
     expect(withMeter.freezeSlot).toBe(0);
+  });
+
+  it('down + super with a full meter is the Level 3 hyper and spends all three levels', () => {
+    const notFull = fight();
+    notFull.fighters[0].meter = METER_MAX - 1000;
+    expect(play(notFull, [[D | Heavy | Special, 0]]).s.fighters[0].moveId).toBe(Move.Super);
+
+    const s = fight();
+    s.fighters[0].meter = METER_MAX;
+    const after = play(s, [[D | Heavy | Special, 0]]).s;
+    expect(after.fighters[0].moveId).toBe(Move.Ultimate);
+    expect(after.fighters[0].meter).toBe(0);
+    for (const hero of ALL_HEROES) expect(HEROES[hero].moves.ultimate.meterCost).toBe(METER_MAX);
   });
 
   it('every move of both heroes connects from a sensible range', () => {

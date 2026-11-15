@@ -66,6 +66,8 @@ export function stepLabel(key: MoveKey, simple: boolean): string {
       return simple ? '↓ SPECIAL' : '→↓↘ SPECIAL';
     case 'super':
       return 'HEAVY + SPECIAL';
+    case 'ultimate':
+      return '↓ HEAVY + SPECIAL';
     case 'heatBurst':
       return 'LIGHT + SPECIAL';
     case 'heatSmash':

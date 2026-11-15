@@ -21,6 +21,7 @@ import {
   getHurtboxes,
   getMove,
   getProjectile,
+  isHyper,
   rallying,
   ROUND_TICKS,
   step,
@@ -757,7 +758,7 @@ export class FightScene extends Phaser.Scene {
     }
     // A super that ends the round gets its own call.
     const finisher = winner === Result.P1 || winner === Result.P2 ? s.fighters[winner] : null;
-    if (ko && finisher && finisher.state === FS.Attack && finisher.moveId === Move.Super) {
+    if (ko && finisher && finisher.state === FS.Attack && isHyper(finisher.moveId)) {
       sub = sub ? `HYPER COMBO FINISH · ${sub}` : 'HYPER COMBO FINISH';
       this.cameras.main.flash(420, 255, 220, 120);
     }
@@ -780,7 +781,7 @@ export class FightScene extends Phaser.Scene {
   private superFlash(slot: number): void {
     const f = this.state.fighters[slot];
     const id = HEROES[f.hero].id;
-    const move = getMove(f.hero, Move.Super);
+    const move = getMove(f.hero, f.moveId === Move.Ultimate ? Move.Ultimate : Move.Super);
     sfx(this, 'super');
     this.pets[slot]?.cheer(0.8);
     sfx(this, this.signature(slot), 0.7);
@@ -790,6 +791,10 @@ export class FightScene extends Phaser.Scene {
     controls.rumble(slot, 0.8, 350);
     this.fx.ring(f.x, GROUND_Y - f.y - 120, heroInfo(id).accent, 2.6);
     this.superFx.flash(heroInfo(id), id, slot, move.name, f.x, GROUND_Y - f.y, f.facing);
+    if (f.moveId === Move.Ultimate) {
+      this.superFx.level3(heroInfo(id), f.x, GROUND_Y - f.y);
+      sfx(this, 'super', 0.9, -300);
+    }
   }
 
   // ---------- drawing ----------
@@ -832,7 +837,7 @@ export class FightScene extends Phaser.Scene {
       if (won && s.hitstop === 0) this.celebrate[i] += 1;
       const pose = poseFor(art, f, this.clock + i * 13, won && this.celebrate[i] > 0, this.celebrate[i]);
       // The super freeze plays the fighter's power-up, before the super's own startup frames.
-      if (s.hitstop > 0 && s.freezeSlot === i && f.state === FS.Attack && f.moveId === Move.Super && art.powerUp.length > 0) {
+      if (s.hitstop > 0 && s.freezeSlot === i && f.state === FS.Attack && isHyper(f.moveId) && art.powerUp.length > 0) {
         const n = art.powerUp.length;
         const k = Math.min(n - 1, Math.floor(((SUPER_FREEZE - s.hitstop) * n) / SUPER_FREEZE));
         pose.frame = frameName('power_up', art.powerUp[k]);
@@ -908,7 +913,7 @@ export class FightScene extends Phaser.Scene {
       shadow.setPosition(f.x, GROUND_Y + 2).setScale(1.1 - lift * 0.5, 1).setAlpha(0.75 - lift * 0.45);
 
       // Afterimages on dashes and supers, and a short smear as a big strike swings through.
-      const superActive = f.state === FS.Attack && f.moveId === Move.Super;
+      const superActive = f.state === FS.Attack && isHyper(f.moveId);
       let swing = false;
       if (f.state === FS.Attack && f.moveId !== Move.Light && f.moveId !== Move.CrouchLight && f.moveId !== Move.Throw && !superActive) {
         const m = getMove(f.hero, f.moveId);
@@ -923,6 +928,14 @@ export class FightScene extends Phaser.Scene {
 
       this.drawProjectile(f, this.projViews[i]);
       if (superActive && s.hitstop === 0) this.superFx.active(heroInfo(HEROES[f.hero].id), f.x, GROUND_Y - f.y, f.facing, this.clock);
+      if (superActive && f.moveId === Move.Ultimate && s.hitstop === 0) {
+        const um = getMove(f.hero, Move.Ultimate);
+        const hb = um.frames[f.stateTick]?.hitboxes[0];
+        if (hb) {
+          const x = f.facing > 0 ? f.x + hb.x : f.x - hb.x - hb.w;
+          this.superFx.ultimate(heroInfo(HEROES[f.hero].id), { x, y: GROUND_Y - f.y - hb.y - hb.h, w: hb.w, h: hb.h }, f.facing, this.clock);
+        }
+      }
     });
 
     this.drawBench(s);
@@ -1082,7 +1095,7 @@ export class FightScene extends Phaser.Scene {
       return { dx: -dir * 7 * e, rot: -dir * 0.1 * e, sx: 1, sy: 1 };
     }
     if (f.state === FS.Dash && f.vx * dir > 0) return { dx: 0, rot: dir * 0.07, sx: 1.03, sy: 0.98 };
-    if (f.state !== FS.Attack || f.y > 0 || f.moveId === Move.Super || f.moveId === Move.Throw) return { dx: 0, rot: 0, sx: 1, sy: 1 };
+    if (f.state !== FS.Attack || f.y > 0 || isHyper(f.moveId) || f.moveId === Move.Throw) return { dx: 0, rot: 0, sx: 1, sy: 1 };
     const m = getMove(f.hero, f.moveId);
     const w = Math.min(1.4, Math.max(0.35, m.damage / 80));
     const t = f.stateTick;
@@ -1103,7 +1116,7 @@ export class FightScene extends Phaser.Scene {
 
   /** A PixelLab swing arc through the hitbox on the first active frame of every melee strike. */
   private swingArc(f: FighterState, i: number): void {
-    if (f.state !== FS.Attack || f.moveId === Move.Throw || f.moveId === Move.Super) return;
+    if (f.state !== FS.Attack || f.moveId === Move.Throw || isHyper(f.moveId)) return;
     const m = getMove(f.hero, f.moveId);
     if (f.stateTick !== m.startup) return;
     const id = this.state.tick - f.stateTick;

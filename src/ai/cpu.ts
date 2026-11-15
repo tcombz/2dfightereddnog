@@ -243,6 +243,11 @@ export class Cpu {
     return me.projLife === 0 && this.chance(0.5) ? projectile : [0, SPECIAL];
   }
 
+  /** The super press: with a full meter, usually the Level 3 hyper (down held). */
+  private hyper(me: FighterState): number {
+    return me.meter >= HEROES[me.hero].moves.ultimate.meterCost && this.chance(0.7) ? DOWN | HEAVY | SPECIAL : HEAVY | SPECIAL;
+  }
+
   private comboAfter(me: FighterState): number[] {
     const superReady = me.meter >= HEROES[me.hero].moves.super.meterCost;
     switch (me.moveId) {
@@ -256,10 +261,10 @@ export class Cpu {
         // In Heat, end on the Heat Smash; otherwise burst into Heat now and then to extend the combo.
         if (me.heat > 0 && this.chance(0.7)) return [0, LIGHT | SPECIAL];
         if (me.heatUsed === 0 && this.chance(0.25)) return [0, LIGHT | SPECIAL];
-        return superReady && this.chance(0.6) ? [0, HEAVY | SPECIAL] : this.finisher(me);
+        return superReady && this.chance(0.6) ? [0, this.hyper(me)] : this.finisher(me);
       case Move.Special:
       case Move.Rising:
-        return superReady ? [0, HEAVY | SPECIAL] : [];
+        return superReady ? [0, this.hyper(me)] : [];
       default:
         return [];
     }
@@ -294,7 +299,7 @@ export class Cpu {
       return;
     }
     // Close range.
-    if (superReady && r < 0.12) this.push(HEAVY | SPECIAL);
+    if (superReady && r < 0.12) this.push(this.hyper(me));
     else if (me.heatUsed === 0 && opp.state === FS.Block && r < 0.2) this.push(LIGHT | SPECIAL);
     else if (dist < 115 && r < 0.2 && (opp.state === FS.Block || opp.state === FS.Idle || opp.state === FS.Crouch)) this.push(LIGHT | HEAVY);
     else if (r < 0.38) this.push(LIGHT);

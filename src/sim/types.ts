@@ -102,6 +102,7 @@ export const MOVE_KEYS = [
   'heatSmash',
   'launcher',
   'airLight',
+  'ultimate',
 ] as const;
 export type MoveKey = (typeof MOVE_KEYS)[number];
 
@@ -123,7 +124,14 @@ export const Move = {
   Launcher: 13,
   /** Light in the air: chains into the jumping heavy. */
   AirLight: 14,
+  /** Down + Heavy + Special with a full meter: the Level 3 hyper (all three bars). */
+  Ultimate: 15,
 } as const;
+
+/** Both hypers: the Level 1 super and the Level 3 ultimate. */
+export function isHyper(moveId: number): boolean {
+  return moveId === Move.Super || moveId === Move.Ultimate;
+}
 
 export interface HeroStats {
   maxHealth: number;

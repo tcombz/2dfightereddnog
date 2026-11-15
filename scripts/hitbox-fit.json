@@ -153,5 +153,51 @@
     "w": 128
    }
   }
+ },
+ "ignar": {
+  "height": 219,
+  "crouchHeight": 180,
+  "moves": {
+   "light": {
+    "w": 112,
+    "y": 128,
+    "h": 45
+   },
+   "heavy": {
+    "w": 118
+   },
+   "kick": {
+    "w": 107
+   },
+   "crouchLight": {
+    "w": 80
+   },
+   "sweep": {
+    "w": 132
+   }
+  }
+ },
+ "vesper": {
+  "height": 205,
+  "crouchHeight": 179,
+  "moves": {
+   "light": {
+    "w": 113,
+    "y": 116,
+    "h": 49
+   },
+   "heavy": {
+    "w": 130
+   },
+   "kick": {
+    "w": 108
+   },
+   "crouchLight": {
+    "w": 90
+   },
+   "sweep": {
+    "w": 150
+   }
+  }
  }
 }

@@ -192,6 +192,58 @@ export class SuperFx {
     this.cutIn(info, heroId, slot, moveName);
   }
 
+  /** The Level 3 hyper: a gold banner over the cut-in and a white-out, on top of the normal super flash. */
+  level3(info: HeroInfo, x: number, footY: number): void {
+    const s = this.scene;
+    s.cameras.main.flash(260, 255, 255, 255);
+    s.cameras.main.shake(500, 0.01);
+    const banner = s.add.text(VIEW_W / 2, VIEW_H * 0.24, 'LEVEL 3 HYPER', display(46, '#ffffff', 8)).setOrigin(0.5).setScrollFactor(0).setDepth(80).setScale(2.4).setAlpha(0);
+    goldFill(banner);
+    this.ui.add(banner);
+    s.tweens.add({ targets: banner, scale: 1, alpha: 1, duration: 220, ease: 'Back.easeOut' });
+    this.fadeOut([banner], 1300, 300);
+    for (let k = 0; k < 3; k += 1) {
+      s.time.delayedCall(k * 140, () => {
+        const ring = this.w(s.add.image(x, footY - 120, 'fx_glow').setTint(info.accent).setBlendMode(Phaser.BlendModes.ADD).setScale(0.5), 33);
+        s.tweens.add({ targets: ring, scale: 9, alpha: 0, duration: 650, ease: 'Quad.easeOut', onComplete: () => ring.destroy() });
+      });
+    }
+  }
+
+  /**
+   * The Level 3 hyper's active frames, drawn from its hitbox: a long box is a beam fired across the
+   * screen, a screen-wide one is a blast over everything, anything else a rushing barrage.
+   */
+  ultimate(info: HeroInfo, box: { x: number; y: number; w: number; h: number }, facing: number, clock: number): void {
+    const s = this.scene;
+    const cy = box.y + box.h / 2;
+    if (box.w >= 1000) {
+      if (clock % 4 === 0) {
+        const bx = box.x + Math.random() * box.w;
+        const fall = this.w(s.add.image(bx, cy - 380, 'fx_beam').setOrigin(0.5, 0).setTint(info.accent).setBlendMode(Phaser.BlendModes.ADD).setScale(0.8, 1.6).setAlpha(0.9), 34);
+        s.tweens.add({ targets: fall, alpha: 0, scaleX: 1.6, duration: 260, onComplete: () => fall.destroy() });
+        const boom = this.w(s.add.image(bx, box.y + box.h - 30, 'fx_glow').setTint(info.color).setBlendMode(Phaser.BlendModes.ADD).setScale(1.2), 34);
+        s.tweens.add({ targets: boom, scale: 3.4, alpha: 0, duration: 320, onComplete: () => boom.destroy() });
+      }
+      if (clock % 10 === 0) s.cameras.main.shake(120, 0.006);
+    } else if (box.w >= 600) {
+      // The beam: a thick core with a pulsing glow, out to the end of the hitbox.
+      const len = box.w;
+      const x0 = facing > 0 ? box.x : box.x + box.w;
+      const pulse = 1 + Math.sin(clock * 0.8) * 0.15;
+      const glow = this.w(s.add.image(x0, cy, 'fx_glow').setOrigin(0, 0.5).setTint(info.color).setBlendMode(Phaser.BlendModes.ADD), 34);
+      glow.setDisplaySize(len, box.h * 1.3 * pulse).setFlipX(facing < 0);
+      if (facing < 0) glow.setOrigin(1, 0.5);
+      const core = this.w(s.add.rectangle(x0, cy, len, box.h * 0.32 * pulse, 0xffffff, 0.9).setOrigin(facing > 0 ? 0 : 1, 0.5), 35);
+      s.tweens.add({ targets: [glow, core], alpha: 0, duration: 60, onComplete: () => { glow.destroy(); core.destroy(); } });
+      if (clock % 6 === 0) s.cameras.main.shake(80, 0.004);
+    } else if (clock % 3 === 0) {
+      const hx = box.x + Math.random() * box.w;
+      const spark = this.w(s.add.image(hx, box.y + Math.random() * box.h, 'fx_glow').setTint(info.accent).setBlendMode(Phaser.BlendModes.ADD).setScale(0.9), 34);
+      s.tweens.add({ targets: spark, scale: 2.2, alpha: 0, duration: 200, onComplete: () => spark.destroy() });
+    }
+  }
+
   /** Effects while the super's active frames run (call every render tick). */
   active(info: HeroInfo, x: number, footY: number, facing: number, clock: number): void {
     const style = info.superStyle;

@@ -114,8 +114,36 @@ function heatMoves(stats) {
   };
 }
 
+/**
+ * Level 3 hypers (Down + Heavy + Special, all three bars). Three shapes: a full-screen beam, a
+ * rushing barrage, or a blast that fills the whole screen.
+ */
+const ULTIMATES = {
+  rogue: ['Thunderhead Cannon', 'beam'],
+  jetsetter: ['Afterburner Encore', 'rush'],
+  chris: ['Royal Flush', 'screen'],
+  leader: ['Crown of Kings', 'rush'],
+  eddnog: ['Fortress Breaker', 'rush'],
+  malcolm: ['Orbital Strike', 'screen'],
+  quincy: ['Nine Lives', 'rush'],
+  ignar: ['Inferno Dragon', 'beam'],
+  vesper: ['Supernova', 'screen'],
+};
+
+function ultimate(id, stats) {
+  const [name, shape] = ULTIMATES[id];
+  const base = { name, kind: Kind.Super, juggle: 1, meterCost: 3000, invuln: 24, chip: 30, hitstun: 36, blockstun: 22, knockdown: true, limb: false };
+  if (shape === 'beam') {
+    return { ...base, startup: 12, active: 44, recovery: 30, hits: 11, rehit: 4, damage: 38, kb: [2, 10], hitstop: 5, hitbox: { x: 10, y: 50, w: 820, h: 150 } };
+  }
+  if (shape === 'screen') {
+    return { ...base, startup: 22, active: 36, recovery: 30, hits: 7, rehit: 5, damage: 58, kb: [1, 14], hitstop: 6, hitbox: { x: -500, y: 0, w: 1300, h: 420 } };
+  }
+  return { ...base, startup: 8, active: 36, recovery: 30, hits: 9, rehit: 4, advance: 12, damage: 46, kb: [3, 12], hitstop: 6, hitbox: { x: 0, y: 20, w: 170, h: stats.height } };
+}
+
 function hero({ id, name, color, stats, bodies, moves }) {
-  moves = { ...moves, ...heatMoves(stats) };
+  moves = { ...moves, ...heatMoves(stats), ultimate: ultimate(id, stats) };
   // Air combos: the jumping heavy can hit a launched opponent too.
   moves.jumpAttack = { ...moves.jumpAttack, juggle: 1 };
   const fit = FIT[id];
