@@ -7,7 +7,6 @@ import { artFor, feetOrigin, frameName, menuScale } from '../heroArt';
 import { heroInfo } from '../heroInfo';
 import { STAGES } from '../stages';
 import { body, display, fitText, goTo, goldFill, stripes } from '../ui';
-import { introLine } from '../rivals';
 
 /** The split-screen VS splash shown while the stage music loads. */
 export class VersusScene extends Phaser.Scene {
@@ -33,8 +32,8 @@ export class VersusScene extends Phaser.Scene {
     const team = (i: number): string => (setup.partners ? `${said(i === 0 ? setup.p1 : setup.p2)} and ${said(setup.partners[i])}` : said(i === 0 ? setup.p1 : setup.p2));
     announce(`${team(0)}. Versus. ${team(1)}!`);
     // Each team stands together on its own side: the partner behind, towards the edge, a shade
-    // darker; the point fighter in front. Names, the team line and a pre-fight line in the corners
-    // (player 1 top left, player 2 bottom right).
+    // darker; the point fighter in front. Names and the team line in the corners (player 1 top
+    // left, player 2 bottom right), kept clear of the fighters.
     [setup.p1, setup.p2].forEach((hero, i) => {
       const left = i === 0;
       const art = artFor(hero);
@@ -77,11 +76,6 @@ export class VersusScene extends Phaser.Scene {
         fitText(team, VIEW_W * 0.48);
         lines.add(team);
       }
-      lines.add(
-        this.add
-          .text(ax + (left ? 2 : -2), left ? (partner !== undefined ? 104 : 86) : VIEW_H - 46, `"${info.tagline}"`, body(16, left ? '#bcd6ff' : '#ffd8bc'))
-          .setOrigin(align, 0),
-      );
       const party = setup.party;
       if (party) {
         lines.add(
@@ -91,20 +85,6 @@ export class VersusScene extends Phaser.Scene {
         );
       }
       this.tweens.add({ targets: lines, alpha: 1, duration: 300, delay: 300 + i * 120 });
-      // Pre-fight banter: one line each, the second a beat later.
-      const line = introLine(hero, i === 0 ? setup.p2 : setup.p1);
-      const banter = this.add
-        .text(ax + (left ? 2 : -2), left ? 140 : VIEW_H - 196, `"${line}"`, body(18, '#111428'))
-        .setOrigin(align, 0)
-        .setBackgroundColor('#ffffffee')
-        .setPadding(12, 6, 12, 6)
-        .setAlpha(0)
-        .setScale(0.6)
-        .setDepth(5);
-      fitText(banter, VIEW_W * 0.5);
-      const k = banter.scaleX;
-      banter.setScale(k * 0.6);
-      this.tweens.add({ targets: banter, alpha: 1, scale: k, duration: 220, delay: 900 + i * 650, ease: 'Back.easeOut' });
     });
 
     const vs = this.add.text(VIEW_W / 2, VIEW_H / 2, 'VS', display(120, '#ffffff', 12)).setOrigin(0.5).setScale(3).setAlpha(0);
