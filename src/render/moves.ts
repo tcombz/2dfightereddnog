@@ -76,7 +76,7 @@ export const BASICS: Array<[string, string]> = [
   ['Counter hit', 'Hit someone as they start an attack for extra damage.'],
   ['Throw break', 'Press LIGHT + HEAVY as you are grabbed to break the throw.'],
   ['Buffer', 'Press your next attack a moment early: it comes out on the first free frame.'],
-  ['Simple specials', 'Pick at character select (Up / Down): → + SPECIAL shoots, ↓ + SPECIAL rises.'],
+  ['Simple specials', 'Switch at character select with SPECIAL: → + SPECIAL shoots, ↓ + SPECIAL rises.'],
   ['Armor', 'Big moves that soak hits and keep coming. Beat them with a throw or a super.'],
   ['Rally', 'On a third of your health or less: meter twice as fast, and the super costs half.'],
   ['Heat', 'LIGHT + SPECIAL once a round: 6 s of +25% damage and chip. Again in Heat: Heat Smash.'],
@@ -87,5 +87,6 @@ export const BASICS: Array<[string, string]> = [
 export const COMBOS: Array<[string, string]> = [
   ...TRIALS.map((t): [string, string] => [t.name, routeText(t, false)]),
   ['Punish', 'Block a big move, then HEAVY > ↓↘→ SPECIAL'],
+  ['Level 3', 'Full meter: any combo > ↓ + HEAVY + SPECIAL (all three levels)'],
   ['Practise', 'Training mode: F4 (or the pause menu) starts the combo trials.'],
 ];

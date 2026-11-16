@@ -4,7 +4,7 @@ import { HEROES, Result } from '../../sim';
 import { playMusic, sfx } from '../audio';
 import { C, CSS, VIEW_H, VIEW_W } from '../config';
 import type { MatchSetup } from '../config';
-import { artFor, feetOrigin, frameName, menuScale } from '../heroArt';
+import { artFor, feetOrigin, frameName, menuScale, pingpong } from '../heroArt';
 import { heroInfo } from '../heroInfo';
 import { arcadeSetup } from '../arcade';
 import { afterMatch, leaderboard } from '../party';
@@ -26,6 +26,9 @@ export class ResultScene extends Phaser.Scene {
   private menu!: Menu;
   private sprite: Phaser.GameObjects.Image | null = null;
   private hero = 0;
+  /** Tag teams: the winner's partner, standing behind. */
+  private partnerSprite: Phaser.GameObjects.Image | null = null;
+  private partner = -1;
   private pet: Companion | null = null;
   private clock = 0;
 
@@ -54,6 +57,8 @@ export class ResultScene extends Phaser.Scene {
       this.celebrate(champ.color, champ.accent);
     }
 
+    this.partnerSprite = null;
+    this.partner = -1;
     if (winner === Result.Draw) {
       const t = this.add.text(VIEW_W / 2, 150, 'DRAW GAME', display(64, '#ffffff', 10)).setOrigin(0.5);
       goldFill(t);
@@ -63,6 +68,15 @@ export class ResultScene extends Phaser.Scene {
       const id = HEROES[this.hero].id;
       const info = heroInfo(id);
       const art = artFor(this.hero);
+      if (setup.partners) {
+        this.partner = setup.partners[winner === 0 ? 0 : 1];
+        const pa = artFor(this.partner);
+        this.partnerSprite = this.add
+          .image(105, VIEW_H - 30, pa.key, frameName('idle', pa.idle[0]))
+          .setOrigin(...feetOrigin(pa))
+          .setScale(menuScale(pa, 2.4))
+          .setTint(0x9aa0c0);
+      }
       this.sprite = this.add
         .image(250, VIEW_H - 10, art.key, frameName('win', art.win[0]))
         .setOrigin(...feetOrigin(art))
@@ -76,6 +90,10 @@ export class ResultScene extends Phaser.Scene {
       const room = VIEW_W - 470 - 24;
       if (t.width > room) t.setScale(room / t.width);
       goldFill(t);
+      if (this.partner >= 0) {
+        const team = this.add.text(472, 140, `&  ${heroInfo(HEROES[this.partner].id).title}`, display(15, CSS.ink, 4));
+        if (team.width > room) team.setScale(room / team.width);
+      }
       const quote = winLine(this.hero, winner === 0 ? setup.p2 : setup.p1);
       const bubble = this.add.graphics();
       bubble.fillStyle(0xffffff, 0.95).fillRoundedRect(470, 160, 440, 70, 14);
@@ -199,6 +217,10 @@ export class ResultScene extends Phaser.Scene {
       const had = this.pet !== null;
       this.pet = menuPet(this, this.pet, art, this.sprite, 1);
       if (this.pet && !had) this.time.delayedCall(500, () => this.pet?.cheer(0.6));
+    }
+    if (this.partnerSprite && this.partner >= 0) {
+      const pa = artFor(this.partner);
+      this.partnerSprite.setFrame(frameName('idle', pingpong(pa.idle, Math.floor(this.clock / (1000 / 60)), 10)));
     }
     controls.poll();
     for (const e of controls.take()) this.menu.handle(e.action);

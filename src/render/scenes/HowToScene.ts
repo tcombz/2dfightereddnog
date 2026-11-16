@@ -22,6 +22,7 @@ function controlsTable(): Array<[string, string, string, string]> {
     ['Block', `Hold back (or ${k(0, 'block')})`, `Hold back (or ${k(1, 'block')})`, 'Hold back, LB / L1'],
     ['Throw', combo(0, 'throw', 'Light + Heavy'), combo(1, 'throw', 'Light + Heavy'), 'A + Y / ✕ + △'],
     ['Super', combo(0, 'super', 'Heavy + Special'), combo(1, 'super', 'Heavy + Special'), 'RT / R2'],
+    ['Level 3', 'Down + Heavy + Special', 'Down + Heavy + Special', 'Down + RT / R2'],
     ['Heat', combo(0, 'heat', 'Light + Special'), combo(1, 'heat', 'Light + Special'), 'A + B / ✕ + ○'],
     ['Assist', combo(0, 'assist', 'Block + Light'), combo(1, 'assist', 'Block + Light'), 'RB / R1'],
     ['Tag', combo(0, 'tag', 'Block + Special'), combo(1, 'tag', 'Block + Special'), 'LT / L2'],
@@ -64,17 +65,22 @@ export class HowToScene extends Phaser.Scene {
     const pad = (a: Parameters<typeof padButton>[0]): string => padButton(a, controls.pad(0) ? 0 : 1);
     const rows = controlsTable().map((r) => [...r] as [string, string, string, string]);
     rows[0][3] = `YOUR ${familyName(controls.pad(0) ? 0 : 1).toUpperCase()} PAD`;
-    rows[2][3] = pad('light');
-    rows[3][3] = pad('heavy');
-    rows[4][3] = pad('special');
-    rows[5][3] = `Hold back, or ${pad('block')}`;
-    rows[6][3] = `${pad('light')} + ${pad('heavy')}`;
-    rows[7][3] = pad('super');
-    rows[8][3] = `${pad('light')} + ${pad('special')}`;
-    rows[9][3] = pad('assist');
-    rows[10][3] = pad('tag');
-    rows[11][3] = `${pad('block')} + ${pad('heavy')}`;
-    rows[12][3] = pad('start');
+    const set = (label: string, text: string): void => {
+      const row = rows.find((r) => r[0] === label);
+      if (row) row[3] = text;
+    };
+    set('Light', pad('light'));
+    set('Heavy', pad('heavy'));
+    set('Special', pad('special'));
+    set('Block', `Hold back, or ${pad('block')}`);
+    set('Throw', `${pad('light')} + ${pad('heavy')}`);
+    set('Super', pad('super'));
+    set('Level 3', `Down + ${pad('super')}`);
+    set('Heat', `${pad('light')} + ${pad('special')}`);
+    set('Assist', pad('assist'));
+    set('Tag', pad('tag'));
+    set('Launcher', `${pad('block')} + ${pad('heavy')}`);
+    set('Pause', pad('start'));
     return rows;
   }
 
@@ -95,7 +101,7 @@ export class HowToScene extends Phaser.Scene {
 
     if (this.page === 0) {
       this.controlsTable().forEach((row, r) => {
-        const y = 112 + r * 27;
+        const y = 110 + r * 25;
         row.forEach((cell, c) => {
           const x = [70, 220, 470, 690][c];
           const style = r === 0 ? display(14, CSS.gold, 4) : c === 0 ? display(14, CSS.ink, 4) : body(15, CSS.ink);
@@ -106,7 +112,7 @@ export class HowToScene extends Phaser.Scene {
     } else if (this.page === 2) {
       add(this.add.text(70, 112, 'Every fighter shares these routes. "," chains a normal into the next; ">" cancels into a special or super.', body(14, CSS.muted)).setWordWrapWidth(820));
       COMBOS.forEach(([name, route], r) => {
-        const y = 158 + r * 46;
+        const y = 150 + r * 40;
         add(this.add.text(70, y, name.toUpperCase(), display(16, CSS.gold, 4)));
         add(this.add.text(290, y, inputText(route, -1), body(19, CSS.ink)));
       });

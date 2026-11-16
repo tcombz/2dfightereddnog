@@ -32,72 +32,79 @@ export class VersusScene extends Phaser.Scene {
     const said = (h: number): string => heroInfo(HEROES[h].id).name.toLowerCase();
     const team = (i: number): string => (setup.partners ? `${said(i === 0 ? setup.p1 : setup.p2)} and ${said(setup.partners[i])}` : said(i === 0 ? setup.p1 : setup.p2));
     announce(`${team(0)}. Versus. ${team(1)}!`);
-    // Tag teams: the partner's sheet art behind the point fighter's, smaller, with a name tag.
-    if (setup.partners) {
-      setup.partners.forEach((hero, i) => {
-        const id = HEROES[hero].id;
-        if (!this.textures.exists(`sheet_${id}`)) return;
-        const fromX = i === 0 ? -200 : VIEW_W + 200;
-        const toX = i === 0 ? 420 : VIEW_W - 420;
-        const art = this.add.image(fromX, VIEW_H / 2 + 60, `sheet_${id}`).setFlipX(i === 1).setTint(0xb8bcd8);
-        art.setScale((VIEW_H - 160) / art.height);
-        this.tweens.add({ targets: art, x: toX, duration: 380, ease: 'Cubic.easeOut', delay: 200 + i * 120 });
-        const tag = this.add
-          .text(toX, VIEW_H - 70, `+ ${heroInfo(id).name}`, display(22, '#ffffff', 6))
-          .setOrigin(0.5)
-          .setAlpha(0);
-        this.tweens.add({ targets: tag, alpha: 1, duration: 300, delay: 600 + i * 120 });
-      });
-    }
+    // Each team stands together on its own side: the partner behind, towards the edge, a shade
+    // darker; the point fighter in front. Names, the team line and a pre-fight line in the corners
+    // (player 1 top left, player 2 bottom right).
     [setup.p1, setup.p2].forEach((hero, i) => {
+      const left = i === 0;
       const art = artFor(hero);
       const info = heroInfo(HEROES[hero].id);
-      const fromX = i === 0 ? -260 : VIEW_W + 260;
-      const toX = i === 0 ? 250 : VIEW_W - 250;
       const id = HEROES[hero].id;
+      const partner = setup.partners?.[i];
+      const enter = (img: Phaser.GameObjects.Image, toX: number, delay: number): void => {
+        img.setX(left ? -260 : VIEW_W + 260);
+        this.tweens.add({ targets: img, x: toX, duration: 380, ease: 'Cubic.easeOut', delay });
+      };
+      if (partner !== undefined && this.textures.exists(`sheet_${HEROES[partner].id}`)) {
+        const back = this.add.image(0, VIEW_H + 6, `sheet_${HEROES[partner].id}`).setOrigin(0.5, 1).setFlipX(!left).setTint(0x8a90b0);
+        back.setScale(370 / back.height);
+        enter(back, left ? 110 : VIEW_W - 110, 160 + i * 120);
+      }
       if (this.textures.exists(`sheet_${id}`)) {
-        // The illustrated portrait from the character sheet, big.
-        const art2 = this.add.image(fromX, VIEW_H / 2 + 20, `sheet_${id}`).setFlipX(i === 1);
-        art2.setScale((VIEW_H - 60) / art2.height);
-        this.tweens.add({ targets: art2, x: toX, duration: 380, ease: 'Cubic.easeOut', delay: i * 120 });
+        const front = this.add.image(0, VIEW_H + 10, `sheet_${id}`).setOrigin(0.5, 1).setFlipX(!left);
+        front.setScale(470 / front.height);
+        enter(front, left ? 300 : VIEW_W - 300, i * 120);
       } else {
         const sprite = this.add
-          .image(fromX, VIEW_H + 40, art.key, frameName('win', art.win[Math.min(2, art.win.length - 1)]))
-          .setOrigin(...feetOrigin(art, i === 1))
+          .image(0, VIEW_H + 40, art.key, frameName('win', art.win[Math.min(2, art.win.length - 1)]))
+          .setOrigin(...feetOrigin(art, !left))
           .setScale(menuScale(art, 3.2))
-          .setFlipX(i === 1);
-        this.tweens.add({ targets: sprite, x: toX, duration: 380, ease: 'Cubic.easeOut', delay: i * 120 });
+          .setFlipX(!left);
+        enter(sprite, left ? 300 : VIEW_W - 300, i * 120);
       }
-      const name = this.add
-        .text(i === 0 ? 30 : VIEW_W - 30, i === 0 ? 40 : VIEW_H - 92, info.title, display(info.title.length > 14 ? 30 : 40, '#ffffff', 8))
-        .setOrigin(i === 0 ? 0 : 1, 0)
-        .setAlpha(0);
-      fitText(name, VIEW_W * 0.56);
+      const ax = left ? 30 : VIEW_W - 30;
+      const align = left ? 0 : 1;
+      const lines = this.add.container(0, 0).setAlpha(0);
+      const name = this.add.text(ax, left ? 34 : VIEW_H - 96, info.title, display(info.title.length > 14 ? 30 : 38, '#ffffff', 8)).setOrigin(align, 0);
+      fitText(name, VIEW_W * 0.52);
       goldFill(name);
-      const tag = this.add
-        .text(i === 0 ? 32 : VIEW_W - 32, i === 0 ? 92 : VIEW_H - 40, `"${info.tagline}"`, body(17, i === 0 ? '#bcd6ff' : '#ffd8bc'))
-        .setOrigin(i === 0 ? 0 : 1, 0)
-        .setAlpha(0);
-      // Pre-fight banter: one line each, the second a beat later, like a callout before the bell.
+      lines.add(name);
+      if (partner !== undefined) {
+        const p = heroInfo(HEROES[partner].id);
+        const team = this.add
+          .text(ax + (left ? 2 : -2), left ? 80 : VIEW_H - 122, `&  ${p.title}`, display(16, left ? '#bcd6ff' : '#ffd8bc', 4))
+          .setOrigin(align, 0);
+        fitText(team, VIEW_W * 0.48);
+        lines.add(team);
+      }
+      lines.add(
+        this.add
+          .text(ax + (left ? 2 : -2), left ? (partner !== undefined ? 104 : 86) : VIEW_H - 46, `"${info.tagline}"`, body(16, left ? '#bcd6ff' : '#ffd8bc'))
+          .setOrigin(align, 0),
+      );
+      const party = setup.party;
+      if (party) {
+        lines.add(
+          this.add
+            .text(ax, left ? 10 : VIEW_H - 146, party.names[party.sides[i]], display(16, left ? '#9cc3ff' : '#ffb98a', 5))
+            .setOrigin(align, 0),
+        );
+      }
+      this.tweens.add({ targets: lines, alpha: 1, duration: 300, delay: 300 + i * 120 });
+      // Pre-fight banter: one line each, the second a beat later.
       const line = introLine(hero, i === 0 ? setup.p2 : setup.p1);
       const banter = this.add
-        .text(i === 0 ? 32 : VIEW_W - 32, i === 0 ? 124 : VIEW_H - 160, `"${line}"`, body(19, '#111428'))
-        .setOrigin(i === 0 ? 0 : 1, 0)
+        .text(ax + (left ? 2 : -2), left ? 140 : VIEW_H - 196, `"${line}"`, body(18, '#111428'))
+        .setOrigin(align, 0)
         .setBackgroundColor('#ffffffee')
         .setPadding(12, 6, 12, 6)
         .setAlpha(0)
-        .setScale(0.6);
-      this.tweens.add({ targets: banter, alpha: 1, scale: 1, duration: 220, delay: 900 + i * 650, ease: 'Back.easeOut' });
-      const tweenTargets: Phaser.GameObjects.Text[] = [name, tag];
-      const party = setup.party;
-      if (party) {
-        const who = this.add
-          .text(i === 0 ? 32 : VIEW_W - 32, i === 0 ? 16 : VIEW_H - 120, party.names[party.sides[i]], display(18, i === 0 ? '#9cc3ff' : '#ffb98a', 5))
-          .setOrigin(i === 0 ? 0 : 1, 0)
-          .setAlpha(0);
-        tweenTargets.push(who);
-      }
-      this.tweens.add({ targets: tweenTargets, alpha: 1, duration: 300, delay: 300 + i * 120 });
+        .setScale(0.6)
+        .setDepth(5);
+      fitText(banter, VIEW_W * 0.5);
+      const k = banter.scaleX;
+      banter.setScale(k * 0.6);
+      this.tweens.add({ targets: banter, alpha: 1, scale: k, duration: 220, delay: 900 + i * 650, ease: 'Back.easeOut' });
     });
 
     const vs = this.add.text(VIEW_W / 2, VIEW_H / 2, 'VS', display(120, '#ffffff', 12)).setOrigin(0.5).setScale(3).setAlpha(0);

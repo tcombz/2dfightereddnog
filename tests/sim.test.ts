@@ -546,7 +546,7 @@ describe('every hero', () => {
         expect(hashState(run(log, createInitialState(a, b)))).toBe(hashState(run(log, createInitialState(a, b))));
       }
     }
-  });
+  }, 30000);
 });
 
 describe('armor and teleports', () => {

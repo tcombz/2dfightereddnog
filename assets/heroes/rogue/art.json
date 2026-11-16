@@ -49,7 +49,8 @@
   2
  ],
  "powerUp": [
-  1
+  1,
+  2
  ],
  "dash": [
   0,
@@ -182,19 +183,32 @@
    ]
   },
   "super": {
-   "anim": "special",
+   "anim": "barrage",
    "startup": [
     0
    ],
    "active": [
-    0,
     1,
-    2
+    2,
+    3,
+    4
+   ],
+   "recovery": [
+    5
+   ],
+   "loopActive": true
+  },
+  "ultimate": {
+   "anim": "heavy_punch",
+   "startup": [
+    0
+   ],
+   "active": [
+    1
    ],
    "recovery": [
     2
-   ],
-   "loopActive": true
+   ]
   }
  },
  "metrics": {
@@ -301,8 +315,16 @@
    25
   ],
   "power_up": [
-   60,
-   54,
+   26,
+   67,
+   19
+  ],
+  "barrage": [
+   31,
+   87,
+   102,
+   107,
+   67,
    25
   ]
  },

@@ -49,7 +49,8 @@
   2
  ],
  "powerUp": [
-  1
+  1,
+  2
  ],
  "dash": [
   0,
@@ -181,17 +182,18 @@
    ]
   },
   "super": {
-   "anim": "special",
+   "anim": "barrage",
    "startup": [
     0
    ],
    "active": [
-    0,
     1,
-    2
+    2,
+    3,
+    4
    ],
    "recovery": [
-    2
+    5
    ],
    "loopActive": true
   }
@@ -300,9 +302,17 @@
    45
   ],
   "power_up": [
-   94,
-   89,
-   53
+   47,
+   78,
+   49
+  ],
+  "barrage": [
+   64,
+   123,
+   130,
+   103,
+   78,
+   45
   ]
  },
  "face": {

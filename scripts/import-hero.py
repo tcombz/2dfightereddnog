@@ -5,7 +5,8 @@ sprite and art.json (draw scale, cell, feet anchor, face box and which frames pl
 Usage: python3 -I scripts/import-hero.py <unzipped character dir> <heroId> <world height>
 
 Optional assets/heroes/<heroId>/art-overrides.json: "skip" lists animations to leave out, "rename"
-maps a downloaded animation onto another name (a re-roll replacing the original), "clean" lists
+maps a downloaded animation onto another name (a re-roll replacing the original), "compose" builds an
+animation from frames of others ({"barrage": [["heavy_punch", 0], ["kick", 1], ...]}), "clean" lists
 animations whose specks (tiny clusters apart from the body) are erased, "recolor"
 maps an animation to a hue in degrees (warm fire baked into a template becomes that colour), and any
 other key replaces the measured value in art.json ("attacks" entries are replaced one by one).
@@ -104,6 +105,11 @@ def main() -> None:
     for old, new in renames.items():
         if old in anims:
             anims[new] = anims.pop(old)
+    # New clips made of other clips' frames (a short cast gets a super barrage from its strikes).
+    for name, parts in overrides.pop('compose', {}).items():
+        frames = [anims[a][i] for a, i in parts if a in anims and i < len(anims[a])]
+        if frames:
+            anims[name] = frames
     # Newer, hero-specific re-rolls replace the shared template clips when the download has them.
     for old, new in PREFER.items():
         if old in anims:

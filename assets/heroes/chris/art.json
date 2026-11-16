@@ -49,7 +49,8 @@
   2
  ],
  "powerUp": [
-  1
+  1,
+  2
  ],
  "dash": [
   0,
@@ -181,19 +182,34 @@
    ]
   },
   "super": {
-   "anim": "special",
+   "anim": "barrage",
    "startup": [
     0
    ],
    "active": [
-    0,
     1,
+    2,
+    3,
+    4
+   ],
+   "recovery": [
+    5
+   ],
+   "loopActive": true
+  },
+  "ultimate": {
+   "anim": "uppercut",
+   "startup": [
+    0,
+    1
+   ],
+   "active": [
     2
    ],
    "recovery": [
-    2
-   ],
-   "loopActive": true
+    1,
+    0
+   ]
   }
  },
  "metrics": {
@@ -300,8 +316,16 @@
    65
   ],
   "power_up": [
-   79,
-   72,
+   65,
+   52,
+   65
+  ],
+  "barrage": [
+   29,
+   116,
+   122,
+   99,
+   52,
    65
   ]
  },

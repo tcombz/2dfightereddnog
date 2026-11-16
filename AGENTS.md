@@ -64,7 +64,8 @@
   (feet-aligned frames, the east base, and `art.json`: draw scale, cell, feet anchor, face box and
   which frames play for each state and attack, measured from the frames), then repack with
   `python3 scripts/pack-hero-atlas.py <id>`. Hand fixes go in `art-overrides.json` (skip, rename,
-  clean, recolor, or any `art.json` key), never in `art.json`, which the import overwrites. The
+  compose (a clip built from other clips' frames: the redesigned heroes' `barrage` super and raised-fist
+  `power_up`), clean, recolor, or any `art.json` key), never in `art.json`, which the import overwrites. The
   draw scale keeps each hero's world height matched to his hurtbox; the fight camera zooms to
   1.28x when the fighters are close.
 - `assets/stages/` stage art (768x320, drawn at 2x); `assets/audio/` music loops and sound effects.

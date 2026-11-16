@@ -227,15 +227,36 @@ export class SuperFx {
       }
       if (clock % 10 === 0) s.cameras.main.shake(120, 0.006);
     } else if (box.w >= 600) {
-      // The beam: a thick core with a pulsing glow, out to the end of the hitbox.
+      // The beam: three layers of light (a wide glow in the fighter's colour, the accent, a white-hot
+      // core) rippling as it pours out, a flare at the hands and a burst where it ends.
       const len = box.w;
       const x0 = facing > 0 ? box.x : box.x + box.w;
-      const pulse = 1 + Math.sin(clock * 0.8) * 0.15;
-      const glow = this.w(s.add.image(x0, cy, 'fx_glow').setOrigin(0, 0.5).setTint(info.color).setBlendMode(Phaser.BlendModes.ADD), 34);
-      glow.setDisplaySize(len, box.h * 1.3 * pulse).setFlipX(facing < 0);
-      if (facing < 0) glow.setOrigin(1, 0.5);
-      const core = this.w(s.add.rectangle(x0, cy, len, box.h * 0.32 * pulse, 0xffffff, 0.9).setOrigin(facing > 0 ? 0 : 1, 0.5), 35);
-      s.tweens.add({ targets: [glow, core], alpha: 0, duration: 60, onComplete: () => { glow.destroy(); core.destroy(); } });
+      const ripple = (k: number): number => 1 + Math.sin(clock * 0.9 + k) * 0.12;
+      const layer = (h: number, tint: number, alpha: number, k: number): Phaser.GameObjects.Image =>
+        this.w(
+          s.add
+            .image(x0, cy, 'fx_hbeam')
+            .setOrigin(0, 0.5)
+            .setFlipX(facing < 0)
+            .setTint(tint)
+            .setBlendMode(Phaser.BlendModes.ADD)
+            .setAlpha(alpha)
+            .setDisplaySize(len, h * ripple(k)),
+          34,
+        ).setOrigin(facing > 0 ? 0 : 1, 0.5);
+      const parts = [
+        layer(box.h * 1.6, info.color, 0.7, 0),
+        layer(box.h * 0.95, info.accent, 0.9, 1.3),
+        layer(box.h * 0.4, 0xffffff, 1, 2.1),
+        this.w(s.add.image(x0, cy, 'fx_glow').setTint(info.accent).setBlendMode(Phaser.BlendModes.ADD).setScale(1.6 * ripple(3)), 35),
+        this.w(s.add.image(x0 + facing * len, cy, 'fx_glow').setTint(info.color).setBlendMode(Phaser.BlendModes.ADD).setScale(2.2 * ripple(4)).setAlpha(0.8), 35),
+      ];
+      s.tweens.add({ targets: parts, alpha: 0, duration: 70, onComplete: () => parts.forEach((p) => p.destroy()) });
+      // Sparks racing along it.
+      if (clock % 2 === 0) {
+        const sp = this.w(s.add.image(x0, cy + (Math.random() - 0.5) * box.h * 0.7, 'fx_glow').setTint(0xffffff).setBlendMode(Phaser.BlendModes.ADD).setScale(0.25), 36);
+        s.tweens.add({ targets: sp, x: x0 + facing * len, alpha: 0, duration: 260, onComplete: () => sp.destroy() });
+      }
       if (clock % 6 === 0) s.cameras.main.shake(80, 0.004);
     } else if (clock % 3 === 0) {
       const hx = box.x + Math.random() * box.w;

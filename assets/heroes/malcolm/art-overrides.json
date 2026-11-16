@@ -1,4 +1,87 @@
 {
- "fall": [0, 1],
- "lying": [2]
+ "fall": [
+  0,
+  1
+ ],
+ "lying": [
+  2
+ ],
+ "compose": {
+  "power_up": [
+   [
+    "idle",
+    0
+   ],
+   [
+    "uppercut",
+    1
+   ],
+   [
+    "uppercut",
+    2
+   ]
+  ],
+  "barrage": [
+   [
+    "heavy_punch",
+    0
+   ],
+   [
+    "light_punch",
+    1
+   ],
+   [
+    "heavy_punch",
+    1
+   ],
+   [
+    "kick",
+    1
+   ],
+   [
+    "uppercut",
+    1
+   ],
+   [
+    "heavy_punch",
+    2
+   ]
+  ]
+ },
+ "powerUp": [
+  1,
+  2
+ ],
+ "attacks": {
+  "super": {
+   "anim": "barrage",
+   "startup": [
+    0
+   ],
+   "active": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "recovery": [
+    5
+   ],
+   "loopActive": true
+  },
+  "ultimate": {
+   "anim": "uppercut",
+   "startup": [
+    0,
+    1
+   ],
+   "active": [
+    2
+   ],
+   "recovery": [
+    1,
+    0
+   ]
+  }
+ }
 }

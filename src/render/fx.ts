@@ -166,6 +166,25 @@ export function makeTextures(scene: Phaser.Scene): void {
     ctx.closePath();
     ctx.fill();
   });
+  // A horizontal beam of light: soft top and bottom edges, a hot middle, fading out at the far end.
+  canvasTexture(scene, 'fx_hbeam', 256, 64, (ctx) => {
+    const v = ctx.createLinearGradient(0, 0, 0, 64);
+    v.addColorStop(0, 'rgba(255,255,255,0)');
+    v.addColorStop(0.3, 'rgba(255,255,255,0.35)');
+    v.addColorStop(0.5, 'rgba(255,255,255,1)');
+    v.addColorStop(0.7, 'rgba(255,255,255,0.35)');
+    v.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = v;
+    ctx.fillRect(0, 0, 256, 64);
+    ctx.globalCompositeOperation = 'destination-in';
+    const h = ctx.createLinearGradient(0, 0, 256, 0);
+    h.addColorStop(0, 'rgba(0,0,0,1)');
+    h.addColorStop(0.9, 'rgba(0,0,0,1)');
+    h.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = h;
+    ctx.fillRect(0, 0, 256, 64);
+    ctx.globalCompositeOperation = 'source-over';
+  });
   canvasTexture(scene, 'fx_speedline', 512, 6, (ctx) => {
     const g = ctx.createLinearGradient(0, 0, 512, 0);
     g.addColorStop(0, 'rgba(255,255,255,0)');

@@ -284,7 +284,8 @@ export class FightScene extends Phaser.Scene {
 
     this.centerCamera(true);
     playMusic(this, this.stage.music);
-    if (setup.mode !== 'training') this.hud.shout('ROUND 1', '', 1000);
+    // A tag match is one round: the call is READY, then FIGHT.
+    if (setup.mode !== 'training') this.hud.shout(this.state.team ? 'READY?' : 'ROUND 1', '', 1000);
     if (this.rb || this.replayInputs) {
       this.netText = this.add.text(VIEW_W / 2, VIEW_H - 14, '', body(13, CSS.ink)).setOrigin(0.5, 1).setBackgroundColor('#0b0e1ccc').setPadding(10, 3, 10, 3);
       this.ui.add(this.netText);
