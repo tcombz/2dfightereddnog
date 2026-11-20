@@ -345,7 +345,7 @@ const SCREENS: Record<PhoneView['screen'], (root: HTMLElement) => Mounted> = {
     const { bar, say, chip } = topBar();
     const sub = el('div', { class: 'muted' });
     const list = el('div', { class: 'players' });
-    const start = el('button', { class: 'big', style: 'max-width:420px', onclick: () => cmd('start') }, 'START');
+    const starts = el('div', { class: 'starts' });
     r.append(
       bar,
       el(
@@ -354,7 +354,7 @@ const SCREENS: Record<PhoneView['screen'], (root: HTMLElement) => Mounted> = {
         el('div', { class: 'h1 pop' }, "YOU'RE IN!"),
         sub,
         list,
-        start,
+        starts,
         el('div', { class: 'tip' }, 'Tip: turn your phone sideways for the fight. Tap your name to change it.'),
       ),
     );
@@ -369,8 +369,14 @@ const SCREENS: Record<PhoneView['screen'], (root: HTMLElement) => Mounted> = {
             el('div', { class: `chip${p.on ? '' : ' off'}${p.me ? ' me' : ''}` }, el('span', { class: 'dot', style: `background:${p.color};box-shadow:0 0 10px ${p.color}` }), p.name),
           ),
         );
-        start.textContent = v.start || 'START';
-        start.style.display = v.start ? '' : 'none';
+        const opts = v.starts ?? [];
+        const key = opts.map((o) => `${o.id}:${o.label}`).join('|');
+        if (starts.dataset.key !== key) {
+          starts.dataset.key = key;
+          starts.replaceChildren(
+            ...opts.map((o, i) => el('button', { class: i === 0 ? 'big' : 'big alt', onclick: () => cmd('start', o.id) }, o.label)),
+          );
+        }
       },
     };
   },
@@ -379,7 +385,8 @@ const SCREENS: Record<PhoneView['screen'], (root: HTMLElement) => Mounted> = {
     const { bar, chip } = topBar();
     const big = el('div', { class: 'h1 pop' });
     const sub = el('div', { class: 'muted' });
-    r.append(bar, el('div', { class: 'center' }, big, sub, el('div', { class: 'tip' }, 'Your controller switches on when it is your turn.')));
+    const tip = el('div', { class: 'tip' }, 'Your controller switches on when it is your turn.');
+    r.append(bar, el('div', { class: 'center' }, big, sub, tip));
     return {
       key: 'wait',
       update(v) {
@@ -391,6 +398,8 @@ const SCREENS: Record<PhoneView['screen'], (root: HTMLElement) => Mounted> = {
           big.classList.add('pop');
         }
         sub.textContent = v.sub ?? '';
+        // Still to play: the controller comes back. Out, or the champion: nothing to wait for.
+        tip.style.display = ['CHAMPION!', 'GG', 'KNOCKED OUT', 'WATCHING'].includes(v.say) ? 'none' : '';
       },
     };
   },

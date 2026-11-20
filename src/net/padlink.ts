@@ -240,7 +240,9 @@ function localPair(ch: BroadcastChannel, me: string, them: string): PadConn {
 }
 
 function localServer(): PadServer {
-  const code = padCode();
+  const last = savedCode();
+  const code = last.length === 4 ? last : padCode();
+  savedCode(code);
   const ch = new BroadcastChannel(`afterhours-pads-${code}`);
   const listeners: Array<(c: PadConn) => void> = [];
   ch.addEventListener('message', (e: MessageEvent<LocalMsg>) => {

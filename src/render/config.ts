@@ -55,10 +55,38 @@ export interface MatchSetup {
   simple?: [boolean, boolean];
   /** Tag teams: each side's partner (no partners: one on one). */
   partners?: [number, number];
+  /** Set in a tournament: the bracket (the match being played is its current one). */
+  tourney?: TourneyState;
   /** Online: which player this side plays, and the match number shared with the other side. */
   online?: { me: 0 | 1; match: number };
   /** Replay: the recorded inputs to play back, and where to go when it ends. */
   replay?: { inputs: string; back: { scene: string; data?: object } };
+}
+
+/** One bracket match: entrants by index (-1 not known yet, -2 a bye), the winner, games won. */
+export interface TourneyMatch {
+  a: number;
+  b: number;
+  winner: number;
+  score: [number, number];
+}
+
+/** A single-elimination tournament: random seeds, byes for the top seeds, a best-of-3 final. */
+export interface TourneyState {
+  names: string[];
+  /** A phone tournament: the phone (its id) behind each name. */
+  phones?: string[];
+  /** Bracket size: the field rounded up to a power of two. */
+  size: number;
+  /** Matches per round, first round first; the last round is the final. */
+  rounds: TourneyMatch[][];
+  /** Games needed to win a match, per round. */
+  firstTo: number[];
+  /** Each entrant's last team (point, partner), so their cursor starts there next time. */
+  picks: Array<[number, number]>;
+  champion: number;
+  /** The result the bracket screen should animate next (cleared once shown). */
+  last?: { round: number; match: number; winner: number; draw?: boolean };
 }
 
 /** Party mode: winner stays on, the loser hands the controller to the next name in the queue. */

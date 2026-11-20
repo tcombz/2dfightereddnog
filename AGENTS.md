@@ -41,6 +41,10 @@
     sound; `ui.ts` menu widgets; `moves.ts` move list text; `trials.ts` combo trials and the combo tracker
     (training mode, F4); `arcade.ts` the arcade ladder (opponent order, home stages, CPU levels);
     `party.ts` party mode (winner stays on, queue, streaks, leaderboard; lobby in `scenes/PartyScene.ts`);
+    `tourney.ts` tournaments (single elimination, random seeds, byes for top seeds, best-of-3 final,
+    saved in the browser so a reload can resume; `MatchSetup.tourney`, the match played is its
+    current one), drawn and animated by `scenes/BracketScene.ts` (started from the phone lobby or
+    the party lobby; results go back to it from ResultScene);
     `superFx.ts` super cinematics; `config.ts` sizes, colours, game title
 - `src/net/` online play: `rollback.ts` (rollback netcode over `step`: input delay, prediction,
   rewind, time sync, desync hash check), `link.ts` (the claude.ai page's room when hosted there,
@@ -90,6 +94,7 @@
 - Menu events: up, down, left, right, confirm, back, pause and `alt` (Special on the keyboard, Heavy /
   X on a pad), which the select screen uses to switch Classic / Simple controls.
 - `tests/net.test.ts` rollback under lag and dropped messages, replay encoding
+- `tests/tourney.test.ts` brackets for 2 to 16 players, byes, draws, forfeits, phone status lines
 - `tests/sim.test.ts` determinism, match flow, guarding, specials, combos (every trial route for every
   pair of fighters), movement, training and data tests
 

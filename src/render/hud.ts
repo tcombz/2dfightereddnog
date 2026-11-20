@@ -39,6 +39,7 @@ export class Hud {
     state: GameState,
     cpuSide: number,
     private readonly training: boolean,
+    players: [string, string] | null = null,
   ) {
     const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
       this.objects.push(o);
@@ -71,6 +72,16 @@ export class Hud {
     }
     // Hyper level: a big number beside each meter.
     this.levels = [0, 1].map((i) => add(scene.add.text(i === 0 ? 24 : VIEW_W - 24, VIEW_H - 22, '0', display(26, '#9ff6ff', 5)).setOrigin(i === 0 ? 0 : 1, 0.5)));
+    // Party and tournament play: whose side is whose, under the fighter names.
+    if (players) {
+      players.forEach((name, i) => {
+        add(
+          scene.add
+            .text(i === 0 ? 82 : VIEW_W - 82, BAR_Y + BAR_H + 26, name, display(12, i === 0 ? '#9cc3ff' : '#ffb98a', 3))
+            .setOrigin(i === 0 ? 0 : 1, 0),
+        );
+      });
+    }
     if (cpuSide >= 0) {
       add(scene.add.text(cpuSide === 0 ? 82 : VIEW_W - 82, BAR_Y + BAR_H + 26, 'CPU', body(12, CSS.muted)).setOrigin(cpuSide === 0 ? 0 : 1, 0));
     }

@@ -15,6 +15,7 @@ import { OnlineScene } from './render/scenes/OnlineScene';
 import { ReplaysScene } from './render/scenes/ReplaysScene';
 import { SettingsScene } from './render/scenes/SettingsScene';
 import { PhonesScene } from './render/scenes/PhonesScene';
+import { BracketScene } from './render/scenes/BracketScene';
 
 export async function startGame(): Promise<void> {
   // Text is drawn to canvases, so the web fonts must be ready before the first scene draws any.
@@ -32,7 +33,7 @@ export async function startGame(): Promise<void> {
     pixelArt: true,
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     input: { gamepad: false },
-    scene: [BootScene, TitleScene, SelectScene, VersusScene, FightScene, ResultScene, HowToScene, ControllerScene, PartyScene, OnlineScene, ReplaysScene, SettingsScene, PhonesScene],
+    scene: [BootScene, TitleScene, SelectScene, VersusScene, FightScene, ResultScene, HowToScene, ControllerScene, PartyScene, OnlineScene, ReplaysScene, SettingsScene, PhonesScene, BracketScene],
   });
   phones.attach(game);
   showCrashes();

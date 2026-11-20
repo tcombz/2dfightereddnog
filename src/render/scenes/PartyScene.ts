@@ -4,6 +4,7 @@ import { controls } from '../../input/controls';
 import { sfx } from '../audio';
 import { C, CSS, VIEW_H, VIEW_W } from '../config';
 import { newParty } from '../party';
+import { newTourney } from '../tourney';
 import { menuHint, onPad } from '../prompts';
 import { Menu, backdrop, body, display, goTo, goldFill } from '../ui';
 
@@ -47,6 +48,7 @@ export class PartyScene extends Phaser.Scene {
         { label: 'ADD PLAYER', onSelect: () => this.add_() },
         { label: 'REMOVE LAST', onSelect: () => this.removeLast() },
         { label: 'START PARTY', onSelect: () => this.start() },
+        { label: 'START TOURNAMENT', onSelect: () => this.startTourney() },
         { label: 'BACK', onSelect: () => this.leave('title') },
       ],
       380,
@@ -142,6 +144,15 @@ export class PartyScene extends Phaser.Scene {
       return;
     }
     this.leave('select', { mode: 'versus', cpuLevel: 1, party: newParty([...this.names]) });
+  }
+
+  private startTourney(): void {
+    if (this.names.length < 2) {
+      this.hint.setText('Add at least two players for a tournament.');
+      sfx(this, 'ui_move', 0.7);
+      return;
+    }
+    this.leave('bracket', { tourney: newTourney([...this.names]), cpuLevel: 1, intro: true });
   }
 
   private leave(key: string, data?: object): void {

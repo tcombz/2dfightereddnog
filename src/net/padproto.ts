@@ -1,7 +1,7 @@
 // What the TV and the phones say to each other. Shared by both sides; no game code here.
 
 /** Bumped when the messages change shape, so an old phone page can ask to be reloaded. */
-export const PAD_VERSION = 1;
+export const PAD_VERSION = 2;
 
 export type PhoneScreen = 'lobby' | 'remote' | 'select' | 'stage' | 'fight' | 'wait';
 
@@ -23,9 +23,9 @@ export interface PhoneView {
   team?: boolean;
   /** Stage select: the stage shown. */
   stage?: number;
-  /** Lobby: everyone in, and the start button's label. */
+  /** Lobby: everyone in, and the ways to start (a button each). */
   players?: Array<{ name: string; color: string; on: boolean; me: boolean }>;
-  start?: string;
+  starts?: Array<{ id: string; label: string }>;
   /** Fight: each side's team (point first), for the header. */
   teams?: [number[], number[]];
 }

@@ -49,6 +49,8 @@ input { font: 600 20px var(--body); }
 .bar .say { flex: 1; text-align: center; font: 400 clamp(14px, 4.2vw, 20px) var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .players { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 560px; }
 .players .chip.off { opacity: 0.4; }
+.starts { display: flex; flex-direction: column; gap: 10px; width: min(420px, 100%); }
+.big.alt { background: linear-gradient(#2a3166, #1a1f45); color: var(--ink); box-shadow: 0 5px 0 #05060c; border: 2px solid var(--edge); font-size: 18px; }
 .players .chip.me { border-color: var(--gold); }
 .spin { width: 44px; height: 44px; border-radius: 50%; border: 5px solid var(--edge); border-top-color: var(--gold); animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -129,6 +131,13 @@ input { font: 600 20px var(--body); }
 .tc + .tc .tcimg { width: min(24vw, 104px); border-width: 2px; opacity: 0.85; }
 .tcname { font: 400 16px var(--display); }
 .tcrole { font-size: 11px; color: var(--muted); }
+/* A phone on its side: less room top to bottom. */
+@media (max-height: 440px) {
+  .center { gap: 8px; padding: 8px 18px; overflow-y: auto; justify-content: safe center; touch-action: pan-y; }
+  .center .h1 { font-size: 26px; }
+  .big { padding: 11px; font-size: 18px; }
+  .center > .tip { display: none; }
+}
 @media (orientation: portrait) {
   .select { flex-direction: column; }
   .grid { --cols: 4; flex: none; }

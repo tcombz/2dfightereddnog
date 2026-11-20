@@ -1,6 +1,7 @@
 // Phone party lobby, for the TV: a QR code and a room code; everyone who scans it joins with their
-// phone as the controller. Start from the TV or any phone: one phone fights the CPU, two or more
-// play winner-stays-on (the two up hold the controllers, the rest wait their turn on their phones).
+// phone as the controller. Start from the TV or any phone: a tournament (an animated bracket, see
+// BracketScene), winner stays on (the two up hold the controllers, the rest wait their turn on
+// their phones), or with one phone, the CPU.
 import Phaser from 'phaser';
 import qrcode from 'qrcode-generator';
 import { controls } from '../../input/controls';
@@ -11,6 +12,8 @@ import { playMusic, sfx } from '../audio';
 import { C, CSS, VIEW_H, VIEW_W } from '../config';
 import type { PartyState } from '../config';
 import { newParty } from '../party';
+import { newTourney, savedTourney } from '../tourney';
+import type { BracketData } from './BracketScene';
 import { Menu, backdrop, body, display, goTo, goldFill } from '../ui';
 
 const QR_KEY = 'phone_qr';
@@ -41,6 +44,7 @@ export class PhonesScene extends Phaser.Scene {
     playMusic(this, 'menu');
     backdrop(this, 'stage_concert', 0.74);
     this.stamp = -1;
+    this.notice = { text: '', until: 0 };
     this.qr = null;
     this.qrFor = '';
     this.welcomed = phones.joined;
@@ -68,28 +72,70 @@ export class PhonesScene extends Phaser.Scene {
     this.countText = this.add.text(902, 120, '', body(14, CSS.muted)).setOrigin(1, 0);
     this.list = this.add.container(0, 0);
 
+    const resume = savedTourney() !== null;
     this.menu = new Menu(
       this,
       430,
-      410,
+      resume ? 386 : 398,
       [
-        { label: 'START', value: () => this.startLabel(), onSelect: () => this.start() },
+        ...(resume
+          ? [{ label: 'RESUME TOURNAMENT', value: () => 'WHERE YOU LEFT OFF', onSelect: () => this.resumeTourney() }]
+          : []),
+        { label: 'TOURNAMENT', value: () => this.tourneyLabel(), onSelect: () => this.startTourney() },
+        { label: 'WINNER STAYS ON', value: () => this.startLabel(), onSelect: () => this.start() },
         { label: 'CLEAR PLAYERS WHO LEFT', onSelect: () => phones.dropAway() },
         { label: 'BACK', onSelect: () => goTo(this, 'title', { skipIntro: true }) },
       ],
       494,
-      42,
-      20,
+      32,
+      18,
     );
-    this.hint = this.add.text(VIEW_W / 2 + 196, VIEW_H - 10, '', body(13, CSS.muted)).setOrigin(0.5, 1);
+    // Under the join card, clear of the options.
+    this.hint = this.add.text(220, VIEW_H - 5, '', body(12, CSS.muted)).setOrigin(0.5, 1).setWordWrapWidth(400).setAlign('center');
 
     void phones.start();
     controls.take();
   }
 
+  /** A message for a few seconds, over the usual hint. */
+  private notice = { text: '', until: 0 };
+
+  private say(text: string): void {
+    this.notice = { text, until: this.clock + 3500 };
+  }
+
   private startLabel(): string {
     const n = phones.connected().length;
-    return n === 0 ? 'WAITING FOR PHONES' : n === 1 ? 'VS CPU' : n === 2 ? '1 VS 1' : 'WINNER STAYS ON';
+    return n === 0 ? 'WAITING FOR PHONES' : n === 1 ? 'VS CPU' : `${n} PLAYERS`;
+  }
+
+  private tourneyLabel(): string {
+    const n = phones.connected().length;
+    return n < 2 ? 'NEEDS 2+ PHONES' : `${n} PLAYERS`;
+  }
+
+  /** The bracket this TV was running before a reload: phones that come back get their seats again. */
+  private resumeTourney(): void {
+    const t = savedTourney();
+    if (!t) return;
+    sfx(this, 'ui_confirm');
+    goTo(this, 'bracket', { tourney: t, cpuLevel: 1 } satisfies BracketData);
+  }
+
+  /** Everyone connected into a bracket, in a random draw. */
+  startTourney(): void {
+    const ps = phones.connected();
+    if (ps.length < 2) {
+      sfx(this, 'ui_move', 0.8);
+      this.say('A tournament needs at least two phones.');
+      return;
+    }
+    sfx(this, 'ui_confirm');
+    const tourney = newTourney(
+      ps.map((p) => p.name),
+      ps.map((p) => p.id),
+    );
+    goTo(this, 'bracket', { tourney, cpuLevel: 1, intro: true } satisfies BracketData);
   }
 
   /** One phone fights the CPU; two or more play winner-stays-on, with a scoreboard. */
@@ -97,7 +143,7 @@ export class PhonesScene extends Phaser.Scene {
     const ps = phones.connected();
     if (ps.length === 0) {
       sfx(this, 'ui_move', 0.8);
-      this.hint.setText(phones.open ? 'Scan the code with a phone first (or open the address and type the code).' : 'Waiting for the room to open…');
+      this.say(phones.open ? 'Scan the code with a phone first (or open the address and type the code).' : 'Waiting for the room to open…');
       return;
     }
     sfx(this, 'ui_confirm');
@@ -120,12 +166,25 @@ export class PhonesScene extends Phaser.Scene {
       say: "YOU'RE IN!",
       sub: n < 2 ? 'Waiting for more players. Press START to fight the CPU now.' : 'Anyone can press START once everyone is in.',
       players: phones.players.map((q) => ({ name: q.name, color: q.color, on: q.conn !== null, me: q.id === p.id })),
-      start: n === 0 ? '' : `START: ${this.startLabel()}`,
+      starts: [
+        ...(n >= 2 && savedTourney() ? [{ id: 'resume', label: 'RESUME TOURNAMENT' }] : []),
+        ...(n === 0
+          ? []
+          : n === 1
+            ? [{ id: 'party', label: 'START: VS CPU' }]
+            : [
+                { id: 'tourney', label: `NEW TOURNAMENT (${n})` },
+                { id: 'party', label: 'WINNER STAYS ON' },
+              ]),
+      ],
     };
   }
 
-  phoneCommand(_seat: number, c: string): void {
-    if (c === 'start') this.start();
+  phoneCommand(_seat: number, c: string, v: unknown): void {
+    if (c !== 'start') return;
+    if (v === 'resume') this.resumeTourney();
+    else if (v === 'tourney') this.startTourney();
+    else this.start();
   }
 
   // ---------- drawing ----------
@@ -210,7 +269,9 @@ export class PhonesScene extends Phaser.Scene {
     }
     const n = phones.connected().length;
     this.hint.setText(
-      !phones.open
+      this.clock < this.notice.until
+        ? this.notice.text
+        : !phones.open
         ? ''
         : !phones.reachable()
           ? 'Reconnecting to the join service… phones already in can keep playing.'

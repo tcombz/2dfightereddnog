@@ -16,6 +16,7 @@ import { artFor, feetOrigin, frameName, menuScale, pingpong } from '../heroArt';
 import { heroInfo } from '../heroInfo';
 import { STAGES } from '../stages';
 import { keyFor, menuHint, onPad, padButton } from '../prompts';
+import { currentMatch, matchLabel } from '../tourney';
 import { body, display, fitText, goTo, goldFill, stripes } from '../ui';
 
 /** Grid: columns per row, tile size and slant. */
@@ -99,6 +100,7 @@ export class SelectScene extends Phaser.Scene {
       stage: 0,
       cpuLevel: data.cpuLevel ?? 1,
       party: data.party,
+      tourney: data.tourney,
       simple: data.simple ? [...data.simple] : [simple, simple && mode === 'versus'],
     };
     // A phone party: anyone who joined since the last match goes to the back of the queue. Phone
@@ -134,7 +136,11 @@ export class SelectScene extends Phaser.Scene {
     this.g = this.add.graphics().setDepth(6);
 
     const party = this.setup.party;
-    const modeName = party
+    const tourney = this.setup.tourney;
+    const tm = tourney ? currentMatch(tourney) : null;
+    const modeName = tourney && tm
+      ? matchLabel(tourney, tm.round, tm.match)
+      : party
       ? `PARTY · MATCH ${party.matches + 1}`
       : this.arcade
         ? `ARCADE · ${CPU_LEVELS[this.setup.cpuLevel]}`
@@ -171,7 +177,10 @@ export class SelectScene extends Phaser.Scene {
       this.tiles.push(img);
     }
 
-    const names = [party ? party.names[party.sides[0]] : 'PLAYER 1', party ? party.names[party.sides[1]] : this.arcade ? 'ARCADE' : mode === 'versus' ? 'PLAYER 2' : mode === 'training' ? 'DUMMY' : 'CPU'];
+    const names =
+      tourney && tm
+        ? [tourney.names[tm.m.a], tourney.names[tm.m.b]]
+        : [party ? party.names[party.sides[0]] : 'PLAYER 1', party ? party.names[party.sides[1]] : this.arcade ? 'ARCADE' : mode === 'versus' ? 'PLAYER 2' : mode === 'training' ? 'DUMMY' : 'CPU'];
     this.ratingLabels = [];
     this.sides = [0, 1].map((i) => {
       const left = i === 0;
@@ -233,6 +242,13 @@ export class SelectScene extends Phaser.Scene {
     this.hint = this.add.text(VIEW_W / 2, VIEW_H - 8, '', body(12, CSS.muted)).setOrigin(0.5, 1).setDepth(22);
     if (data.p1 !== undefined) this.sides[0].cursor = data.p1;
     if (data.p2 !== undefined) this.sides[1].cursor = data.p2;
+    // A tournament: each player's cursor starts on the point fighter they used last time.
+    if (tourney && tm) {
+      const a = tourney.picks[tm.m.a]?.[0] ?? -1;
+      const b = tourney.picks[tm.m.b]?.[0] ?? -1;
+      if (a >= 0) this.sides[0].cursor = a;
+      if (b >= 0) this.sides[1].cursor = b;
+    }
     this.refresh();
     controls.take();
   }
@@ -452,6 +468,10 @@ export class SelectScene extends Phaser.Scene {
       this.sides[0].locked = false;
       this.sides[0].ready.setVisible(false);
     } else {
+      if (this.setup.tourney) {
+        goTo(this, 'bracket', { tourney: this.setup.tourney, cpuLevel: this.setup.cpuLevel });
+        return;
+      }
       const fromPhones = !!this.setup.party?.phones || (!this.setup.party && phones.connected().length > 0);
       goTo(this, fromPhones ? 'phones' : this.setup.party ? 'party' : 'title', { skipIntro: true });
       return;

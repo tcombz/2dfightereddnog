@@ -7,6 +7,7 @@ import type { PhoneView } from '../../net/padproto';
 import { artFor, feetOrigin, frameName, menuScale } from '../heroArt';
 import { heroInfo } from '../heroInfo';
 import { STAGES } from '../stages';
+import { currentMatch, matchLabel, sideNames } from '../tourney';
 import { body, display, fitText, goTo, goldFill, stripes } from '../ui';
 
 /** The split-screen VS splash shown while the stage music loads. */
@@ -86,11 +87,11 @@ export class VersusScene extends Phaser.Scene {
         fitText(team, VIEW_W * 0.48);
         lines.add(team);
       }
-      const party = setup.party;
-      if (party) {
+      const players = sideNames(setup);
+      if (players) {
         lines.add(
           this.add
-            .text(ax, left ? 10 : VIEW_H - 146, party.names[party.sides[i]], display(16, left ? '#9cc3ff' : '#ffb98a', 5))
+            .text(ax, left ? 10 : VIEW_H - 146, players[i], display(16, left ? '#9cc3ff' : '#ffb98a', 5))
             .setOrigin(align, 0),
         );
       }
@@ -109,6 +110,15 @@ export class VersusScene extends Phaser.Scene {
       onStart: () => sfx(this, 'round', 0.9),
       onComplete: () => this.cameras.main.shake(180, 0.008),
     });
+    const tm = setup.tourney ? currentMatch(setup.tourney) : null;
+    if (setup.tourney && tm) {
+      const final = tm.round === setup.tourney.rounds.length - 1;
+      this.add
+        .text(VIEW_W / 2, VIEW_H / 2 + 86, matchLabel(setup.tourney, tm.round, tm.match), display(20, final ? '#ffd27a' : '#ffffff', 5))
+        .setOrigin(0.5)
+        .setBackgroundColor('#00000088')
+        .setPadding(12, 4, 12, 4);
+    }
     if (setup.arcade) {
       const run = setup.arcade;
       const last = run.fight === run.order.length - 1;

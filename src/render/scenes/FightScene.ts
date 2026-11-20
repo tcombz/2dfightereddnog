@@ -39,6 +39,7 @@ import { SuperFx } from '../superFx';
 import { moveList } from '../moves';
 import { backHint, inputText } from '../prompts';
 import { STAGES } from '../stages';
+import { sideNames } from '../tourney';
 import { ComboTracker, TRIALS, stepLabel } from '../trials';
 import { Rollback } from '../../net/rollback';
 import { Companion } from '../companion';
@@ -273,7 +274,7 @@ export class FightScene extends Phaser.Scene {
 
     // The HUD gets its own camera so shakes and zooms leave it still.
     const cpuSide = setup.mode === 'cpu' ? 1 : -1;
-    this.hud = new Hud(this, this.state, cpuSide, setup.mode === 'training');
+    this.hud = new Hud(this, this.state, cpuSide, setup.mode === 'training', sideNames(setup));
     this.ui.add(this.hud.objects);
     if (setup.mode === 'training') {
       this.trainingText = this.add.text(VIEW_W / 2, 78, '', body(13, CSS.ink)).setOrigin(0.5, 0).setBackgroundColor('#0b0e1ccc').setPadding(10, 4, 10, 4);
@@ -1481,10 +1482,12 @@ export class FightScene extends Phaser.Scene {
       {
         label: 'CHARACTER SELECT',
         onSelect: () =>
-          goTo(this, 'select', { mode: this.setup.mode, cpuLevel: this.setup.cpuLevel, party: this.setup.party, simple: this.setup.simple }),
+          goTo(this, 'select', { mode: this.setup.mode, cpuLevel: this.setup.cpuLevel, party: this.setup.party, tourney: this.setup.tourney, simple: this.setup.simple }),
       },
-      { label: 'MAIN MENU', onSelect: () => goTo(this, 'title', { skipIntro: true }) },
     );
+    // A tournament never ends from a pause: back to the bracket, this match still to play.
+    if (this.setup.tourney) items.push({ label: 'BACK TO THE BRACKET', onSelect: () => goTo(this, 'bracket', { tourney: this.setup.tourney, cpuLevel: this.setup.cpuLevel }) });
+    else items.push({ label: 'MAIN MENU', onSelect: () => goTo(this, 'title', { skipIntro: true }) });
     this.pauseMenu = new Menu(this, VIEW_W / 2 - 170, items.length > 5 ? 186 : 200, items, 340, items.length > 5 ? 42 : 46);
     this.pauseObjects = [shade, title, ...this.pauseMenu.objects];
     this.ui.add(this.pauseObjects);

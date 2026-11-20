@@ -4,7 +4,8 @@
 // the rest wait their turn. Each phone is told what to show (fight pad, roster, remote, waiting)
 // whenever that changes. Not part of the sim.
 import type Phaser from 'phaser';
-import type { PartyState } from '../render/config';
+import type { PartyState, TourneyState } from '../render/config';
+import { currentMatch, entrantStatus } from '../render/tourney';
 import { STAGES } from '../render/stages';
 import { HEROES } from '../sim';
 import { openPadServer, phoneUrl } from '../net/padlink';
@@ -49,12 +50,14 @@ export interface PhonePlayer {
 
 /** Scenes describe what phones should show, and take commands from them (all optional). */
 export interface PhoneAware {
+  /** The scene gives every phone its view itself, seated or not (the bracket). */
+  phoneAll?: boolean;
   phoneView?(seat: number, p: PhonePlayer): Partial<PhoneView> | null;
   phoneCommand?(seat: number, cmd: string, v: unknown, p: PhonePlayer): void;
 }
 
 /** Screens of a match in progress: only the two seated phones drive these. */
-const MATCH_SCENES = new Set(['select', 'versus', 'fight', 'result']);
+const MATCH_SCENES = new Set(['select', 'versus', 'fight', 'result', 'bracket']);
 
 class PhoneHub implements RemoteInput {
   private server: PadServer | null = null;
@@ -63,8 +66,9 @@ class PhoneHub implements RemoteInput {
   readonly players: PhonePlayer[] = [];
   /** The phone (by id) in each player seat. */
   seats: [string | null, string | null] = [null, null];
-  /** The party running now, for queue positions. */
+  /** The party or tournament running now, for queue positions and bracket news. */
   private party: PartyState | null = null;
+  private tourney: TourneyState | null = null;
   private events: MenuEvent[] = [];
   private game: Phaser.Game | null = null;
   /** Goes up whenever the player list changes, so the lobby knows to redraw. */
@@ -137,16 +141,25 @@ class PhoneHub implements RemoteInput {
     return p && p.conn ? p : null;
   }
 
-  /** Seat the two players a match is for: a phone party's sides, else whoever was seated. */
-  seatFor(setup: { party?: PartyState }): void {
+  /** Seat the two players a match is for: a phone party's sides or tournament match, else whoever was seated. */
+  seatFor(setup: { party?: PartyState; tourney?: TourneyState }): void {
     const party = setup.party;
     this.party = party ?? null;
+    this.tourney = setup.tourney ?? null;
     if (party?.phones) this.seats = [party.phones[party.sides[0]] ?? null, party.phones[party.sides[1]] ?? null];
+    // A party or bracket of typed names is played on keys and pads: no phone holds a seat.
+    if ((party && !party.phones) || (setup.tourney && !setup.tourney.phones)) this.seats = [null, null];
+    const t = setup.tourney;
+    if (t?.phones) {
+      const cur = currentMatch(t);
+      this.seats = cur ? [t.phones[cur.m.a] ?? null, t.phones[cur.m.b] ?? null] : [null, null];
+    }
   }
 
   seat(a: string | null, b: string | null): void {
     this.seats = [a, b];
     this.party = null;
+    this.tourney = null;
   }
 
   /** A phone party with everyone who joined since it started added to the back of the queue. */
@@ -225,8 +238,11 @@ class PhoneHub implements RemoteInput {
       this.joined = p;
       if (this.activeKey() !== 'phones') notify(`${p.name} joined: they play next`);
     } else {
-      // The same phone back again (screen locked, Wi-Fi blip): it keeps its seat.
-      if (p.conn && p.conn !== c) p.conn.close();
+      // The same phone back again (screen locked, Wi-Fi blip): it keeps its seat. Swap the link
+      // before closing the old one, so its close does not read as this player leaving.
+      const old = p.conn;
+      p.conn = c;
+      if (old && old !== c) old.close();
       const name = cleanName(m.name);
       if (name) p.name = name;
       notify(`${p.name} is back`);
@@ -334,7 +350,14 @@ class PhoneHub implements RemoteInput {
     const seat = this.seatOf(p.id);
     const key = scene?.scene.key ?? '';
     const base: PhoneView = { screen: 'remote', say: 'USE THE TV MENU', sub: 'Move with the pad, OK to choose.', seat };
+    if (scene?.phoneAll) return { ...base, ...(scene.phoneView?.(seat, p) ?? {}), seat };
     const someoneSeated = this.seats.some((s) => this.byId(s)?.conn);
+    if (seat < 0 && MATCH_SCENES.has(key) && someoneSeated && this.tourney) {
+      const st = entrantStatus(this.tourney, this.tourney.phones?.indexOf(p.id) ?? -1);
+      const cur = currentMatch(this.tourney);
+      const on = cur ? `On now: ${this.tourney.names[cur.m.a]} vs ${this.tourney.names[cur.m.b]}` : '';
+      return { screen: 'wait', seat, say: st.say, sub: st.say === 'STILL IN' || st.say === "YOU'RE UP NEXT" ? `${st.sub}  ·  ${on}` : st.sub };
+    }
     if (seat < 0 && MATCH_SCENES.has(key) && someoneSeated) {
       const party = this.party;
       const k = party?.phones?.indexOf(p.id) ?? -1;

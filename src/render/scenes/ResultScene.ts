@@ -13,6 +13,7 @@ import { STAGES } from '../stages';
 import { Menu, body, display, goTo, goldFill, stripes } from '../ui';
 import { Companion, menuPet } from '../companion';
 import { winLine } from '../rivals';
+import { currentMatch, recordGame, sideNames, withPicks } from '../tourney';
 
 interface ResultData {
   setup: MatchSetup;
@@ -83,7 +84,8 @@ export class ResultScene extends Phaser.Scene {
         .setOrigin(...feetOrigin(art))
         .setScale(menuScale(art, 3));
       let who = setup.mode === 'cpu' && winner === 1 ? 'CPU' : `PLAYER ${winner + 1}`;
-      if (setup.party) who = setup.party.names[setup.party.sides[winner]];
+      const players = sideNames(setup);
+      if (players) who = players[winner];
       if (run && won) who = champion ? 'ARCADE CLEAR' : `FIGHT ${run.fight + 1} OF ${run.order.length} WON`;
       this.add.text(470, 70, who, display(18, winner === 0 ? CSS.p1 : CSS.p2, 4));
       const t = this.add.text(470, 92, champion ? `${info.name}: CHAMPION` : `${info.name} WINS`, display(42, '#ffffff', 8));
@@ -104,7 +106,8 @@ export class ResultScene extends Phaser.Scene {
     }
     const score = `${data.wins[0]} - ${data.wins[1]}`;
     const extra = run ? (champion ? `  ·  continues used: ${run.continues}` : won ? '' : '  ·  continue?') : '';
-    this.add.text(470, 248, score + extra, display(22, CSS.muted, 4));
+    // A tournament says where the match leaves the bracket instead (below).
+    if (!setup.tourney) this.add.text(470, 248, score + extra, display(22, CSS.muted, 4));
 
     const mainMenu = { label: 'MAIN MENU', onSelect: () => goTo(this, 'title', { skipIntro: true }) };
     const inputs = data.replay ?? '';
@@ -127,6 +130,35 @@ export class ResultScene extends Phaser.Scene {
         ]
       : [];
     let items;
+    const tourney = setup.tourney;
+    const tm = tourney ? currentMatch(tourney) : null;
+    if (tourney && tm) {
+      // The bracket after this game; each side's team is remembered for their next pick.
+      const teams: [[number, number], [number, number]] = [
+        [setup.p1, setup.partners?.[0] ?? -1],
+        [setup.p2, setup.partners?.[1] ?? -1],
+      ];
+      const next = recordGame(withPicks(tourney, tm.m.a, tm.m.b, teams[0], teams[1]), winner === 0 || winner === 1 ? winner : -1);
+      const m = next.rounds[tm.round][tm.match];
+      const done = m.winner >= 0;
+      const final = tm.round === tourney.rounds.length - 1;
+      const line = winner !== 0 && winner !== 1
+        ? 'DRAW: THIS MATCH IS PLAYED AGAIN'
+        : done
+          ? final
+            ? `${next.names[m.winner]} WINS THE TOURNAMENT!`
+            : `${next.names[m.winner]} MOVES ON`
+          : `FINAL: ${m.score[0]} - ${m.score[1]}  ·  FIRST TO ${next.firstTo[tm.round]}`;
+      const t = this.add.text(470, 284, line, display(16, done ? CSS.gold : CSS.ink, 4));
+      if (t.width > VIEW_W - 490) t.setScale((VIEW_W - 490) / t.width);
+      items = [
+        { label: done && final ? 'CROWN THE CHAMPION' : 'SEE THE BRACKET', onSelect: () => goTo(this, 'bracket', { tourney: next, cpuLevel: setup.cpuLevel }) },
+        ...watch,
+      ];
+      this.menu = new Menu(this, 470, 326, items);
+      controls.take();
+      return;
+    }
     const party = setup.party;
     if (party) {
       const next = afterMatch(party, winner === 0 || winner === 1 ? winner : -1);
