@@ -30,6 +30,7 @@ import type { FighterState, GameState } from '../../sim';
 import { playMusic, sfx } from '../audio';
 import { C, CSS, GROUND_Y, VIEW_H, VIEW_W } from '../config';
 import type { MatchSetup } from '../config';
+import type { PhoneView } from '../../net/padproto';
 import { Effects } from '../fx';
 import { artFor, feetOrigin, frameName, poseFor } from '../heroArt';
 import { heroInfo } from '../heroInfo';
@@ -310,6 +311,17 @@ export class FightScene extends Phaser.Scene {
     controls.take();
   }
 
+  // ---------- phones ----------
+
+  /** A seated phone shows the fight pad; the pause menu and replays use the remote. */
+  phoneView(): Partial<PhoneView> {
+    const s = this.setup;
+    const teams: [number[], number[]] = [[s.p1, ...(s.partners ? [s.partners[0]] : [])], [s.p2, ...(s.partners ? [s.partners[1]] : [])]];
+    if (s.mode === 'replay') return { screen: 'remote', say: 'REPLAY', sub: 'OK or BACK to stop watching.' };
+    if (this.paused) return { screen: 'remote', say: 'PAUSED', sub: 'Pick from the menu on the TV.' };
+    return { screen: 'fight', say: this.finale ? 'PAUSE SKIPS' : '', teams };
+  }
+
   // ---------- inputs ----------
 
   private inputs(s: GameState): [number, number] {
@@ -364,7 +376,7 @@ export class FightScene extends Phaser.Scene {
       this.runNet();
     } else if (!this.paused) {
       // After a KO the sim ignores input, so playing it slower changes nothing but the drama.
-      this.acc += delta * this.slowmo.rate * this.replaySpeed;
+      this.acc += this.paced(delta) * this.slowmo.rate * this.replaySpeed;
       const most = MAX_STEPS_PER_FRAME * this.replaySpeed;
       let steps = 0;
       while (this.acc >= TICK_MS && steps < most) {
@@ -388,6 +400,28 @@ export class FightScene extends Phaser.Scene {
       if (showFinale && this.matchOverTicks > 110) this.startFinale();
       else if (!showFinale && this.matchOverTicks > 170) this.proceed();
     }
+  }
+
+  /**
+   * Lock the sim to the display. On a 60 Hz screen (most TVs) every frame should run exactly one
+   * sim step, but frame times wobble by a fraction of a millisecond, and with the leftover time
+   * sitting right at a step boundary that wobble alone gives frames of 0 then 2 steps: a visible
+   * stutter several times a second. A frame time within a hair of 1/60 s (or 1/120 s) counts as
+   * exactly that, and the leftover is kept mid-step, so rounding can never tip a frame either way.
+   * Real slowdowns (a dropped frame) are far outside the window and still catch up as before.
+   */
+  private paced(delta: number): number {
+    const steady = this.slowmo.rate === 1 && this.replaySpeed === 1;
+    if (Math.abs(delta - TICK_MS) < 1.5) {
+      if (steady && (this.acc < TICK_MS * 0.2 || this.acc > TICK_MS * 0.8)) this.acc = TICK_MS / 2;
+      return TICK_MS;
+    }
+    if (Math.abs(delta - TICK_MS / 2) < 0.75) {
+      const m = this.acc % (TICK_MS / 2);
+      if (steady && (m < TICK_MS * 0.1 || m > TICK_MS * 0.4)) this.acc = this.acc < TICK_MS / 2 ? TICK_MS * 0.25 : TICK_MS * 0.75;
+      return TICK_MS / 2;
+    }
+    return delta;
   }
 
   /**

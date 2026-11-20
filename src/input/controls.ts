@@ -19,6 +19,14 @@ export interface MenuEvent {
 
 type Binding = Record<string, number>;
 
+/** Inputs from outside this machine's keys and pads: phones used as controllers (`phones.ts`). */
+export interface RemoteInput {
+  poll(now: number): void;
+  bits(player: number): number;
+  take(): MenuEvent[];
+  buzz(player: number, strength: number, ms: number): void;
+}
+
 /** What a keyboard key can be bound to: the eight sim buttons, plus one-key throw, super and Heat. */
 export type KeyAction = 'up' | 'down' | 'left' | 'right' | 'light' | 'heavy' | 'special' | 'block' | 'throw' | 'super' | 'heat' | 'assist' | 'tag' | 'launcher';
 export type KeyMap = Record<KeyAction, string[]>;
@@ -350,6 +358,8 @@ export class Controls {
   private lookup: [Binding, Binding] = [lookupFor(this.keyMaps[0]), lookupFor(this.keyMaps[1])];
   /** While set, the next key press goes here (the key settings are listening) instead of the game. */
   private keyCapture: ((code: string | null) => void) | null = null;
+  /** Phones, once a phone room is open: they add to both players' buttons and to the menus. */
+  remote: RemoteInput | null = null;
 
   constructor() {
     try {
@@ -529,6 +539,11 @@ export class Controls {
       this.padPrev[i] = bits;
       this.padBitsNow[i] = this.capturing ? 0 : bits;
     }
+    if (this.remote) {
+      this.remote.poll(performance.now());
+      const ev = this.remote.take();
+      if (ev.length > 0 && !this.capturing) this.events.push(...ev);
+    }
   }
 
   /** Menu events since the last call. */
@@ -541,7 +556,7 @@ export class Controls {
   /** The sim input bitmask for a player right now. */
   bits(player: number): number {
     const map = this.lookup[player === 0 ? 0 : 1];
-    let b = this.padBitsNow[player];
+    let b = this.padBitsNow[player] | (this.remote?.bits(player) ?? 0);
     for (const code of this.held) b |= map[code] ?? 0;
     return b;
   }
@@ -598,6 +613,7 @@ export class Controls {
   /** Shake a player's pad (where the browser and pad support it). Strength 0 to 1. */
   rumble(player: number, strength: number, ms: number): void {
     if (!this.rumbleOn) return;
+    this.remote?.buzz(player, strength, ms);
     const pad = this.pad(player) as (Gamepad & { vibrationActuator?: { playEffect?: (t: string, p: object) => Promise<unknown> } }) | null;
     const act = pad?.vibrationActuator;
     if (!act || typeof act.playEffect !== 'function') return;

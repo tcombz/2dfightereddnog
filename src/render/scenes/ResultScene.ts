@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { controls } from '../../input/controls';
+import { phones } from '../../input/phones';
 import { HEROES, Result } from '../../sim';
 import { playMusic, sfx } from '../audio';
 import { C, CSS, VIEW_H, VIEW_W } from '../config';
@@ -148,8 +149,13 @@ export class ResultScene extends Phaser.Scene {
       items = [
         { label: 'NEXT MATCH', onSelect: () => goTo(this, 'select', carry) },
         ...watch,
-        { label: 'END PARTY', onSelect: () => goTo(this, 'party') },
+        { label: 'END PARTY', onSelect: () => goTo(this, party.phones ? 'phones' : 'party') },
       ];
+      if (party.phones && phones.open) {
+        this.add
+          .text(VIEW_W - 16, VIEW_H - 12, `MORE PLAYERS? JOIN WITH CODE ${phones.code}`, display(13, CSS.gold, 3))
+          .setOrigin(1, 1);
+      }
       this.standings(next);
       this.menu = new Menu(this, 470, 326, items);
       controls.take();

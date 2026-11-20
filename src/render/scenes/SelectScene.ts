@@ -3,6 +3,8 @@
 // Tag teams pick two (point, then partner); training picks one each.
 import Phaser from 'phaser';
 import { controls } from '../../input/controls';
+import { phones } from '../../input/phones';
+import type { PhoneView } from '../../net/padproto';
 import { HEROES } from '../../sim';
 import { playMusic, sfx } from '../audio';
 import { C, CSS, VIEW_H, VIEW_W } from '../config';
@@ -99,6 +101,14 @@ export class SelectScene extends Phaser.Scene {
       party: data.party,
       simple: data.simple ? [...data.simple] : [simple, simple && mode === 'versus'],
     };
+    // A phone party: anyone who joined since the last match goes to the back of the queue. Phone
+    // players get their own controls setting (simple specials unless they turned it off).
+    if (this.setup.party?.phones) this.setup.party = phones.withLatecomers(this.setup.party);
+    phones.seatFor(this.setup);
+    for (const i of [0, 1]) {
+      const ph = phones.phoneAt(i);
+      if (ph && this.setup.simple && (i === 0 || mode === 'versus')) this.setup.simple[i] = ph.simple;
+    }
     this.phase = 'heroes';
     this.pets = [null, null];
     this.team = mode !== 'training';
@@ -268,6 +278,8 @@ export class SelectScene extends Phaser.Scene {
     const s = this.setup.simple ?? [false, false];
     s[i] = !s[i];
     this.setup.simple = s;
+    const ph = phones.phoneAt(i);
+    if (ph) ph.simple = s[i];
     sfx(this, 'ui_move', 0.8);
     this.refresh();
   }
@@ -278,7 +290,7 @@ export class SelectScene extends Phaser.Scene {
       const simple = this.setup.simple?.[i] ?? false;
       side.controls
         .setVisible(this.human(i) && this.phase === 'heroes')
-        .setText(`${this.altKey(i)}: CONTROLS ${simple ? 'SIMPLE' : 'CLASSIC'}`)
+        .setText(`${phones.phoneAt(i) ? 'PHONE' : this.altKey(i)}: CONTROLS ${simple ? 'SIMPLE' : 'CLASSIC'}`)
         .setColor(simple ? CSS.gold : CSS.ink);
       const hero = side.cursor < HEROES.length ? side.cursor : -1;
       if (i === 1 && this.arcade) {
@@ -343,7 +355,16 @@ export class SelectScene extends Phaser.Scene {
       fitText(side.title, 280);
     }
     const who = this.setup.mode === 'versus' ? 'Each player: move and confirm' : this.sides[0].locked && !this.arcade ? 'Now pick the opponent' : 'Pick with the arrows';
-    this.hint.setText(this.phase === 'stage' ? `Choose a stage  ·  Left / Right  ·  ${menuHint()}` : `${who}  ·  ${menuHint()}`);
+    const onPhones = phones.phoneAt(0) !== null || phones.phoneAt(1) !== null;
+    this.hint.setText(
+      onPhones
+        ? this.phase === 'stage'
+          ? 'Pick the stage on your phone, then FIGHT!'
+          : 'Pick on your phone: tap a fighter, tap again (or LOCK IN) to lock'
+        : this.phase === 'stage'
+          ? `Choose a stage  ·  Left / Right  ·  ${menuHint()}`
+          : `${who}  ·  ${menuHint()}`,
+    );
   }
 
   /** A slot filling: the card slams in. */
@@ -431,11 +452,83 @@ export class SelectScene extends Phaser.Scene {
       this.sides[0].locked = false;
       this.sides[0].ready.setVisible(false);
     } else {
-      goTo(this, this.setup.party ? 'party' : 'title', { skipIntro: true });
+      const fromPhones = !!this.setup.party?.phones || (!this.setup.party && phones.connected().length > 0);
+      goTo(this, fromPhones ? 'phones' : this.setup.party ? 'party' : 'title', { skipIntro: true });
       return;
     }
     sfx(this, 'ui_move', 0.8);
     this.refresh();
+  }
+
+  private confirmStage(): void {
+    if ((this as unknown as { leaving?: boolean }).leaving) return;
+    sfx(this, 'ui_confirm');
+    if (this.team) {
+      this.setup.p1 = this.sides[0].first;
+      this.setup.p2 = this.sides[1].first;
+      this.setup.partners = [this.sides[0].cursor, this.sides[1].cursor];
+    } else {
+      this.setup.p1 = this.sides[0].cursor;
+      this.setup.p2 = this.sides[1].cursor;
+      this.setup.partners = undefined;
+    }
+    this.setup.stage = this.stage;
+    goTo(this, 'versus', this.setup, 300);
+  }
+
+  private showStage(k: number): void {
+    this.stage = (k + STAGES.length) % STAGES.length;
+    this.stageBg.setTexture(`stage_${STAGES[this.stage].id}`);
+    sfx(this, 'ui_move', 0.8);
+  }
+
+  // ---------- phones ----------
+
+  /** What a seated phone shows: its side's picks, or the stage list. */
+  phoneView(seat: number): Partial<PhoneView> | null {
+    if (seat < 0 || this.arcade) return null;
+    if (this.phase === 'stage') return { screen: 'stage', say: 'CHOOSE A STAGE', stage: this.stage };
+    const i = this.activeSide(seat);
+    const side = this.sides[i];
+    const cpu = i === 1 && this.setup.mode !== 'versus';
+    const who = cpu ? "THE CPU'S " : '';
+    const say = side.locked
+      ? 'READY!'
+      : !this.team
+        ? `PICK ${cpu ? 'THE CPU FIGHTER' : 'A FIGHTER'}`
+        : side.first < 0
+          ? `PICK ${who || 'YOUR '}POINT`
+          : `NOW PICK ${who || 'A '}PARTNER`;
+    return {
+      screen: 'select',
+      say,
+      side: i,
+      cursor: side.cursor,
+      first: side.first,
+      locked: side.locked,
+      team: this.team,
+      simple: this.human(i) ? (this.setup.simple?.[i] ?? false) : undefined,
+    };
+  }
+
+  phoneCommand(seat: number, c: string, v: unknown): void {
+    if (seat < 0 || this.arcade || (this as unknown as { leaving?: boolean }).leaving) return;
+    if (this.phase === 'stage') {
+      if (c === 'stage' && typeof v === 'number' && v >= 0 && v < STAGES.length) this.showStage(v);
+      else if (c === 'lock') this.confirmStage();
+      else if (c === 'back') this.back(1);
+      return;
+    }
+    const i = this.activeSide(seat);
+    const side = this.sides[i];
+    if (c === 'back') this.back(i);
+    else if (side.locked) return;
+    else if (c === 'hero' && typeof v === 'number' && v >= 0 && v < this.count && v !== side.cursor) {
+      side.cursor = v;
+      sfx(this, 'ui_move', 0.8);
+      this.refresh();
+    } else if (c === 'lock') this.lock(i);
+    else if (c === 'simple' && this.human(i)) this.toggleControls(i);
   }
 
   /** Grid moves: left / right along the row (wrapping), up / down between rows. */
@@ -463,24 +556,9 @@ export class SelectScene extends Phaser.Scene {
     }
     for (const e of controls.take()) {
       if (this.phase === 'stage') {
-        if (e.action === 'left' || e.action === 'right') {
-          this.stage = (this.stage + (e.action === 'left' ? -1 : 1) + STAGES.length) % STAGES.length;
-          this.stageBg.setTexture(`stage_${STAGES[this.stage].id}`);
-          sfx(this, 'ui_move', 0.8);
-        } else if (e.action === 'confirm') {
-          sfx(this, 'ui_confirm');
-          if (this.team) {
-            this.setup.p1 = this.sides[0].first;
-            this.setup.p2 = this.sides[1].first;
-            this.setup.partners = [this.sides[0].cursor, this.sides[1].cursor];
-          } else {
-            this.setup.p1 = this.sides[0].cursor;
-            this.setup.p2 = this.sides[1].cursor;
-            this.setup.partners = undefined;
-          }
-          this.setup.stage = this.stage;
-          goTo(this, 'versus', this.setup, 300);
-        } else if (e.action === 'back' || e.action === 'pause') this.back(1);
+        if (e.action === 'left' || e.action === 'right') this.showStage(this.stage + (e.action === 'left' ? -1 : 1));
+        else if (e.action === 'confirm') this.confirmStage();
+        else if (e.action === 'back' || e.action === 'pause') this.back(1);
         continue;
       }
       const i = this.activeSide(e.player);

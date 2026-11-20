@@ -46,6 +46,15 @@
   rewind, time sync, desync hash check), `link.ts` (the claude.ai page's room when hosted there,
   WebRTC through PeerJS elsewhere, `?net=local` for two tabs), `session.ts` (lobby state across
   scenes; lobby UI in `scenes/OnlineScene.ts`)
+- Phone controllers (party on a TV): `src/net/padlink.ts` (the TV hosts a room through the PeerJS
+  broker, phones connect by code; `?net=local` for tabs of one browser), `src/net/padproto.ts` (the
+  messages), `src/input/phones.ts` (TV side: phones become players, two hold the P1 / P2 seats and
+  feed `controls` like a pad, short taps are latched so none are missed; each phone is sent a view
+  from the active scene's `phoneView()` and its picks go to `phoneCommand()`), `src/phone/` (the
+  phone page: plain DOM, no Phaser; fight pad, menu remote, roster and stage picker, wait screen),
+  lobby in `scenes/PhonesScene.ts` (QR code). `src/main.ts` loads the phone page for `?pad=CODE` or a
+  touch-only device (`?tv=1` forces the game), else `src/game.ts`. A phone party is a party with
+  `PartyState.phones` (phone ids by name); players who join later go to the back of the queue.
 - `src/render/companion.ts` a fighter's companion (Quincy's cat, `companion: true` in `heroArt.ts`):
   sits in the stage background on his side in every fight (hisses when he is knocked down, meows on
   his super and wins) and on the floor beside him in the menus. Presentation only
@@ -73,6 +82,8 @@
   into `assets/audio/sfx/`: cleaned, levelled, layered with synthesized transients, plus synthesized
   power sounds. Edit the script, not the output. `audio.ts` puts a compressor on the master output and
   throttles repeats.
+- FightScene locks sim steps to the display (`paced()`): a frame time within a hair of 1/60 s (or
+  1/120 s) counts as exactly that, so a 60 Hz screen runs one step per frame with no 0 / 2 judder.
 - Animation smoothness comes from the renderer, not more frames: FightScene blends each frame change
   over ~70 ms (`blend`), adds breathing, jump stretch and blockstun shove (`bodyMotion`), and wind-up /
   lunge / follow-through on attacks (`motion`); `pingpong` idles in `heroArt.ts`.

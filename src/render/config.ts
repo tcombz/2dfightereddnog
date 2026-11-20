@@ -75,6 +75,8 @@ export interface PartyState {
   matches: number;
   /** Who won the last match, for streaks. */
   lastWinner?: number;
+  /** A phone party: the phone (its id) behind each name, in the same order as `names`. */
+  phones?: string[];
 }
 
 /** An arcade run: the opponents in order, which fight is next, continues used, and the difficulty. */

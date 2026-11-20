@@ -3,6 +3,7 @@ import { HEROES } from '../../sim';
 import { announce, ensureMusic, sfx, stopMusic } from '../audio';
 import { CSS, VIEW_H, VIEW_W } from '../config';
 import type { MatchSetup } from '../config';
+import type { PhoneView } from '../../net/padproto';
 import { artFor, feetOrigin, frameName, menuScale } from '../heroArt';
 import { heroInfo } from '../heroInfo';
 import { STAGES } from '../stages';
@@ -14,7 +15,16 @@ export class VersusScene extends Phaser.Scene {
     super('versus');
   }
 
+  private setup!: MatchSetup;
+
+  /** Phones switch to the fight pad during the splash. */
+  phoneView(): Partial<PhoneView> {
+    const s = this.setup;
+    return { screen: 'fight', say: 'GET READY', teams: [[s.p1, ...(s.partners ? [s.partners[0]] : [])], [s.p2, ...(s.partners ? [s.partners[1]] : [])]] };
+  }
+
   create(setup: MatchSetup): void {
+    this.setup = setup;
     (this as unknown as { leaving: boolean }).leaving = false;
     this.cameras.main.fadeIn(200, 255, 255, 255);
     stopMusic(this, 400);

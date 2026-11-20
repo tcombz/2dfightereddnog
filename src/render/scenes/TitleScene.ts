@@ -19,6 +19,7 @@ import { body, display, fitText, goTo, goldFill } from '../ui';
 const HOME: Record<string, string> = { rogue: 'rooftop', jetsetter: 'concert', chris: 'embassy', leader: 'crown', eddnog: 'fortress', malcolm: 'helipad', quincy: 'penthouse', ignar: 'fortress', vesper: 'rooftop' };
 
 const TIPS = [
+  'PHONE PARTY: put this on a TV. Everyone scans the code and plays with their phone.',
   'Pick two fighters: BLOCK + LIGHT calls your partner in for an assist.',
   'BLOCK + SPECIAL tags your partner in. The one resting gets red health back.',
   'Any normal > BLOCK + HEAVY launches. Press UP to super jump after them.',
@@ -121,7 +122,8 @@ export class TitleScene extends Phaser.Scene {
     const tips = Phaser.Utils.Array.Shuffle([...TIPS]).join('      ★      ');
     this.ticker = this.add.text(VIEW_W, VIEW_H - 14, tips, body(13, CSS.ink)).setOrigin(0, 0.5).setDepth(11);
     const hintBg = this.add.graphics().setDepth(12);
-    hintBg.fillStyle(0x05060c, 1).fillRect(VIEW_W - 330, VIEW_H - 28, 330, 28);
+    hintBg.fillStyle(0x05060c, 1).fillRect(VIEW_W - 344, VIEW_H - 28, 344, 28);
+    hintBg.fillStyle(0x05060c, 0.6).fillRect(VIEW_W - 356, VIEW_H - 28, 12, 28);
     this.footer = this.add.text(VIEW_W - 14, VIEW_H - 14, '', body(13, CSS.muted)).setOrigin(1, 0.5).setDepth(13);
     this.promptStamp = -1;
     // Status, top right.
@@ -254,6 +256,7 @@ export class TitleScene extends Phaser.Scene {
       goTo(this, 'select', setup);
     };
     this.root = [
+      { label: 'PHONE PARTY', desc: 'Put the game on a TV. Everyone scans the code and plays with their phone as the controller.', onSelect: () => goTo(this, 'phones') },
       { label: 'ARCADE', desc: 'Pick a team and fight through the whole ladder. Left / Right: difficulty.', value: level, onLeft: easier, onRight: harder, onSelect: () => goTo(this, 'select', { mode: 'cpu', cpuLevel: cpuLevel(), arcadeStart: true }) },
       {
         label: 'VERSUS',
@@ -320,7 +323,8 @@ export class TitleScene extends Phaser.Scene {
       const on = Math.max(0, 1 - Math.abs(this.ease - k));
       const slide = Math.min(1, Math.max(0, (since - k * 45) / 220));
       const enter = 1 - (1 - slide) * (1 - slide);
-      const h = 33 + 13 * on;
+      // Eight rows fit above the description strip when packed a little tighter.
+      const h = (items.length > 7 ? 29 : 33) + 13 * on;
       const x = 30 + on * 22 - (1 - enter) * 420;
       const w = 330 + on * 40;
       const cy = y + h / 2;
@@ -345,7 +349,7 @@ export class TitleScene extends Phaser.Scene {
         .setPosition(x + w - 26, cy)
         .setAlpha(enter);
       fitText(r.label, w - (it.value ? 150 : 40));
-      y += h + 6;
+      y += h + (items.length > 7 ? 5 : 6);
     });
     this.desc.setText(items[index]?.desc ?? '');
   }
