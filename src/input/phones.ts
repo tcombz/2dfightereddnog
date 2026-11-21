@@ -46,6 +46,8 @@ export interface PhonePlayer {
   lastBuzz: number;
   /** When the TV last pinged this phone (performance.now). */
   pinged: number;
+  /** The phone page's session: it changes when the page is reloaded. */
+  sid: string;
 }
 
 /** Scenes describe what phones should show, and take commands from them (all optional). */
@@ -189,12 +191,18 @@ class PhoneHub implements RemoteInput {
 
   private greet(c: PadConn): void {
     let me: PhonePlayer | null = null;
+    let asked = 0;
     c.onData((m) => {
       if (m.t === 'hi') {
         me = this.hello(c, m);
         return;
       }
       if (me && me.conn === c) this.hear(me, m);
+      else if (performance.now() - asked > 2000) {
+        // A phone we do not know on this link (the TV's side of it restarted): ask who it is.
+        asked = performance.now();
+        c.send({ t: 'who' });
+      }
     });
     c.onClose(() => {
       if (me && me.conn === c) {
@@ -233,6 +241,7 @@ class PhoneHub implements RemoteInput {
         sent: '',
         lastBuzz: 0,
         pinged: 0,
+        sid: '',
       };
       this.players.push(p);
       this.joined = p;
@@ -249,8 +258,14 @@ class PhoneHub implements RemoteInput {
     }
     p.conn = c;
     p.heard = performance.now();
-    p.q = 0;
-    p.n = typeof m.n === 'number' ? m.n : 0;
+    // The same page saying hello again on another route keeps its counters (so no press is
+    // replayed); a reloaded page starts from zero.
+    const sid = typeof m.sid === 'string' ? m.sid : '';
+    if (!sid || sid !== p.sid) {
+      p.q = 0;
+      p.n = typeof m.n === 'number' ? m.n : 0;
+    }
+    p.sid = sid;
     p.sent = '';
     const hello: PadHello = { t: 'hello', v: PAD_VERSION, roster: HEROES.map((h) => h.id), stages: STAGES.map((s) => ({ id: s.id, name: s.name })), name: p.name, color: p.color };
     c.send(hello);

@@ -150,9 +150,16 @@ function attach(c: PadConn): void {
     conn = null;
     lost();
   });
-  c.send({ t: 'hi', v: PAD_VERSION, id, name, n: presses });
+  sayHi(c);
   status = 'live';
   render();
+}
+
+/** This page, this visit: lets the TV tell a reload from the same page on another route. */
+const sid = Math.random().toString(36).slice(2, 10);
+
+function sayHi(c: PadConn | null = conn): void {
+  c?.send({ t: 'hi', v: PAD_VERSION, id, sid, name, n: presses });
 }
 
 function lost(): void {
@@ -195,6 +202,8 @@ function onMessage(m: Record<string, unknown>): void {
   } else if (m.t === 'full') {
     status = 'full';
     render();
+  } else if (m.t === 'who') {
+    sayHi();
   }
 }
 
