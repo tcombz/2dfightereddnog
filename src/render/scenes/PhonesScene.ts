@@ -213,7 +213,7 @@ export class PhonesScene extends Phaser.Scene {
     this.tweens.add({ targets: this.qr, scaleX: QR_SIZE / n, scaleY: QR_SIZE / n, alpha: 1, duration: 300, ease: 'Back.easeOut' });
     this.codeText.setText(`CODE  ${phones.code}`);
     goldFill(this.codeText);
-    this.urlText.setText(url.replace(/^https?:\/\//, '').replace(/[?&]net=local/, ''));
+    this.urlText.setText(`${url.replace(/^https?:\/\//, '').replace(/[?&](net|b)=[^&]*/g, '')}   ·   build ${__BUILD__}`);
     this.status.setText('');
   }
 

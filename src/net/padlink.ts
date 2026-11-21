@@ -45,7 +45,8 @@ export function phoneUrl(code: string): string {
   const h = location.hostname;
   const shareable = !embedded && location.protocol.startsWith('http') && h !== 'localhost' && h !== '127.0.0.1' && h !== '';
   const base = shareable || local() ? `${location.origin}${location.pathname}` : PUBLIC_URL;
-  return `${base}?pad=${code}${local() ? '&net=local' : ''}`;
+  // The build stamp makes the address new for every release, so phones never open a cached old page.
+  return `${base}?pad=${code}&b=${__BUILD__}${local() ? '&net=local' : ''}`;
 }
 
 // ---------- the broker ----------
@@ -450,7 +451,17 @@ async function peerConnect(code: string, waitMs: number): Promise<PadConn> {
       link.close();
       reject(new Error(msg));
     };
-    const timer = setTimeout(() => fail(reason || 'No answer from the TV. Check the code on the TV screen, and that the TV is on the PHONE PARTY screen.'), waitMs);
+    let reachedBroker = false;
+    const timer = setTimeout(
+      () =>
+        fail(
+          reason ||
+            (reachedBroker
+              ? 'Online, but the TV did not answer. On the laptop: reload the game page, open PHONE PARTY, check the code.'
+              : 'No answer from the TV. Check the code on the TV screen, and that the TV is on the PHONE PARTY screen.'),
+        ),
+      waitMs,
+    );
     const up = (): void => {
       if (settled) return;
       settled = true;
@@ -466,6 +477,7 @@ async function peerConnect(code: string, waitMs: number): Promise<PadConn> {
     if (only !== 'direct') {
       Relay.open(`afterhours-p-${rid()}`).then(
         (relay) => {
+          reachedBroker = true;
           const tv = `${RELAY_PREFIX}${code.toLowerCase()}`;
           let confirmed = false;
           // Knock until the TV answers (the first knock can race the TV's own connection).
@@ -485,7 +497,7 @@ async function peerConnect(code: string, waitMs: number): Promise<PadConn> {
             link.deliver(m);
           });
           relay.onExpire((dst) => {
-            if (dst === tv && !confirmed) reason = 'No game with that code. Check the code on the TV screen.';
+            if (dst === tv && !confirmed) reason = `No TV with code ${code} right now. Check the code, or on the laptop reload the game and open PHONE PARTY.`;
           });
           relay.onClose(() => {
             window.clearInterval(knocking);

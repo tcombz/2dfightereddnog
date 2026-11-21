@@ -121,12 +121,24 @@ async function join(): Promise<void> {
     return;
   }
   store('afterhours.phoneName', name);
+  // A fresh try clears the last error; an automatic retry keeps it on screen.
+  if (status !== 'connecting') {
+    error = '';
+    tries = 0;
+  }
   status = 'connecting';
-  error = '';
   render();
   keepAwake();
+  tries += 1;
   try {
-    attach(await connectPad(code));
+    const c = await connectPad(code);
+    if (status !== 'connecting') {
+      // Cancelled while it was connecting.
+      c.close();
+      return;
+    }
+    tries = 0;
+    attach(c);
     try {
       const u = new URL(location.href);
       u.searchParams.set('pad', code);
@@ -135,11 +147,19 @@ async function join(): Promise<void> {
       // Fine without it.
     }
   } catch (e) {
-    status = 'join';
+    if (status !== 'connecting') return;
+    // Keep trying by itself: the TV may still be loading, or on another screen.
     error = (e as Error)?.message ?? 'Could not connect.';
     render();
+    window.clearTimeout(reconnectTimer);
+    reconnectTimer = window.setTimeout(() => {
+      if (status === 'connecting') void join();
+    }, 2500);
   }
 }
+
+/** Attempts so far, for the waiting screen. */
+let tries = 0;
 
 function attach(c: PadConn): void {
   conn = c;
@@ -184,7 +204,7 @@ function onMessage(m: Record<string, unknown>): void {
   heardAt = performance.now();
   if (m.t === 'hello') {
     const h = m as unknown as PadHello;
-    if (h.v !== PAD_VERSION) {
+    if (h.v > PAD_VERSION) {
       status = 'old';
       conn?.close();
       render();
@@ -302,11 +322,35 @@ function joinScreen(): HTMLElement {
       el('div', { class: 'err' }, error),
     ),
     el('a', { class: 'link', href: `${location.pathname}?tv=1` }, 'Play on this screen instead'),
+    el('div', { class: 'tip' }, `build ${__BUILD__}`),
   );
 }
 
 function waitingScreen(): HTMLElement {
-  return el('div', { class: 'center' }, el('div', { class: 'spin' }), el('div', { class: 'h2' }, status === 'live' ? 'CONNECTED' : 'CONNECTING TO THE TV'), el('div', { class: 'muted' }, `Code ${code}`));
+  const live = status === 'live';
+  return el(
+    'div',
+    { class: 'center' },
+    el('div', { class: 'spin' }),
+    el('div', { class: 'h2' }, live ? 'CONNECTED' : 'CONNECTING TO THE TV'),
+    el('div', { class: 'muted' }, `Code ${code}${!live && tries > 1 ? `  ·  try ${tries}, keeps trying by itself` : ''}`),
+    !live && error && el('div', { class: 'err' }, error),
+    !live &&
+      el(
+        'button',
+        {
+          class: 'ghost',
+          onclick: () => {
+            status = 'join';
+            tries = 0;
+            window.clearTimeout(reconnectTimer);
+            render();
+          },
+        },
+        'CHANGE CODE',
+      ),
+    el('div', { class: 'tip' }, `build ${__BUILD__}`),
+  );
 }
 
 function lostScreen(): HTMLElement {
@@ -325,7 +369,13 @@ function fullScreen(): HTMLElement {
 }
 
 function oldScreen(): HTMLElement {
-  return el('div', { class: 'center' }, el('div', { class: 'h2' }, 'UPDATE NEEDED'), el('div', { class: 'muted' }, 'The TV runs a newer version.'), el('button', { class: 'big', onclick: () => location.reload() }, 'RELOAD'));
+  return el(
+    'div',
+    { class: 'center' },
+    el('div', { class: 'h2' }, 'UPDATE NEEDED'),
+    el('div', { class: 'muted' }, 'The TV runs a newer version of the game than this page.'),
+    el('button', { class: 'big', onclick: () => location.replace(`${location.pathname}?pad=${code}&b=${Date.now().toString(36)}`) }, 'RELOAD'),
+  );
 }
 
 /** The top bar: the headline, and this player's name chip (tap to rename). */
