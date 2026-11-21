@@ -518,12 +518,15 @@ class Routes implements PadConn {
       r.close();
       return;
     }
-    this.routes.get(kind)?.close();
+    const old = this.routes.get(kind);
     this.routes.set(kind, r);
+    if (old && old !== r) old.close();
     this.pick();
   }
 
-  drop(kind: Route): void {
+  /** A route has closed: forget it, if it is still the one in use for its kind. */
+  drop(kind: Route, r?: { send(m: unknown): void; close(): void }): void {
+    if (r && this.routes.get(kind) !== r) return;
     if (!this.routes.delete(kind)) return;
     if (this.routes.size === 0) this.end();
     else this.pick();
@@ -633,6 +636,9 @@ async function peerConnect(code: string, waitMs: number): Promise<PadConn> {
             mq.subscribe(`${base}/p/${me}`);
             const send = (m: unknown): void => mq.publish(`${base}/tv`, JSON.stringify({ f: me, m }));
             let confirmed = false;
+            /** This broker is the one carrying the link (the others are closed when they answer). */
+            let mine = false;
+            const route = { send, close: () => mq.close() };
             const knock = (): void => send({ __probe: 1 });
             // The subscription settles first, then knock until the TV answers.
             const knocking = window.setInterval(knock, 1500);
@@ -656,16 +662,17 @@ async function peerConnect(code: string, waitMs: number): Promise<PadConn> {
                   return;
                 }
                 won = true;
-                link.add('mqtt', { send, close: () => mq.close() });
+                mine = true;
+                link.add('mqtt', route);
                 up();
                 return;
               }
-              if (confirmed && won) link.deliver(m);
+              if (mine) link.deliver(m);
             });
             mq.onClose(() => {
               window.clearInterval(knocking);
-              if (confirmed && won) link.drop('mqtt');
-              else lose();
+              if (mine) link.drop('mqtt', route);
+              else if (!confirmed) lose();
             });
             window.setTimeout(() => {
               if (!confirmed) {
@@ -685,6 +692,7 @@ async function peerConnect(code: string, waitMs: number): Promise<PadConn> {
           reachedService = true;
           const tv = `${RELAY_PREFIX}${code.toLowerCase()}`;
           let confirmed = false;
+          const relayRoute = { send: (msg: unknown) => relay.send(tv, msg), close: () => relay.close() };
           // Knock until the TV answers (the first knock can race the TV's own connection).
           const knock = (): void => relay.send(tv, { __probe: 1 });
           knock();
@@ -695,7 +703,7 @@ async function peerConnect(code: string, waitMs: number): Promise<PadConn> {
               if (confirmed) return;
               confirmed = true;
               window.clearInterval(knocking);
-              link.add('relay', { send: (msg) => relay.send(tv, msg), close: () => relay.close() });
+              link.add('relay', relayRoute);
               up();
               return;
             }
@@ -703,7 +711,7 @@ async function peerConnect(code: string, waitMs: number): Promise<PadConn> {
           });
           relay.onClose(() => {
             window.clearInterval(knocking);
-            if (confirmed) link.drop('relay');
+            if (confirmed) link.drop('relay', relayRoute);
             else failed();
           });
           // Never answered: give up on this route (another may still come through).
@@ -739,12 +747,13 @@ async function peerConnect(code: string, waitMs: number): Promise<PadConn> {
             // Linked: the broker is not needed for this route any more.
             peer.disconnect();
             const pc = wrap(dc);
+            const directRoute = { send: (m: unknown) => pc.send(m), close: () => pc.close() };
             pc.onData((m) => link.deliver(m));
             pc.onClose(() => {
-              link.drop('direct');
+              link.drop('direct', directRoute);
               peer.destroy();
             });
-            link.add('direct', { send: (m) => pc.send(m), close: () => pc.close() });
+            link.add('direct', directRoute);
             up();
           });
         });
