@@ -53,8 +53,11 @@
 - Phone controllers (party on a TV): `src/net/padlink.ts` (the TV hosts a room through the PeerJS
   broker, phones connect by code over two routes at once: a relay through the broker (its
   forwarded "candidate" messages; works on mobile data and Wi-Fi that keeps devices apart) and a
-  direct WebRTC link that takes over when it opens; `?net=local` for tabs of one browser,
-  `?broker=host:port` to test against a local PeerJS server, `?route=relay|direct` for one route), `src/net/padproto.ts` (the
+  direct WebRTC link that takes over when it opens) plus free public MQTT brokers (`src/net/mqtt.ts`,
+  a minimal MQTT-over-WebSocket client; the TV listens on all, a phone uses the first that answers),
+  so the room still opens and phones still join when the PeerJS broker is down; `?net=local` for tabs
+  of one browser, `?broker=host:port` / `?mqtt=ws://host:port` to test against local servers,
+  `?route=relay|direct|mqtt` for one route), `src/net/padproto.ts` (the
   messages), `src/input/phones.ts` (TV side: phones become players, two hold the P1 / P2 seats and
   feed `controls` like a pad, short taps are latched so none are missed; each phone is sent a view
   from the active scene's `phoneView()` and its picks go to `phoneCommand()`), `src/phone/` (the

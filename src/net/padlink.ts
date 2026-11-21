@@ -1,10 +1,12 @@
-// Phones as controllers: the TV page hosts a room, each phone connects to it through the public
-// PeerJS broker, over two routes at once: a relay through the broker (works almost anywhere) and
-// a direct WebRTC link (faster; takes over when the network lets it open). `?net=local` uses a
-// BroadcastChannel instead, so tabs of one browser can try it.
+// Phones as controllers: the TV page hosts a room, each phone connects to it over every route at
+// once: a direct WebRTC link (fastest; when the network lets it open), a relay through the public
+// PeerJS broker, and free public MQTT brokers (other providers, for when PeerJS is out of reach).
+// `?net=local` uses a BroadcastChannel instead, so tabs of one browser can try it.
 //
 // Messages are small JSON objects. The data channel is reliable but unordered (no message waits
 // behind a lost one); the phone numbers its input messages so the TV can ignore stale ones.
+
+import { Mqtt } from './mqtt';
 
 export interface PadConn {
   send(msg: unknown): void;
@@ -290,36 +292,143 @@ function savedCode(code?: string): string {
   }
 }
 
-async function peerServer(): Promise<PadServer> {
-  const { Peer } = await import('peerjs');
-  const last = savedCode();
-  for (let attempt = 0; attempt < 6; attempt += 1) {
-    const code = attempt === 0 && last.length === 4 ? last : padCode();
-    const peer = new Peer(`${PREFIX}${code.toLowerCase()}`, broker() ?? {});
-    const ok = await new Promise<string>((res) => {
-      const timer = setTimeout(() => res('timeout'), 12000);
-      peer.once('open', () => {
-        clearTimeout(timer);
-        res('ok');
-      });
-      peer.once('error', (e: { type?: string }) => {
-        clearTimeout(timer);
-        res(e.type === 'unavailable-id' ? 'taken' : 'error');
-      });
+// ---------- backup: public MQTT brokers ----------
+
+/**
+ * Free public MQTT brokers, from different providers. The TV listens on all of them; a phone
+ * knocks on all of them and uses the first where the TV answers. They carry the game whenever the
+ * PeerJS broker cannot be reached. `?mqtt=ws://host:port` (comma separated) for testing.
+ */
+function mqttBrokers(): string[] {
+  const t = new URLSearchParams(location.search).get('mqtt');
+  if (t) return t.split(',').filter(Boolean);
+  return ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081/mqtt'];
+}
+
+const topicBase = (code: string): string => `afterhours-pad/v1/${code.toLowerCase()}`;
+
+/** The TV's end on every MQTT broker: each phone that writes to it becomes a connection. */
+function mqttHost(code: string, listeners: Array<(c: PadConn) => void>): { up(): boolean; close(): void } {
+  const base = topicBase(code);
+  let stopped = false;
+  const live = new Set<Mqtt>();
+  const conns = new Map<string, { deliver(m: Record<string, unknown>): void; end(): void }>();
+  const start = async (url: string): Promise<void> => {
+    if (stopped) return;
+    let mq: Mqtt;
+    try {
+      mq = await Mqtt.connect(url);
+    } catch {
+      if (!stopped) window.setTimeout(() => void start(url), 6000);
+      return;
+    }
+    if (stopped) {
+      mq.close();
+      return;
+    }
+    live.add(mq);
+    mq.subscribe(`${base}/tv`);
+    mq.onMessage((_topic, payload) => {
+      let msg: { f?: string; m?: Record<string, unknown> };
+      try {
+        msg = JSON.parse(payload);
+      } catch {
+        return;
+      }
+      const from = typeof msg.f === 'string' ? msg.f.slice(0, 40) : '';
+      const m = msg.m;
+      if (!from || !m || typeof m !== 'object') return;
+      const to = `${base}/p/${from}`;
+      if (m.__probe === 1) {
+        mq.publish(to, JSON.stringify({ m: { __probe: 2 } }));
+        return;
+      }
+      const key = `${url}|${from}`;
+      let c = conns.get(key);
+      if (!c) {
+        const data: Array<(m: Record<string, unknown>) => void> = [];
+        const closed: Array<() => void> = [];
+        let done = false;
+        const end = (): void => {
+          if (done) return;
+          done = true;
+          conns.delete(key);
+          for (const f of closed) f();
+        };
+        const pc: PadConn = {
+          send: (out) => {
+            if (!done && !mq.closed) mq.publish(to, JSON.stringify({ m: out }));
+          },
+          onData: (f) => void data.push(f),
+          onClose: (f) => void closed.push(f),
+          close: end,
+        };
+        c = { deliver: (x) => data.forEach((f) => f(x)), end };
+        conns.set(key, c);
+        for (const f of listeners) f(pc);
+      }
+      c.deliver(m);
     });
-    if (ok === 'taken') {
-      peer.destroy();
-      continue;
-    }
-    if (ok !== 'ok') {
-      peer.destroy();
-      throw new Error('Could not reach the connection service. Check the internet connection and try again.');
-    }
-    savedCode(code);
-    const listeners: Array<(c: PadConn) => void> = [];
-    let up = true;
-    peer.on('connection', (c) => {
-      const dc = c as unknown as PeerDataConn;
+    mq.onClose(() => {
+      live.delete(mq);
+      for (const [key, c] of [...conns.entries()]) if (key.startsWith(`${url}|`)) c.end();
+      if (!stopped) window.setTimeout(() => void start(url), 3000);
+    });
+  };
+  for (const url of mqttBrokers()) void start(url);
+  return {
+    up: () => live.size > 0,
+    close: () => {
+      stopped = true;
+      for (const mq of live) mq.close();
+    },
+  };
+}
+
+// ---------- the TV's room ----------
+
+/** Try to take this code on the PeerJS broker: the peer, 'taken', or null (broker out of reach). */
+async function peerFor(code: string, waitMs: number): Promise<{ destroy(): void; disconnected: boolean; destroyed: boolean; reconnect(): void; on(ev: string, f: (...a: unknown[]) => void): void } | 'taken' | null> {
+  const { Peer } = await import('peerjs');
+  const peer = new Peer(`${PREFIX}${code.toLowerCase()}`, broker() ?? {});
+  const ok = await new Promise<string>((res) => {
+    const timer = setTimeout(() => res('timeout'), waitMs);
+    peer.once('open', () => {
+      clearTimeout(timer);
+      res('ok');
+    });
+    peer.once('error', (e: { type?: string }) => {
+      clearTimeout(timer);
+      res(e.type === 'unavailable-id' ? 'taken' : 'error');
+    });
+  });
+  if (ok === 'ok') return peer as never;
+  peer.destroy();
+  return ok === 'taken' ? 'taken' : null;
+}
+
+async function peerServer(): Promise<PadServer> {
+  const listeners: Array<(c: PadConn) => void> = [];
+  const last = savedCode();
+  let code = last.length === 4 ? last : padCode();
+  // The PeerJS broker (direct links and its relay) when it can be reached; it also makes sure
+  // nobody else holds this code. If it is out of reach, the MQTT brokers carry everything.
+  let peer: Awaited<ReturnType<typeof peerFor>> = null;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    peer = await peerFor(code, 7000).catch(() => null);
+    if (peer !== 'taken') break;
+    code = padCode();
+  }
+  if (peer === 'taken') peer = null;
+  savedCode(code);
+  const mqtt = mqttHost(code, listeners);
+  let relay: { up(): boolean; close(): void } | null = null;
+  let peerUp = false;
+  let stopped = false;
+  const adopt = (p: NonNullable<Exclude<typeof peer, 'taken'>>): void => {
+    peerUp = true;
+    p.on('connection', (c: unknown) => {
+      const dc = c as PeerDataConn;
       const ready = (): void => {
         const pc = wrap(dc);
         for (const f of listeners) f(pc);
@@ -327,17 +436,17 @@ async function peerServer(): Promise<PadServer> {
       if (dc.open) ready();
       else dc.on('open', ready);
     });
-    // Losing the broker only stops new phones from finding the TV: keep asking to be let back in.
-    peer.on('disconnected', () => {
-      up = false;
+    // Losing the broker only stops new phones from finding the TV this way: keep asking back in.
+    p.on('disconnected', () => {
+      peerUp = false;
       const retry = (): void => {
-        if (peer.destroyed) return;
-        if (!peer.disconnected) {
-          up = true;
+        if (p.destroyed || stopped) return;
+        if (!p.disconnected) {
+          peerUp = true;
           return;
         }
         try {
-          peer.reconnect();
+          p.reconnect();
         } catch {
           // Tried again below.
         }
@@ -345,60 +454,91 @@ async function peerServer(): Promise<PadServer> {
       };
       setTimeout(retry, 1000);
     });
-    peer.on('open', () => {
-      up = true;
+    p.on('open', () => {
+      peerUp = true;
     });
-    peer.on('error', () => undefined);
-    // The relay listens under the same code, for phones whose direct link cannot open.
-    const relay = relayHost(code, listeners);
-    return {
-      code,
-      onConnection: (f) => void listeners.push(f),
-      online: () => (up && !peer.disconnected) || relay.up(),
-      close: () => {
-        relay.close();
-        peer.destroy();
-      },
+    p.on('error', () => undefined);
+    relay = relayHost(code, listeners);
+  };
+  if (peer) adopt(peer);
+  else {
+    // Keep trying the PeerJS broker in the background; it is faster when it comes back.
+    const again = async (): Promise<void> => {
+      if (stopped || peerUp) return;
+      const p = await peerFor(code, 7000).catch(() => null);
+      if (p && p !== 'taken') {
+        if (stopped) p.destroy();
+        else {
+          peer = p;
+          adopt(p);
+        }
+      } else if (!stopped) setTimeout(() => void again(), 20000);
     };
+    setTimeout(() => void again(), 20000);
   }
-  throw new Error('Could not get a room code. Try again.');
+  // Open once any route is up.
+  const t0 = Date.now();
+  while (!peerUp && !mqtt.up() && Date.now() - t0 < 10000) await new Promise((r) => setTimeout(r, 200));
+  if (!peerUp && !mqtt.up()) {
+    stopped = true;
+    mqtt.close();
+    throw new Error('Could not reach any connection service. Check the laptop is online, then try again.');
+  }
+  return {
+    code,
+    onConnection: (f) => void listeners.push(f),
+    online: () => peerUp || mqtt.up() || (relay?.up() ?? false),
+    close: () => {
+      stopped = true;
+      mqtt.close();
+      relay?.close();
+      if (peer && peer !== 'taken') peer.destroy();
+    },
+  };
 }
 
 /**
- * A phone's link to the TV over two routes at once: the relay (up within a second or two almost
- * anywhere) and the direct link (faster, when the network lets it open). Messages go over the
- * best route open; the phone's greeting is sent again whenever the route changes, so the TV
- * follows it.
+ * A phone's link to the TV over every route at once: the direct link (fastest, when the network
+ * lets it open), the PeerJS relay, and the MQTT brokers. Messages go over the best route open;
+ * the phone's greeting is sent again whenever the route changes, so the TV follows it.
  */
-class TwoRoutes implements PadConn {
-  private readonly routes = new Map<'direct' | 'relay', { send(m: unknown): void; close(): void }>();
+type Route = 'direct' | 'relay' | 'mqtt';
+const ROUTE_ORDER: Route[] = ['direct', 'relay', 'mqtt'];
+
+class Routes implements PadConn {
+  private readonly routes = new Map<Route, { send(m: unknown): void; close(): void }>();
   private readonly data: Array<(m: Record<string, unknown>) => void> = [];
   private readonly closed: Array<() => void> = [];
   private done = false;
   private hi: unknown = null;
   private using = '';
 
-  add(kind: 'direct' | 'relay', r: { send(m: unknown): void; close(): void }): void {
+  add(kind: Route, r: { send(m: unknown): void; close(): void }): void {
     if (this.done) {
       r.close();
       return;
     }
+    this.routes.get(kind)?.close();
     this.routes.set(kind, r);
     this.pick();
   }
 
-  drop(kind: 'direct' | 'relay'): void {
+  drop(kind: Route): void {
     if (!this.routes.delete(kind)) return;
     if (this.routes.size === 0) this.end();
     else this.pick();
   }
 
   private best(): { send(m: unknown): void } | null {
-    return this.routes.get('direct') ?? this.routes.get('relay') ?? null;
+    for (const k of ROUTE_ORDER) {
+      const r = this.routes.get(k);
+      if (r) return r;
+    }
+    return null;
   }
 
   private pick(): void {
-    const k = this.routes.has('direct') ? 'direct' : this.routes.has('relay') ? 'relay' : '';
+    const k = ROUTE_ORDER.find((r) => this.routes.has(r)) ?? '';
     if (k === this.using) return;
     const was = this.using;
     this.using = k;
@@ -437,13 +577,14 @@ class TwoRoutes implements PadConn {
 }
 
 async function peerConnect(code: string, waitMs: number): Promise<PadConn> {
-  const link = new TwoRoutes();
+  const link = new Routes();
   const only = onlyRoute();
-  const tries = only ? 1 : 2;
+  const kinds = (['relay', 'direct', 'mqtt'] as const).filter((k) => !only || only === k);
   return new Promise<PadConn>((resolve, reject) => {
     let settled = false;
     let failures = 0;
     let reason = '';
+    let reachedService = false;
     const fail = (msg: string): void => {
       if (settled) return;
       settled = true;
@@ -451,12 +592,11 @@ async function peerConnect(code: string, waitMs: number): Promise<PadConn> {
       link.close();
       reject(new Error(msg));
     };
-    let reachedBroker = false;
     const timer = setTimeout(
       () =>
         fail(
           reason ||
-            (reachedBroker
+            (reachedService
               ? 'Online, but the TV did not answer. On the laptop: reload the game page, open PHONE PARTY, check the code.'
               : 'No answer from the TV. Check the code on the TV screen, and that the TV is on the PHONE PARTY screen.'),
         ),
@@ -468,16 +608,81 @@ async function peerConnect(code: string, waitMs: number): Promise<PadConn> {
       clearTimeout(timer);
       resolve(link);
     };
-    const failed = (msg: string): void => {
-      if (!reason) reason = msg;
+    const failed = (): void => {
       failures += 1;
-      if (failures >= tries) fail(reason);
+      if (failures >= kinds.length) {
+        fail(reason || (reachedService ? 'Online, but the TV did not answer. On the laptop: reload the game page and open PHONE PARTY.' : 'Could not reach any connection service. Check this phone is online (Wi-Fi or mobile data).'));
+      }
     };
 
-    if (only !== 'direct') {
-      Relay.open(`afterhours-p-${rid()}`).then(
+    if (kinds.includes('mqtt')) {
+      // Knock on every MQTT broker; the first where the TV answers carries the link.
+      const me = `p${rid()}`;
+      const base = topicBase(code);
+      const urls = mqttBrokers();
+      let pending = urls.length;
+      let won = false;
+      const lose = (): void => {
+        pending -= 1;
+        if (pending === 0 && !won) failed();
+      };
+      for (const url of urls) {
+        Mqtt.connect(url).then(
+          (mq) => {
+            reachedService = true;
+            mq.subscribe(`${base}/p/${me}`);
+            const send = (m: unknown): void => mq.publish(`${base}/tv`, JSON.stringify({ f: me, m }));
+            let confirmed = false;
+            const knock = (): void => send({ __probe: 1 });
+            // The subscription settles first, then knock until the TV answers.
+            const knocking = window.setInterval(knock, 1500);
+            window.setTimeout(knock, 150);
+            mq.onMessage((_t, payload) => {
+              let msg: { m?: Record<string, unknown> };
+              try {
+                msg = JSON.parse(payload);
+              } catch {
+                return;
+              }
+              const m = msg.m;
+              if (!m || typeof m !== 'object') return;
+              if (m.__probe === 2) {
+                if (confirmed) return;
+                confirmed = true;
+                window.clearInterval(knocking);
+                if (won) {
+                  // Another broker got there first.
+                  mq.close();
+                  return;
+                }
+                won = true;
+                link.add('mqtt', { send, close: () => mq.close() });
+                up();
+                return;
+              }
+              if (confirmed && won) link.deliver(m);
+            });
+            mq.onClose(() => {
+              window.clearInterval(knocking);
+              if (confirmed && won) link.drop('mqtt');
+              else lose();
+            });
+            window.setTimeout(() => {
+              if (!confirmed) {
+                window.clearInterval(knocking);
+                mq.close();
+              }
+            }, waitMs);
+          },
+          () => lose(),
+        );
+      }
+    }
+
+    if (kinds.includes('relay')) {
+      Relay.open(`afterhours-p-${rid()}`, 7000).then(
         (relay) => {
-          reachedBroker = true;
+          reachedService = true;
           const tv = `${RELAY_PREFIX}${code.toLowerCase()}`;
           let confirmed = false;
           // Knock until the TV answers (the first knock can race the TV's own connection).
@@ -496,15 +701,12 @@ async function peerConnect(code: string, waitMs: number): Promise<PadConn> {
             }
             link.deliver(m);
           });
-          relay.onExpire((dst) => {
-            if (dst === tv && !confirmed) reason = `No TV with code ${code} right now. Check the code, or on the laptop reload the game and open PHONE PARTY.`;
-          });
           relay.onClose(() => {
             window.clearInterval(knocking);
             if (confirmed) link.drop('relay');
-            else failed('Could not reach the connection service. Check your internet connection.');
+            else failed();
           });
-          // Never answered: give up on this route (the direct one may still come through).
+          // Never answered: give up on this route (another may still come through).
           window.setTimeout(() => {
             if (!confirmed) {
               window.clearInterval(knocking);
@@ -512,28 +714,27 @@ async function peerConnect(code: string, waitMs: number): Promise<PadConn> {
             }
           }, waitMs);
         },
-        () => failed('Could not reach the connection service. Check your internet connection.'),
+        () => failed(),
       );
     }
 
-    if (only !== 'relay') {
+    if (kinds.includes('direct')) {
       void import('peerjs').then(({ Peer }) => {
         const peer = new Peer(broker() ?? {});
         let opened = false;
-        const giveUp = (msg: string): void => {
-          if (opened) return;
+        let gaveUp = false;
+        const giveUp = (): void => {
+          if (opened || gaveUp) return;
+          gaveUp = true;
           peer.destroy();
-          failed(msg);
+          failed();
         };
-        peer.on('error', (e: { type?: string }) => {
-          if (e.type === 'peer-unavailable') giveUp('No game with that code. Check the code on the TV screen.');
-          else if (e.type === 'network' || e.type === 'server-error' || e.type === 'socket-error') giveUp('Could not reach the connection service. Check your internet connection.');
-          else giveUp('Could not connect. Try again.');
-        });
+        peer.on('error', () => giveUp());
         peer.on('open', () => {
+          reachedService = true;
           const dc = peer.connect(`${PREFIX}${code.toLowerCase()}`, { reliable: false, serialization: 'json' }) as unknown as PeerDataConn;
           dc.on('open', () => {
-            if (opened) return;
+            if (opened || gaveUp) return;
             opened = true;
             // Linked: the broker is not needed for this route any more.
             peer.disconnect();
@@ -548,8 +749,8 @@ async function peerConnect(code: string, waitMs: number): Promise<PadConn> {
           });
         });
         // A direct link that has not opened in this long will not: stop trying.
-        window.setTimeout(() => giveUp('No answer from the TV.'), Math.max(waitMs, 20000));
-      }, () => failed('Could not load the connection code. Reload the page.'));
+        window.setTimeout(giveUp, Math.max(waitMs, 20000));
+      }, () => failed());
     }
   });
 }
